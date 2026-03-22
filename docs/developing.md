@@ -27,6 +27,35 @@ Before pushing a PR branch:
 2. `uv run ruff format --check src tests` — formatting must pass
 3. `uv run pytest` — all tests must pass
 
+## Publishing
+
+Two automated pipelines handle publishing:
+
+### Push to main (automatic)
+
+Every merge to main triggers:
+- **TestPyPI** — publishes a `.dev` package (e.g. `0.1.140.dev42`)
+- **Docker** — rebuilds images with mutable tags (`orca-2.3.1`) when relevant files change
+
+No version bump needed for day-to-day work.
+
+### Release (tag)
+
+To publish a release:
+
+```bash
+# 1. Bump version in pyproject.toml and src/fabprint/__init__.py
+# 2. Update CHANGELOG.md
+# 3. Commit, tag, and push
+git tag v0.1.141
+git push origin v0.1.141
+```
+
+This triggers:
+- **PyPI** — publishes the release version
+- **Docker** — tags images immutably (e.g. `fabprint/fabprint:0.1.141`)
+- **Profiles** — extracts slicer profiles and opens a PR if changed
+
 ## Docker images
 
 Pre-built OrcaSlicer images are on [Docker Hub](https://hub.docker.com/r/fabprint/fabprint). To build your own:

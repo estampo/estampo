@@ -179,10 +179,10 @@ You cannot combine `--until` and `--only`.
 
 ## `fabprint status`
 
-Query printer status.
+Query printer status, clear errors, or cancel jobs.
 
 ```
-fabprint status [--printer NAME] [--watch] [--interval SECONDS]
+fabprint status [--printer NAME] [--watch] [--interval SECONDS] [--clear] [--cancel]
 ```
 
 | Option              | Description                                      |
@@ -190,8 +190,19 @@ fabprint status [--printer NAME] [--watch] [--interval SECONDS]
 | `--printer NAME`    | Query a specific printer (default: all)          |
 | `-w, --watch`       | Live dashboard mode with auto-refresh            |
 | `--interval SECONDS`| Refresh interval in watch mode (default: 10)     |
+| `--clear`           | Clear FAILED state (sends resume, returns to IDLE) |
+| `--cancel`          | Cancel the current print job                     |
 
 Without `--printer`, shows all configured printers. Add `-w` for a live dashboard.
+
+### Examples
+
+```bash
+fabprint status                             # show all printers
+fabprint status --printer workshop -w       # live dashboard for one printer
+fabprint status --printer workshop --cancel # stop current print
+fabprint status --printer workshop --clear  # clear FAILED → IDLE
+```
 
 ## `fabprint watch`
 

@@ -136,13 +136,14 @@ Build plate dimensions for bin-packing.
 
 Slicer engine and profile selection.
 
-| Key         | Type       | Default  | Description                                                |
-|-------------|------------|----------|------------------------------------------------------------|
-| `engine`    | `string`   | `"orca"` | Slicer engine (`"orca"`)                                   |
-| `version`   | `string`   | —        | Required OrcaSlicer version (e.g. `"2.3.1"`)               |
-| `printer`   | `string`   | —        | Printer profile name                                       |
-| `process`   | `string`   | —        | Process profile name                                       |
-| `filaments` | `[string]` | —        | Filament profiles (auto-derived from parts if omitted)     |
+| Key            | Type       | Default      | Description                                                |
+|----------------|------------|--------------|-------------------------------------------------------------|
+| `engine`       | `string`   | `"orca"`     | Slicer engine (`"orca"`)                                   |
+| `version`      | `string`   | —            | Required OrcaSlicer version (e.g. `"2.3.1"`)               |
+| `printer`      | `string`   | —            | Printer profile name                                       |
+| `process`      | `string`   | —            | Process profile name                                       |
+| `filaments`    | `[string]` | —            | Filament profiles (auto-derived from parts if omitted)     |
+| `profiles_dir` | `string`   | `"profiles"` | Directory for pinned profiles (relative to config file)    |
 
 ### `[slicer.slots]`
 
