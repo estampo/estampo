@@ -4,7 +4,7 @@ All notable changes to fabprint are documented here.
 
 ## 0.1.135 — 2026-03-22
 
-- Fix Docker image: pin VTK to 9.3.x for cadquery-ocp compatibility, enabling STEP file loading
+- Fix Docker image: override cadquery-ocp to 7.9+ for VTK 9.4+ compatibility, enabling STEP file loading
 
 ## 0.1.134 — 2026-03-22
 
