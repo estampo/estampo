@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 
 app = typer.Typer(
     name="fabprint",
-    help="Immutable 3D print pipeline: arrange, slice, and print.",
+    help="Reproducible 3D print builds.",
     no_args_is_help=True,
 )
 
