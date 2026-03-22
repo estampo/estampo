@@ -4,6 +4,7 @@ All notable changes to fabprint are documented here.
 
 ## 0.1.132 — 2026-03-22
 
+- Add `testpypi` environment to TestPyPI workflow for consistent OIDC trusted publishing across all trigger types
 - Fix documentation drift: remove non-existent `fabprint login` command, correct default output dir (`fabprint_output/`), fix default pipeline stages, update cloud credential references to `fabprint setup`
 
 ## 0.1.131 — 2026-03-21
