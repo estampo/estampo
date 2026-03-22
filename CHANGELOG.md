@@ -2,6 +2,10 @@
 
 All notable changes to fabprint are documented here.
 
+## 0.1.133 — 2026-03-22
+
+- Add `upside-down` orientation keyword: flips part 180° around X axis
+
 ## 0.1.132 — 2026-03-22
 
 - Add `testpypi` environment to TestPyPI workflow for consistent OIDC trusted publishing across all trigger types

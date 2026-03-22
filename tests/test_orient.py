@@ -62,6 +62,17 @@ def test_orient_returns_copy():
     assert result is not mesh
 
 
+def test_upside_down_flips_180_around_x():
+    mesh = _load("cylinder_5x20mm.stl")
+    original_extents = mesh.extents.copy()
+    result = orient_mesh(mesh, "upside-down")
+    # Flipping 180° around X preserves Z extent but inverts the part
+    assert abs(result.bounds[0][2]) < 1e-6  # on plate
+    # Extents should be preserved (just flipped)
+    for i in range(3):
+        assert abs(result.extents[i] - original_extents[i]) < 0.5
+
+
 def test_unknown_strategy():
     mesh = _load("cube_10mm.stl")
     with pytest.raises(ValueError, match="Unknown"):

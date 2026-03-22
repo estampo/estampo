@@ -33,6 +33,8 @@ def orient_mesh(
         pass  # keep as-is
     elif strategy == "side":
         mesh.apply_transform(rotation_matrix(math.radians(90), [1, 0, 0]))
+    elif strategy == "upside-down":
+        mesh.apply_transform(rotation_matrix(math.radians(180), [1, 0, 0]))
     else:
         raise ValueError(f"Unknown orientation strategy: '{strategy}'")
 
