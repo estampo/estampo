@@ -210,8 +210,8 @@ def record_init(dry_run: bool = True) -> None:
         child.send("\r")
         status("configured second file")
 
-        # Printer Connection — select workshop
-        expect(child, "Printer Connection")
+        # Printer (optional) — select workshop
+        expect(child, r"Printer \(optional\)")
         time.sleep(1)
         child.send("\r")
         time.sleep(1)
