@@ -55,6 +55,7 @@ jobs:
 - STL/3MF/STEP model files referenced in your config
 - The GHCR package must be public, or you must authenticate with `docker login ghcr.io` before this action runs
 - If using the `comment` feature, your job needs `permissions: pull-requests: write`
+- PR comments work with both `pull_request` and `workflow_run` triggers (the action looks up the PR from the commit SHA)
 
 ## Supported OrcaSlicer versions
 
