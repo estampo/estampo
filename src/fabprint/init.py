@@ -47,7 +47,7 @@ filaments = ["Generic PLA @base"]          # filament profiles (one per AMS slot
 [[parts]]
 file = "my-part.stl"          # path relative to this file
 copies = 1                     # number of copies
-orient = "flat"                # flat, upright, or side
+orient = "flat"                # flat, upright, side, or upside-down
 # filament = "Generic PLA @base"  # filament name or slot number (default: 1)
 # scale = 1.0                     # uniform scale factor
 # rotate = [0, 0, 45]            # [rx, ry, rz] in degrees (overrides orient)
@@ -829,7 +829,7 @@ def _wizard_pick_parts() -> list[dict]:
         for idx in chosen:
             f = candidates[idx]
             copies = _prompt_int(f"{f.name} — copies?", 1)
-            ui.info("Orient options: flat, upright, side")
+            ui.info("Orient options: flat, upright, side, upside-down")
             orient = _prompt_str(f"{f.name} — orient?", "flat")
             if orient not in VALID_ORIENTS:
                 orient = "flat"

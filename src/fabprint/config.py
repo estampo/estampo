@@ -8,7 +8,7 @@ from pathlib import Path
 
 from fabprint import FabprintError
 
-VALID_ORIENTS = {"flat", "upright", "side"}
+VALID_ORIENTS = {"flat", "upright", "side", "upside-down"}
 
 
 @dataclass
