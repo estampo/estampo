@@ -27,6 +27,7 @@ dependencies = [
     "requests>=2.28",
     "typer>=0.15.0",
     "build123d>=0.10.0",
+    "vtk>=9.3,<9.4",  # cadquery-ocp is compiled against VTK 9.3
     "watchfiles>=1.0.0",
     "questionary>=2.1.0",
 ]

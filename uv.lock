@@ -590,7 +590,7 @@ wheels = [
 
 [[package]]
 name = "fabprint"
-version = "0.1.121"
+version = "0.1.131"
 source = { editable = "." }
 dependencies = [
     { name = "bambu-lab-cloud-api" },
@@ -603,6 +603,7 @@ dependencies = [
     { name = "sf-hamilton" },
     { name = "trimesh", extra = ["easy"] },
     { name = "typer" },
+    { name = "vtk" },
     { name = "watchfiles" },
 ]
 
@@ -632,6 +633,7 @@ requires-dist = [
     { name = "sf-hamilton", specifier = ">=1.82.0" },
     { name = "trimesh", extras = ["easy"], specifier = ">=4.0.0" },
     { name = "typer", specifier = ">=0.15.0" },
+    { name = "vtk", specifier = ">=9.3,<9.4" },
     { name = "watchfiles", specifier = ">=1.0.0" },
 ]
 provides-extras = ["dev"]
