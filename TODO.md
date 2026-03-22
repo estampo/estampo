@@ -11,3 +11,6 @@
 ## GIF Script
 - [ ] Add pin to GIF script
 - [ ] Make GIF script modular with splice of cast files
+
+## CLI Output
+- [ ] Add user-facing output for every file written by the CLI
