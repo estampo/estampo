@@ -2,6 +2,12 @@
 
 All notable changes to fabprint are documented here.
 
+## 0.1.140 — 2026-03-22
+
+- Add `fabprint status --clear` to clear FAILED state (sends resume command)
+- Add `fabprint status --cancel` to cancel the current print job
+- Supports bambu-cloud (via MQTT) and moonraker printers
+
 ## 0.1.139 — 2026-03-22
 
 - Make profiles directory configurable via `profiles_dir` in `[slicer]` config (default: `"profiles"`)

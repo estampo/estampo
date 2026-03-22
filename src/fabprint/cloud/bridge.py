@@ -33,6 +33,7 @@ BRIDGE_TIMEOUT = 300
 BRIDGE_STATUS_TIMEOUT = 60
 BRIDGE_TASK_LIST_TIMEOUT = 30
 BRIDGE_CANCEL_TIMEOUT = 30
+BRIDGE_SEND_MQTT_TIMEOUT = 30
 
 # Docker pull staleness: only pull if last pull was more than 24h ago.
 # Override with FABPRINT_DOCKER_PULL=always|never|auto (default: auto).
@@ -456,3 +457,27 @@ def cloud_cancel(
         raise RuntimeError(
             f"Bridge returned non-JSON output (exit {result.returncode}): {result.stdout[:200]}"
         )
+
+
+def cloud_clear_error(
+    device_id: str,
+    token_file: Path,
+    *,
+    verbose: bool = False,
+) -> None:
+    """Send a resume command to clear FAILED state and return to IDLE.
+
+    Uses the bridge's send-mqtt command to send a resume MQTT message.
+    """
+    require_file(token_file, "Token file")
+
+    payload = '{"print":{"command":"resume","sequence_id":"0"}}'
+    args = [
+        "send-mqtt",
+        device_id,
+        str(token_file.resolve()),
+        payload,
+        "--wait",
+        "5",
+    ]
+    _run_bridge(args, timeout=BRIDGE_SEND_MQTT_TIMEOUT, verbose=verbose)
