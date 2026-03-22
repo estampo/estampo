@@ -7,7 +7,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from fabprint.config import DEFAULT_STAGES, VALID_ORIENTS
+from fabprint.config import DEFAULT_STAGES
 
 log = logging.getLogger(__name__)
 
@@ -829,18 +829,23 @@ def _wizard_pick_parts() -> list[dict]:
         for idx in chosen:
             f = candidates[idx]
             copies = _prompt_int(f"{f.name} — copies?", 1)
-            ui.info("Orient options: flat, upright, side, upside-down")
-            orient = _prompt_str(f"{f.name} — orient?", "flat")
-            if orient not in VALID_ORIENTS:
-                orient = "flat"
-            parts_config.append(
-                {
-                    "file": f.name,
-                    "copies": copies,
-                    "orient": orient,
-                    "filament": 1,
-                }
-            )
+            orient_options = ["flat", "upright", "upside-down", "side", "custom rotation"]
+            selected = _prompt_choice(f"{f.name} — orientation", orient_options)
+            pick = orient_options[selected[0]]
+            part: dict[str, object] = {
+                "file": f.name,
+                "copies": copies,
+                "orient": "flat",
+                "filament": 1,
+            }
+            if pick == "custom rotation":
+                rx = _prompt_int("  X rotation (degrees)", 0)
+                ry = _prompt_int("  Y rotation (degrees)", 0)
+                rz = _prompt_int("  Z rotation (degrees)", 0)
+                part["rotate"] = [rx, ry, rz]
+            else:
+                part["orient"] = pick
+            parts_config.append(part)
         ui.console.print()
 
     if not parts_config:
@@ -1113,7 +1118,9 @@ def _build_toml(
         lines.append(f'file = "{p["file"]}"')
         if p.get("copies", 1) != 1:
             lines.append(f"copies = {p['copies']}")
-        if p.get("orient", "flat") != "flat":
+        if p.get("rotate"):
+            lines.append(f"rotate = {p['rotate']}")
+        elif p.get("orient", "flat") != "flat":
             lines.append(f'orient = "{p["orient"]}"')
         if p.get("filament", 1) != 1:
             lines.append(f"filament = {p['filament']}")
