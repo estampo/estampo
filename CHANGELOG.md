@@ -2,6 +2,10 @@
 
 All notable changes to fabprint are documented here.
 
+## 0.1.134 — 2026-03-22
+
+- GitHub Action: support PR comments when triggered via `workflow_run` (looks up PR from commit SHA)
+
 ## 0.1.133 — 2026-03-22
 
 - Add `upside-down` orientation keyword: flips part 180° around X axis
