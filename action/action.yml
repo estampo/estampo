@@ -33,6 +33,15 @@ outputs:
   filament-grams:
     description: "Total filament usage in grams"
     value: ${{ steps.metrics.outputs.filament-grams }}
+  layer-count:
+    description: "Total number of layers"
+    value: ${{ steps.metrics.outputs.layer-count }}
+  filament-types:
+    description: "Filament types used (comma-separated)"
+    value: ${{ steps.metrics.outputs.filament-types }}
+  filament-changes:
+    description: "Number of filament/tool changes"
+    value: ${{ steps.metrics.outputs.filament-changes }}
   gcode-path:
     description: "Path to sliced gcode output directory"
     value: ${{ steps.metrics.outputs.gcode-path }}
@@ -83,17 +92,24 @@ runs:
       run: |
         FULL_OUTPUT_DIR="${WORKSPACE}/${OUTPUT_DIR}"
 
-        # Parse metrics from fabprint log output
-        # gcode_stats is included in the slice stage, output format:
-        #   "  123.4g filament, estimated 1h 7m 32s"
-        PRINT_TIME=$(grep -oE 'estimated .+' /tmp/fabprint-output.log 2>/dev/null | head -1 | sed 's/estimated //' || true)
-        FILAMENT=$(grep -oE '[0-9.]+g filament' /tmp/fabprint-output.log 2>/dev/null | head -1 | sed 's/g filament//' || true)
+        # Read stats from JSON written by fabprint pipeline
+        STATS_FILE=$(find "${FULL_OUTPUT_DIR}" -name stats.json -type f 2>/dev/null | head -1)
+        if [ -n "$STATS_FILE" ]; then
+          PRINT_TIME=$(python3 -c "import json; d=json.load(open('$STATS_FILE')); print(d.get('print_time',''))" 2>/dev/null || true)
+          FILAMENT=$(python3 -c "import json; d=json.load(open('$STATS_FILE')); print(d.get('filament_g',''))" 2>/dev/null || true)
+          LAYERS=$(python3 -c "import json; d=json.load(open('$STATS_FILE')); print(d.get('layer_count',''))" 2>/dev/null || true)
+          FILAMENT_TYPES=$(python3 -c "import json; d=json.load(open('$STATS_FILE')); t=d.get('filament_types',[]); print(', '.join(t) if t else '')" 2>/dev/null || true)
+          FILAMENT_CHANGES=$(python3 -c "import json; d=json.load(open('$STATS_FILE')); print(d.get('filament_changes',''))" 2>/dev/null || true)
+        fi
 
         # Extract project name: match top-level name only (before any [section] header)
         PROJECT_NAME=$(sed -n '/^\[/q; s/^name\s*=\s*"\(.*\)"/\1/p' "${WORKSPACE}/${CONFIG}" 2>/dev/null || true)
 
         echo "print-time=${PRINT_TIME}" >> "$GITHUB_OUTPUT"
         echo "filament-grams=${FILAMENT}" >> "$GITHUB_OUTPUT"
+        echo "layer-count=${LAYERS}" >> "$GITHUB_OUTPUT"
+        echo "filament-types=${FILAMENT_TYPES}" >> "$GITHUB_OUTPUT"
+        echo "filament-changes=${FILAMENT_CHANGES}" >> "$GITHUB_OUTPUT"
         echo "gcode-path=${FULL_OUTPUT_DIR}" >> "$GITHUB_OUTPUT"
         echo "project-name=${PROJECT_NAME}" >> "$GITHUB_OUTPUT"
 
@@ -110,6 +126,9 @@ runs:
       env:
         PRINT_TIME: ${{ steps.metrics.outputs.print-time }}
         FILAMENT_GRAMS: ${{ steps.metrics.outputs.filament-grams }}
+        LAYER_COUNT: ${{ steps.metrics.outputs.layer-count }}
+        FILAMENT_TYPES: ${{ steps.metrics.outputs.filament-types }}
+        FILAMENT_CHANGES: ${{ steps.metrics.outputs.filament-changes }}
         ORCA_VERSION: ${{ inputs.orca-version }}
         PROJECT_NAME: ${{ steps.metrics.outputs.project-name }}
         RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -138,6 +157,9 @@ runs:
 
           const printTime = process.env.PRINT_TIME || 'unknown';
           const filament = process.env.FILAMENT_GRAMS || 'unknown';
+          const layers = process.env.LAYER_COUNT || '';
+          const filamentTypes = process.env.FILAMENT_TYPES || '';
+          const filamentChanges = process.env.FILAMENT_CHANGES || '';
           const orcaVersion = process.env.ORCA_VERSION || 'unknown';
           const projectName = process.env.PROJECT_NAME || '';
           const runUrl = process.env.RUN_URL;
@@ -145,14 +167,21 @@ runs:
           const title = projectName ? `Fabprint: ${projectName}` : 'Fabprint Slice Results';
           const marker = `<!-- fabprint-slice-result-${projectName || 'default'} -->`;
 
+          const rows = [
+            `| Print time | ${printTime} |`,
+            `| Filament | ${filament}g |`,
+          ];
+          if (layers) rows.push(`| Layers | ${layers} |`);
+          if (filamentTypes) rows.push(`| Filament type | ${filamentTypes} |`);
+          if (filamentChanges && filamentChanges !== '0') rows.push(`| Tool changes | ${filamentChanges} |`);
+
           const body = [
             marker,
             `### ${title}`,
             '',
             '| Metric | Value |',
             '|--------|-------|',
-            `| Print time | ${printTime} |`,
-            `| Filament | ${filament}g |`,
+            ...rows,
             '',
             `Sliced with OrcaSlicer ${orcaVersion}`,
             '',

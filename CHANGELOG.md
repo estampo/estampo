@@ -7,6 +7,8 @@ All notable changes to fabprint are documented here.
 - Make GIF recording script modular: each phase (init, validate, run, status) records separately, then merges
 - Add `--phases` flag to re-record only specific phases
 - Setup phase uses pre-recorded cast file (no interactive login needed for rebuild)
+- Write `stats.json` to output dir with print time, filament, layers, filament types, and tool changes
+- GitHub Action reads `stats.json` instead of parsing logs; PR comment now shows all metrics
 
 ## 0.1.136 — 2026-03-22
 

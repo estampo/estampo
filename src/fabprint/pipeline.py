@@ -399,10 +399,30 @@ def sliced_output_dir(
 
 
 def gcode_stats(sliced_output_dir: Path) -> dict:
-    """Parse print time and filament usage from sliced gcode."""
+    """Parse print time and filament usage from sliced gcode, write stats JSON."""
+    import json
+
+    from fabprint.gcode import analyze_gcode
     from fabprint.slicer import parse_gcode_stats
 
-    return parse_gcode_stats(sliced_output_dir)
+    stats: dict = dict(parse_gcode_stats(sliced_output_dir))
+
+    # Enrich with layer/filament analysis
+    gcode_files = list(sliced_output_dir.glob("*.gcode"))
+    if gcode_files:
+        info = analyze_gcode(gcode_files[0])
+        stats["layer_count"] = info.layer_count
+        stats["filament_types"] = info.filament_types
+        stats["filament_changes"] = info.filament_changes
+        if info.filament_usage_g:
+            stats["filament_usage_g"] = info.filament_usage_g
+
+    # Write to output dir for CI/action consumption
+    stats_path = sliced_output_dir / "stats.json"
+    stats_path.write_text(json.dumps(stats, indent=2) + "\n")
+    log.info("Wrote build stats to %s", stats_path)
+
+    return stats
 
 
 def gcode_path(sliced_output_dir: Path) -> Path:
