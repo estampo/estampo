@@ -1,0 +1,112 @@
+name: Publish Docker images
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+
+      - name: Check if cloud-bridge rebuild needed
+        id: bridge_changed
+        run: |
+          git diff HEAD~1 HEAD --name-only \
+            | grep -qE 'Dockerfile\.cloud-bridge|scripts/bambu_cloud_bridge\.cpp' \
+            && echo "changed=true" >> "$GITHUB_OUTPUT" \
+            || echo "changed=false" >> "$GITHUB_OUTPUT"
+
+      - name: Check if orca-base rebuild needed
+        id: base_changed
+        run: |
+          git diff HEAD~1 HEAD --name-only \
+            | grep -qE '^Dockerfile\.orca-base$' \
+            && echo "changed=true" >> "$GITHUB_OUTPUT" \
+            || echo "changed=false" >> "$GITHUB_OUTPUT"
+
+      - name: Check if fabprint image rebuild needed
+        id: fabprint_changed
+        run: |
+          git diff HEAD~1 HEAD --name-only \
+            | grep -qE '^Dockerfile$|^src/fabprint/|^pyproject\.toml$|^uv\.lock$' \
+            && echo "changed=true" >> "$GITHUB_OUTPUT" \
+            || echo "changed=false" >> "$GITHUB_OUTPUT"
+
+      - name: Skip if no Docker-relevant changes
+        id: should_build
+        run: |
+          if [[ "${{ steps.bridge_changed.outputs.changed }}" == "true" || \
+                "${{ steps.base_changed.outputs.changed }}" == "true" || \
+                "${{ steps.fabprint_changed.outputs.changed }}" == "true" ]]; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "build=false" >> "$GITHUB_OUTPUT"
+            echo "No Docker-relevant changes — skipping rebuild"
+          fi
+
+      - name: Log in to Docker Hub
+        if: steps.should_build.outputs.build == 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log in to GitHub Container Registry
+        if: steps.should_build.outputs.build == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        if: steps.should_build.outputs.build == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push cloud-bridge
+        if: steps.bridge_changed.outputs.changed == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.cloud-bridge
+          platforms: linux/amd64
+          push: true
+          tags: fabprint/cloud-bridge:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push orca-base
+        if: steps.base_changed.outputs.changed == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.orca-base
+          platforms: linux/amd64
+          push: true
+          tags: |
+            fabprint/orca-base:2.3.1
+            ghcr.io/${{ github.repository }}/orca-base:2.3.1
+          build-args: ORCA_VERSION=2.3.1
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push fabprint image
+        if: steps.fabprint_changed.outputs.changed == 'true' || steps.base_changed.outputs.changed == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            fabprint/fabprint:orca-2.3.1
+            ghcr.io/${{ github.repository }}:orca-2.3.1
+          build-args: ORCA_VERSION=2.3.1
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
