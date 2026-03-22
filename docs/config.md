@@ -58,7 +58,7 @@ Controls which stages run and in what order. Optional — defaults to the full p
 
 | Key      | Type       | Default                                           | Description                |
 |----------|------------|---------------------------------------------------|----------------------------|
-| `stages` | `[string]` | `["load", "arrange", "plate", "slice", "print"]`  | Ordered list of stages     |
+| `stages` | `[string]` | `["load", "arrange", "plate", "slice"]`  | Ordered list of stages     |
 
 Valid stage names: `load`, `arrange`, `plate`, `slice`, `gcode-info`, `print`.
 

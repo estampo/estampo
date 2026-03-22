@@ -8,6 +8,7 @@ on:
 jobs:
   test-publish:
     runs-on: ubuntu-latest
+    environment: testpypi
     permissions:
       id-token: write  # required for PyPI trusted publishing
     steps:
@@ -18,15 +19,9 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Build Python package
+      - name: Build dev package for TestPyPI
         run: |
           pip install build
-          python -m build
-
-      - name: Append dev suffix to avoid version conflicts
-        run: |
-          pip install pkginfo
-          # Rebuild with a unique dev version so TestPyPI accepts it
           VERSION=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
           DEV_VERSION="${VERSION}.dev${GITHUB_RUN_NUMBER}"
           sed -i "s/version = \"$VERSION\"/version = \"$DEV_VERSION\"/" pyproject.toml
