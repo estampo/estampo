@@ -250,6 +250,7 @@ def _resolve_profiles(
     overrides: dict[str, object] | None,
     project_dir: Path | None,
     tmp_dir: Path,
+    profiles_dir: str = "profiles",
 ) -> tuple[str | None, str | None]:
     """Resolve and flatten all profiles into tmp_dir.
 
@@ -258,7 +259,7 @@ def _resolve_profiles(
     """
     settings = []
     if printer:
-        data = resolve_profile_data(printer, engine, "machine", project_dir)
+        data = resolve_profile_data(printer, engine, "machine", project_dir, profiles_dir)
         # Validate: machine_model profiles define the printer but can't be sliced
         if data.get("type") == "machine_model":
             raise FabprintError(
@@ -269,7 +270,7 @@ def _resolve_profiles(
         path = _write_tmp_profile(data, tmp_dir, "machine")
         settings.append(str(path))
     if process:
-        data = resolve_profile_data(process, engine, "process", project_dir)
+        data = resolve_profile_data(process, engine, "process", project_dir, profiles_dir)
         if overrides:
             data = _apply_overrides(data, overrides, process)
         path = _write_tmp_profile(data, tmp_dir, "process")
@@ -282,7 +283,7 @@ def _resolve_profiles(
         first_path: str | None = None
         for i, f in enumerate(filaments):
             if f:
-                data = resolve_profile_data(f, engine, "filament", project_dir)
+                data = resolve_profile_data(f, engine, "filament", project_dir, profiles_dir)
                 path = _write_tmp_profile(data, tmp_dir, f"filament_{i}")
                 resolved.append(str(path))
                 if first_path is None:
@@ -439,6 +440,7 @@ def slice_plate(
     local: bool = False,
     docker_version: str | None = None,
     required_version: str | None = None,
+    profiles_dir: str = "profiles",
 ) -> Path:
     """Slice a 3MF file using BambuStudio or OrcaSlicer CLI.
 
@@ -538,6 +540,7 @@ def slice_plate(
             overrides,
             project_dir,
             tmp_dir,
+            profiles_dir,
         )
 
         if use_docker:

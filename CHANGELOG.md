@@ -2,6 +2,11 @@
 
 All notable changes to fabprint are documented here.
 
+## 0.1.139 — 2026-03-22
+
+- Make profiles directory configurable via `profiles_dir` in `[slicer]` config (default: `"profiles"`)
+- `fabprint profiles pin` now handles existing directories (overwrite/rename) and auto-updates `fabprint.toml`
+
 ## 0.1.138 — 2026-03-22
 
 - GitHub Action: add job summary with slice metrics (visible on every workflow run, not just PRs)

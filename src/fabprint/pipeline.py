@@ -395,6 +395,7 @@ def sliced_output_dir(
         local=slicer_local,
         docker_version=docker_version,
         required_version=config.slicer.version,
+        profiles_dir=config.slicer.profiles_dir,
     )
 
 

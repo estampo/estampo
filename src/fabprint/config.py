@@ -26,6 +26,7 @@ class SlicerConfig:
     filaments: list[str] = field(default_factory=list)
     slots: dict[int, str] = field(default_factory=dict)  # slot (1-indexed) → profile name
     overrides: dict[str, object] = field(default_factory=dict)
+    profiles_dir: str = "profiles"
 
 
 @dataclass
@@ -210,6 +211,7 @@ def load_config(path: Path) -> FabprintConfig:
         filaments=slicer_raw.get("filaments", []),
         slots=slots_parsed,
         overrides=slicer_raw.get("overrides", {}),
+        profiles_dir=slicer_raw.get("profiles_dir", "profiles"),
     )
     if slicer.engine != "orca":
         raise FabprintError(f"slicer.engine must be 'orca', got '{slicer.engine}'")
