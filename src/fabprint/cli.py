@@ -538,6 +538,58 @@ def _render_printer(status: dict, name: str, serial: str) -> list[str]:
     return lines
 
 
+def _status_action(printers: list[tuple[str, dict]], clear: bool, cancel: bool) -> None:
+    """Execute --clear or --cancel action on printers."""
+    for name, creds in printers:
+        ptype = creds.get("type", "unknown")
+
+        if ptype == "bambu-cloud":
+            from fabprint.cloud import cloud_cancel, cloud_clear_error
+            from fabprint.credentials import cloud_token_json
+
+            serial = creds.get("serial")
+            if not serial:
+                print(f"\033[31m{name}: no serial configured\033[0m")
+                continue
+
+            with cloud_token_json() as token_file:
+                if cancel:
+                    cloud_cancel(serial, token_file)
+                    print(f"{name}: cancel sent")
+                if clear:
+                    cloud_clear_error(serial, token_file)
+                    print(f"{name}: clear sent (resume to IDLE)")
+
+        elif ptype == "bambu-lan":
+            print(f"{name}: --clear/--cancel not yet supported for bambu-lan")
+
+        elif ptype == "moonraker":
+            if cancel:
+                import requests
+
+                url = creds.get("url", "").rstrip("/")
+                api_key = creds.get("api_key")
+                headers = {"X-Api-Key": api_key} if api_key else {}
+                requests.post(f"{url}/printer/print/cancel", headers=headers, timeout=10)
+                print(f"{name}: cancel sent")
+            if clear:
+                import requests
+
+                url = creds.get("url", "").rstrip("/")
+                api_key = creds.get("api_key")
+                headers = {"X-Api-Key": api_key} if api_key else {}
+                requests.post(
+                    f"{url}/printer/gcode/script",
+                    json={"script": "FIRMWARE_RESTART"},
+                    headers=headers,
+                    timeout=10,
+                )
+                print(f"{name}: clear sent (firmware restart)")
+
+        else:
+            print(f"{name}: unsupported printer type '{ptype}'")
+
+
 @app.command()
 def status(
     printer: Annotated[str | None, typer.Option(help="Printer name from credentials.toml")] = None,
@@ -546,6 +598,10 @@ def status(
     ] = None,
     watch: Annotated[bool, typer.Option("-w", "--watch", help="Live dashboard mode")] = False,
     interval: Annotated[int, typer.Option(help="Refresh interval in seconds (with --watch)")] = 10,
+    clear: Annotated[
+        bool, typer.Option("--clear", help="Clear FAILED state (resume to IDLE)")
+    ] = False,
+    cancel: Annotated[bool, typer.Option("--cancel", help="Cancel the current print job")] = False,
     verbose: Annotated[bool, typer.Option("-v", "--verbose", help="Enable debug logging")] = False,
 ) -> None:
     """Query printer status (all configured or by name).
@@ -556,6 +612,10 @@ def status(
     from fabprint.credentials import list_printers, load_printer_credentials
 
     printers = _resolve_status_printers(printer, serial, list_printers, load_printer_credentials)
+
+    if clear or cancel:
+        _status_action(printers, clear=clear, cancel=cancel)
+        return
 
     if not watch:
         for name, creds in printers:
