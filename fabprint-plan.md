@@ -1,4 +1,4 @@
-# fabprint — Headless 3D Print Pipeline
+# fabprint — Reproducible 3D Print Builds
 
 ## Motivation
 

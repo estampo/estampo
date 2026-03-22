@@ -1,4 +1,4 @@
-"""fabprint — Headless 3D print pipeline."""
+"""fabprint — Reproducible 3D print builds."""
 
 from __future__ import annotations
 

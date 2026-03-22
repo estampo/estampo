@@ -6,22 +6,13 @@
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![codecov](https://codecov.io/gh/pzfreo/fabprint/branch/main/graph/badge.svg)](https://codecov.io/gh/pzfreo/fabprint)
 
-**Reproducible 3D print builds from code.**
+**Reproducible 3D print builds.**
 
-fabprint turns a print job into a version-controlled build: parts, arrangement, slicer settings,
-printer target, and output artifacts are defined in a single `fabprint.toml`.
+Define parts, slicer settings, and printer targets in code and generate reproducible print artifacts locally or in CI.
 
-If your team already treats CAD, firmware, and manufacturing data like software, fabprint gives
-you the same discipline for slicing and print preparation:
-
-- Pin the slicer version for repeatable output
-- Pin slicer profiles into the repo
-- Generate G-code in Docker or CI
-- Optionally hand the result off to a printer
-
-Built for engineers, makers, and teams who treat their prints like software. Works with STL, STEP,
-and 3MF files, and pairs naturally with code-CAD tools like [build123d](https://github.com/gumyr/build123d),
-[OpenSCAD](https://openscad.org), and [cadquery](https://github.com/cadquery/cadquery).
+Works with STL, STEP, and 3MF files, and pairs naturally with code-CAD tools like
+[build123d](https://github.com/gumyr/build123d), [OpenSCAD](https://openscad.org),
+and [cadquery](https://github.com/cadquery/cadquery).
 
 ```toml
 # fabprint.toml — a multi-part print with slicer overrides
