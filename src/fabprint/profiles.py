@@ -120,12 +120,13 @@ def discover_profile_names(
     engine: str,
     version: str | None = None,
     project_dir: Path | None = None,
+    profiles_dir: str = "profiles",
 ) -> tuple[dict[str, list[str]], str]:
     """Discover profile names with full fallback chain.
 
     Priority:
     1. System profiles (local OrcaSlicer install)
-    2. Pinned profiles in the project repo (``./profiles/``)
+    2. Pinned profiles in the project repo
     3. Bundled profiles shipped with the package
 
     Returns ``(names_dict, source)`` where *source* is one of
@@ -143,7 +144,7 @@ def discover_profile_names(
     if project_dir:
         pinned: dict[str, list[str]] = {}
         for cat in CATEGORIES:
-            cat_dir = project_dir / "profiles" / cat
+            cat_dir = project_dir / profiles_dir / cat
             if cat_dir.is_dir():
                 pinned[cat] = sorted(f.stem for f in cat_dir.glob("*.json") if f.is_file())
         if any(pinned.values()):
@@ -285,12 +286,13 @@ def resolve_profile(
     engine: str,
     category: str,
     project_dir: Path | None = None,
+    profiles_dir: str = "profiles",
 ) -> Path:
     """Resolve a profile name or path to an absolute file path.
 
     Resolution order:
     1. If it looks like a path, use it directly
-    2. Check <project_dir>/profiles/<category>/<name>.json
+    2. Check <project_dir>/<profiles_dir>/<category>/<name>.json
     3. Check slicer system directory
     """
     if _is_path(name_or_path):
@@ -303,7 +305,7 @@ def resolve_profile(
 
     # Check local pinned profiles
     if project_dir:
-        local = project_dir / "profiles" / category / f"{name_or_path}.json"
+        local = project_dir / profiles_dir / category / f"{name_or_path}.json"
         if local.exists():
             log.debug("Resolved '%s' from pinned profiles: %s", name_or_path, local)
             return local
@@ -327,13 +329,14 @@ def resolve_profile_data(
     engine: str,
     category: str,
     project_dir: Path | None = None,
+    profiles_dir: str = "profiles",
 ) -> dict:
     """Resolve a profile and flatten its full inheritance chain.
 
     Returns a merged dict with all inherited values resolved,
     with the 'inherits' key removed so the slicer uses it as-is.
     """
-    path = resolve_profile(name_or_path, engine, category, project_dir)
+    path = resolve_profile(name_or_path, engine, category, project_dir, profiles_dir)
     base = SYSTEM_DIRS.get(engine)
 
     chain = []
@@ -374,8 +377,9 @@ def pin_profiles(
     filaments: list[str],
     project_dir: Path,
     docker_version: str | None = None,
+    profiles_dir: str = "profiles",
 ) -> list[Path]:
-    """Flatten and save profiles into <project_dir>/profiles/ for reproducibility.
+    """Flatten and save profiles into <project_dir>/<profiles_dir>/ for reproducibility.
 
     Profiles are fully resolved (inheritance chain merged, 'inherits' removed)
     so builds are independent of the installed slicer version.
@@ -402,7 +406,7 @@ def pin_profiles(
             log.info("Skipping '%s' (already a path)", name)
             continue
 
-        dest_dir = project_dir / "profiles" / category
+        dest_dir = project_dir / profiles_dir / category
         dest_dir.mkdir(parents=True, exist_ok=True)
         dest = dest_dir / f"{name}.json"
 
@@ -429,7 +433,7 @@ def pin_profiles(
         docker_dir = extract_docker_profiles(docker_version)
         try:
             for category, name in docker_needed:
-                dest_dir = project_dir / "profiles" / category
+                dest_dir = project_dir / profiles_dir / category
                 dest_dir.mkdir(parents=True, exist_ok=True)
                 dest = dest_dir / f"{name}.json"
 
@@ -471,12 +475,13 @@ def add_profile(
     project_dir: Path,
     category: str | None = None,
     name: str | None = None,
+    profiles_dir: str = "profiles",
 ) -> Path:
     """Import a profile JSON file into the project's profiles directory.
 
     Args:
         source: A local file path or URL (http/https).
-        project_dir: The project root containing ``profiles/``.
+        project_dir: The project root containing the profiles directory.
         category: Profile category (machine/process/filament).
             Auto-detected from JSON content if not provided.
         name: Profile name (default: filename stem or JSON ``"name"`` field).
@@ -528,7 +533,7 @@ def add_profile(
     profile_name = name or data.get("name") or default_name
 
     # Write to profiles directory
-    dest_dir = project_dir / "profiles" / category
+    dest_dir = project_dir / profiles_dir / category
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest = dest_dir / f"{profile_name}.json"
 

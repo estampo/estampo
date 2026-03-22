@@ -745,24 +745,185 @@ def test_profiles_list_command(mock_discover, capsys):
 # --- profiles pin ---
 
 
-@patch("fabprint.profiles.pin_profiles", return_value=[Path("/a/b.json"), Path("/c/d.json")])
-@patch("fabprint.cli.load_config")
-def test_profiles_pin_command(mock_load, mock_pin, tmp_path, capsys):
-    """profiles pin should call pin_profiles and report count."""
-    config = tmp_path / "fabprint.toml"
-    config.write_text("[slicer]\n")
-
-    # Create a mock config object with necessary attributes
+def _mock_pin_cfg(tmp_path, profiles_dir="profiles"):
+    """Create a mock config for profiles pin tests."""
     mock_cfg = MagicMock()
     mock_cfg.slicer.engine = "orca"
     mock_cfg.slicer.printer = "Bambu Lab P1S 0.4 nozzle"
     mock_cfg.slicer.process = "0.20mm Standard @BBL X1C"
     mock_cfg.slicer.filaments = ["Generic PLA @base"]
     mock_cfg.slicer.version = None
+    mock_cfg.slicer.profiles_dir = profiles_dir
     mock_cfg.base_dir = tmp_path
-    mock_load.return_value = mock_cfg
+    return mock_cfg
+
+
+@patch("fabprint.profiles.pin_profiles", return_value=[Path("/a/b.json"), Path("/c/d.json")])
+@patch("fabprint.cli.load_config")
+def test_profiles_pin_command(mock_load, mock_pin, tmp_path, capsys):
+    """profiles pin should call pin_profiles and report count."""
+    config = tmp_path / "fabprint.toml"
+    config.write_text("[slicer]\n")
+    mock_load.return_value = _mock_pin_cfg(tmp_path)
 
     main(["profiles", "pin", str(config)])
     out = capsys.readouterr().out
     assert "Pinned 2 profile(s)" in out
     mock_pin.assert_called_once()
+
+
+@patch("fabprint.profiles.pin_profiles", return_value=[Path("/a/b.json")])
+@patch("fabprint.cli.load_config")
+def test_profiles_pin_existing_dir_overwrite(mock_load, mock_pin, tmp_path, capsys):
+    """profiles pin should allow overwriting an existing profiles directory."""
+    config = tmp_path / "fabprint.toml"
+    config.write_text("[slicer]\n")
+    # Create existing profiles dir with content
+    (tmp_path / "profiles" / "machine").mkdir(parents=True)
+    (tmp_path / "profiles" / "machine" / "old.json").write_text("{}")
+    mock_load.return_value = _mock_pin_cfg(tmp_path)
+
+    with patch("builtins.input", return_value="o"):
+        main(["profiles", "pin", str(config)])
+    out = capsys.readouterr().out
+    assert "Pinned 1 profile(s)" in out
+
+
+@patch("fabprint.profiles.pin_profiles", return_value=[Path("/a/b.json")])
+@patch("fabprint.cli.load_config")
+def test_profiles_pin_existing_dir_cancel(mock_load, mock_pin, tmp_path, capsys):
+    """profiles pin should allow cancelling when dir exists."""
+    config = tmp_path / "fabprint.toml"
+    config.write_text("[slicer]\n")
+    (tmp_path / "profiles" / "machine").mkdir(parents=True)
+    (tmp_path / "profiles" / "machine" / "old.json").write_text("{}")
+    mock_load.return_value = _mock_pin_cfg(tmp_path)
+
+    with patch("builtins.input", return_value="c"):
+        main(["profiles", "pin", str(config)])
+    # Cancel means pin_profiles is never called
+    mock_pin.assert_not_called()
+
+
+@patch("fabprint.profiles.pin_profiles", return_value=[Path("/a/b.json")])
+@patch("fabprint.cli.load_config")
+def test_profiles_pin_existing_dir_different(mock_load, mock_pin, tmp_path, capsys):
+    """profiles pin should allow choosing a different directory."""
+    config = tmp_path / "fabprint.toml"
+    config.write_text('[slicer]\nengine = "orca"\n')
+    (tmp_path / "profiles" / "machine").mkdir(parents=True)
+    (tmp_path / "profiles" / "machine" / "old.json").write_text("{}")
+    mock_load.return_value = _mock_pin_cfg(tmp_path)
+
+    with patch("builtins.input", side_effect=["d", "my-profiles"]):
+        main(["profiles", "pin", str(config)])
+    out = capsys.readouterr().out
+    assert "Pinned 1 profile(s) to my-profiles/" in out
+    # Should have written profiles_dir to TOML
+    updated = config.read_text()
+    assert 'profiles_dir = "my-profiles"' in updated
+
+
+@patch("fabprint.profiles.pin_profiles", return_value=[Path("/a/b.json")])
+@patch("fabprint.cli.load_config")
+def test_profiles_pin_updates_toml_when_nondefault(mock_load, mock_pin, tmp_path, capsys):
+    """profiles pin should add profiles_dir to TOML when using non-default dir."""
+    config = tmp_path / "fabprint.toml"
+    config.write_text('[slicer]\nengine = "orca"\n')
+    mock_load.return_value = _mock_pin_cfg(tmp_path, profiles_dir="custom")
+
+    main(["profiles", "pin", str(config)])
+    updated = config.read_text()
+    assert 'profiles_dir = "custom"' in updated
+
+
+@patch("fabprint.profiles.pin_profiles", return_value=[Path("/a/b.json")])
+@patch("fabprint.cli.load_config")
+def test_profiles_pin_default_dir_no_toml_change(mock_load, mock_pin, tmp_path, capsys):
+    """profiles pin should not modify TOML when using default profiles dir."""
+    config = tmp_path / "fabprint.toml"
+    original = '[slicer]\nengine = "orca"\n'
+    config.write_text(original)
+    mock_load.return_value = _mock_pin_cfg(tmp_path)
+
+    main(["profiles", "pin", str(config)])
+    assert config.read_text() == original
+    out = capsys.readouterr().out
+    assert "no config change needed" in out
+
+
+@patch("fabprint.profiles.pin_profiles", return_value=[Path("/a/b.json")])
+@patch("fabprint.cli.load_config")
+def test_profiles_pin_asks_before_changing_existing_dir(mock_load, mock_pin, tmp_path, capsys):
+    """profiles pin should ask before changing an existing profiles_dir value."""
+    config = tmp_path / "fabprint.toml"
+    config.write_text('[slicer]\nengine = "orca"\nprofiles_dir = "old-profiles"\n')
+    mock_load.return_value = _mock_pin_cfg(tmp_path, profiles_dir="new-profiles")
+
+    with patch("builtins.input", return_value="y"):
+        main(["profiles", "pin", str(config)])
+    updated = config.read_text()
+    assert 'profiles_dir = "new-profiles"' in updated
+
+
+@patch("fabprint.profiles.pin_profiles", return_value=[Path("/a/b.json")])
+@patch("fabprint.cli.load_config")
+def test_profiles_pin_empty_dir_name_cancels(mock_load, mock_pin, tmp_path, capsys):
+    """profiles pin should cancel when user enters empty directory name."""
+    config = tmp_path / "fabprint.toml"
+    config.write_text("[slicer]\n")
+    (tmp_path / "profiles" / "machine").mkdir(parents=True)
+    (tmp_path / "profiles" / "machine" / "old.json").write_text("{}")
+    mock_load.return_value = _mock_pin_cfg(tmp_path)
+
+    with patch("builtins.input", side_effect=["d", ""]):
+        main(["profiles", "pin", str(config)])
+    out = capsys.readouterr().out
+    assert "Cancelled" in out
+    mock_pin.assert_not_called()
+
+
+@patch("fabprint.profiles.pin_profiles", return_value=[Path("/a/b.json")])
+@patch("fabprint.cli.load_config")
+def test_profiles_pin_toml_already_correct(mock_load, mock_pin, tmp_path, capsys):
+    """profiles pin should skip TOML update when profiles_dir already matches."""
+    config = tmp_path / "fabprint.toml"
+    original = '[slicer]\nengine = "orca"\nprofiles_dir = "custom"\n'
+    config.write_text(original)
+    mock_load.return_value = _mock_pin_cfg(tmp_path, profiles_dir="custom")
+
+    main(["profiles", "pin", str(config)])
+    # TOML should be unchanged
+    assert config.read_text() == original
+
+
+# --- profiles add ---
+
+
+@patch("fabprint.profiles.add_profile", return_value=Path("/profiles/machine/test.json"))
+def test_profiles_add_command(mock_add, capsys):
+    """profiles add should call add_profile and report the path."""
+    main(["profiles", "add", "/tmp/test.json"])
+    out = capsys.readouterr().out
+    assert "Added profile:" in out
+    mock_add.assert_called_once()
+
+
+# --- init ---
+
+
+def test_init_template(capsys):
+    """init --template should dump template to stdout."""
+    main(["init", "--template"])
+    out = capsys.readouterr().out
+    assert "fabprint.toml" in out
+    assert "[[parts]]" in out
+
+
+# --- validate ---
+
+
+def test_validate_missing_config(tmp_path):
+    """validate should fail when config file doesn't exist."""
+    with pytest.raises(SystemExit):
+        main(["validate", str(tmp_path / "nonexistent.toml")])

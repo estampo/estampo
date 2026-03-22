@@ -174,7 +174,7 @@ def test_slice_via_docker_failure(tmp_path):
 # --- slice_plate integration ---
 
 
-def _mock_resolve(name, engine, category, project_dir=None):
+def _mock_resolve(name, engine, category, project_dir=None, profiles_dir="profiles"):
     """Return fake profile data for testing."""
     return {"name": name, "from": "test"}
 

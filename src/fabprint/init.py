@@ -137,6 +137,7 @@ def validate_config(path: Path) -> ValidationResult:
         cfg.slicer.engine,
         version=cfg.slicer.version,
         project_dir=cfg.base_dir,
+        profiles_dir=cfg.slicer.profiles_dir,
     )
 
     profile_ok = True

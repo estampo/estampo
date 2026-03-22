@@ -669,10 +669,29 @@ def profiles_pin(
     Extracts profiles from Docker if OrcaSlicer is not installed locally.
     """
     _setup_logging(verbose)
+    import tomllib
+
     from fabprint.profiles import pin_profiles
 
     resolved_config = _resolve_config_path(config)
     cfg = load_config(resolved_config)
+    profiles_dir = cfg.slicer.profiles_dir
+
+    # If profiles directory already exists, ask what to do
+    target = cfg.base_dir / profiles_dir
+    if target.exists() and any(target.iterdir()):
+        print(f"Profiles directory '{profiles_dir}/' already exists.")
+        choice = input("  [o]verwrite, use [d]ifferent directory, or [c]ancel? ").strip().lower()
+        if choice.startswith("d"):
+            profiles_dir = input("  New directory name: ").strip()
+            if not profiles_dir:
+                print("Cancelled.")
+                raise typer.Exit(1)
+        elif choice.startswith("c"):
+            print("Cancelled.")
+            raise typer.Exit(0)
+        # else: overwrite
+
     pinned = pin_profiles(
         engine=cfg.slicer.engine,
         printer=cfg.slicer.printer,
@@ -680,10 +699,47 @@ def profiles_pin(
         filaments=cfg.slicer.filaments,
         project_dir=cfg.base_dir,
         docker_version=cfg.slicer.version,
+        profiles_dir=profiles_dir,
     )
-    print(f"Pinned {len(pinned)} profile(s)")
+    print(f"Pinned {len(pinned)} profile(s) to {profiles_dir}/")
     for p in pinned:
         print(f"  {p}")
+
+    # Update fabprint.toml if needed
+    toml_text = resolved_config.read_text()
+    raw = tomllib.loads(toml_text)
+    existing_dir = raw.get("slicer", {}).get("profiles_dir")
+
+    if existing_dir == profiles_dir:
+        pass  # already correct
+    elif existing_dir is not None and existing_dir != profiles_dir:
+        # Different value exists — ask
+        update = (
+            input(
+                f'\n  fabprint.toml has profiles_dir = "{existing_dir}". '
+                f'Update to "{profiles_dir}"? [y/n] '
+            )
+            .strip()
+            .lower()
+        )
+        if update.startswith("y"):
+            toml_text = toml_text.replace(
+                f'profiles_dir = "{existing_dir}"',
+                f'profiles_dir = "{profiles_dir}"',
+            )
+            resolved_config.write_text(toml_text)
+            print(f"  Updated profiles_dir in {resolved_config.name}")
+    elif profiles_dir != "profiles":
+        # Non-default dir, need to add it to TOML
+        if "[slicer]" in toml_text:
+            toml_text = toml_text.replace(
+                "[slicer]",
+                f'[slicer]\nprofiles_dir = "{profiles_dir}"',
+            )
+        resolved_config.write_text(toml_text)
+        print(f'  Added profiles_dir = "{profiles_dir}" to {resolved_config.name}')
+    else:
+        print("  Using default profiles directory — no config change needed")
 
 
 @profiles_app.command("add")
