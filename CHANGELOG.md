@@ -4,6 +4,7 @@ All notable changes to fabprint are documented here.
 
 ## 0.1.138 — 2026-03-22
 
+- GitHub Action: add job summary with slice metrics (visible on every workflow run, not just PRs)
 - Expand GIF recording to 7 phases: setup, status, init, profiles-pin, validate, run, status-w
 - Add standalone `record_setup.py` for interactive setup recording
 - Add `profiles-pin` and `status` (quick check) as separate recorded phases

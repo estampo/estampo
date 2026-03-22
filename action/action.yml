@@ -113,6 +113,33 @@ runs:
         echo "gcode-path=${FULL_OUTPUT_DIR}" >> "$GITHUB_OUTPUT"
         echo "project-name=${PROJECT_NAME}" >> "$GITHUB_OUTPUT"
 
+    - name: Job summary
+      shell: bash
+      env:
+        PRINT_TIME: ${{ steps.metrics.outputs.print-time }}
+        FILAMENT: ${{ steps.metrics.outputs.filament-grams }}
+        LAYERS: ${{ steps.metrics.outputs.layer-count }}
+        FILAMENT_TYPES: ${{ steps.metrics.outputs.filament-types }}
+        FILAMENT_CHANGES: ${{ steps.metrics.outputs.filament-changes }}
+        PROJECT_NAME: ${{ steps.metrics.outputs.project-name }}
+        ORCA_VERSION: ${{ inputs.orca-version }}
+      run: |
+        TITLE="${PROJECT_NAME:+Fabprint: $PROJECT_NAME}"
+        TITLE="${TITLE:-Fabprint Slice Results}"
+        {
+          echo "### ${TITLE}"
+          echo ""
+          echo "| Metric | Value |"
+          echo "|--------|-------|"
+          [ -n "$PRINT_TIME" ] && echo "| Print time | ${PRINT_TIME} |"
+          [ -n "$FILAMENT" ] && echo "| Filament | ${FILAMENT}g |"
+          [ -n "$LAYERS" ] && echo "| Layers | ${LAYERS} |"
+          [ -n "$FILAMENT_TYPES" ] && echo "| Filament type | ${FILAMENT_TYPES} |"
+          [ -n "$FILAMENT_CHANGES" ] && [ "$FILAMENT_CHANGES" != "0" ] && echo "| Tool changes | ${FILAMENT_CHANGES} |"
+          echo ""
+          echo "Sliced with OrcaSlicer ${ORCA_VERSION}"
+        } >> "$GITHUB_STEP_SUMMARY"
+
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
