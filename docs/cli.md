@@ -1,6 +1,6 @@
 # CLI reference
 
-fabprint provides commands for creating configs (`init`, `validate`), setting up printers (`setup`, `login`), running the pipeline (`run`), and managing printers (`status`, `profiles`).
+fabprint provides commands for creating configs (`init`, `validate`), setting up printers (`setup`), running the pipeline (`run`), and managing printers (`status`, `profiles`).
 
 ## `fabprint init`
 
@@ -118,7 +118,7 @@ If `config` is omitted, fabprint looks for `fabprint.toml` in the current direct
 | Option              | Description                                          |
 |---------------------|------------------------------------------------------|
 | `[config]`          | Path to config file (default: `./fabprint.toml`)     |
-| `-o, --output-dir`  | Output directory (default: `output/`)                |
+| `-o, --output-dir`  | Output directory (default: `fabprint_output/` or `fabprint_output/{name}/`) |
 | `--until STAGE`     | Run pipeline up to and including this stage           |
 | `--only STAGE`      | Run only this stage (fails if prerequisites missing)  |
 | `--scale FACTOR`    | Scale all parts (multiplies per-part scale)           |
@@ -176,16 +176,6 @@ fabprint run myproject.toml --until plate
 - **`--only slice`** runs *just* the slice stage. It expects `output/plate.3mf` to already exist on disk (e.g. from a previous `--until plate` run). Fails with an error if the prerequisite is missing.
 
 You cannot combine `--until` and `--only`.
-
-## `fabprint login`
-
-Log in to Bambu Cloud and cache your authentication token.
-
-```
-fabprint login [--email EMAIL] [--password PASSWORD]
-```
-
-If email/password are omitted, prompts interactively.
 
 ## `fabprint status`
 

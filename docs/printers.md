@@ -30,7 +30,7 @@ Cloud connection to Bambu Lab printers via the Bambu Connect bridge binary (`bam
 | Status             | Supported (via cloud bridge) |
 | Watch              | Supported |
 
-**Credentials:** `serial` (plus cloud login via `fabprint login`)
+**Credentials:** `serial` (plus cloud login via `fabprint setup`)
 
 **Dependencies:** `bambu_cloud_bridge` binary, cloud auth token
 
