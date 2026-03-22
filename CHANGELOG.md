@@ -2,6 +2,12 @@
 
 All notable changes to fabprint are documented here.
 
+## 0.1.138 — 2026-03-22
+
+- Expand GIF recording to 7 phases: setup, status, init, profiles-pin, validate, run, status-w
+- Add standalone `record_setup.py` for interactive setup recording
+- Add `profiles-pin` and `status` (quick check) as separate recorded phases
+
 ## 0.1.137 — 2026-03-22
 
 - Make GIF recording script modular: each phase (init, validate, run, status) records separately, then merges

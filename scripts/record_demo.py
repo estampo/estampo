@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Record fabprint demo phases and merge into a single GIF.
 
-Each phase (init, validate, run, status) is recorded as a separate .cast file.
-The setup phase uses a pre-recorded cast file (setup.fixed.cast) since it
-requires interactive login.
+Each phase is recorded as a separate .cast file. The setup phase uses a
+pre-recorded cast file since it requires interactive login.
 
 Usage:
     # Record all auto phases and build the merged GIF:
@@ -18,7 +17,7 @@ Usage:
     # Convert to GIF (done automatically):
     agg --font-size 20 docs/recordings/demo.cast docs/recordings/demo.gif
 
-Phases: setup (pre-recorded), init, validate, run, status
+Phases: setup, status, init, profiles-pin, validate, run, status-w
 
 Requires: pexpect, asciinema, agg (brew install agg)
 """
@@ -47,17 +46,19 @@ DOWN = "\x1b[B"
 # Phase definitions: name → cast file
 PHASE_FILES = {
     "setup": RECORDINGS_DIR / "setup.fixed.cast",
+    "status": RECORDINGS_DIR / "status.cast",
     "init": RECORDINGS_DIR / "init.cast",
+    "profiles-pin": RECORDINGS_DIR / "profiles-pin.cast",
     "validate": RECORDINGS_DIR / "validate.cast",
     "run": RECORDINGS_DIR / "run.cast",
-    "status": RECORDINGS_DIR / "status.cast",
+    "status-w": RECORDINGS_DIR / "status-w.cast",
 }
 
 # Phases that can be auto-recorded (setup is always pre-recorded)
-AUTO_PHASES = ["init", "validate", "run", "status"]
+AUTO_PHASES = ["status", "init", "profiles-pin", "validate", "run", "status-w"]
 
 # Default phase order for the merged demo
-PHASE_ORDER = ["setup", "init", "validate", "run", "status"]
+PHASE_ORDER = ["setup", "status", "init", "profiles-pin", "validate", "run", "status-w"]
 
 
 def status(msg: str) -> None:
@@ -154,7 +155,25 @@ def stop_recording(child: pexpect.spawn) -> None:
 # ---------------------------------------------------------------------------
 
 
-def record_init(dry_run: bool = True) -> None:
+def record_status() -> None:
+    """Record the status phase (quick printer status check)."""
+    cast_file = PHASE_FILES["status"]
+    status("RECORDING PHASE: status")
+
+    child = start_recording(cast_file)
+
+    try:
+        type_comment(child, "# Check printer status")
+        type_command(child, "fabprint status")
+        expect(child, r"IDLE|RUNNING|FINISH|FAILED|State:", timeout=30)
+        time.sleep(3)
+    finally:
+        stop_recording(child)
+
+    status(f"status phase saved to {cast_file}")
+
+
+def record_init() -> None:
     """Record the init phase."""
     cast_file = PHASE_FILES["init"]
     status("RECORDING PHASE: init")
@@ -168,7 +187,7 @@ def record_init(dry_run: bool = True) -> None:
     child = start_recording(cast_file)
 
     try:
-        type_comment(child, "# Step 2: cd to project directory and run fabprint init")
+        type_comment(child, "# cd to project directory and run fabprint init")
         type_command(child, "cd repos/decoy-case")
         time.sleep(0.5)
         type_command(child, "fabprint init")
@@ -292,6 +311,27 @@ def record_init(dry_run: bool = True) -> None:
     status(f"init phase saved to {cast_file}")
 
 
+def record_profiles_pin() -> None:
+    """Record the profiles pin phase."""
+    cast_file = PHASE_FILES["profiles-pin"]
+    status("RECORDING PHASE: profiles-pin")
+
+    child = start_recording(cast_file, cwd=str(DEMO_DIR))
+
+    try:
+        type_comment(child, "# Pin slicer profiles for reproducibility")
+        type_command(child, "fabprint profiles pin")
+
+        expect(child, "Pinned.*profile")
+        time.sleep(3)
+        status("profiles pinned")
+        time.sleep(1)
+    finally:
+        stop_recording(child)
+
+    status(f"profiles-pin phase saved to {cast_file}")
+
+
 def record_validate() -> None:
     """Record the validate phase."""
     cast_file = PHASE_FILES["validate"]
@@ -300,7 +340,7 @@ def record_validate() -> None:
     child = start_recording(cast_file, cwd=str(DEMO_DIR))
 
     try:
-        type_comment(child, "# Step 3: fabprint validate — check config")
+        type_comment(child, "# Validate config")
         type_command(child, "fabprint validate")
 
         expect(child, "checks passed|warning")
@@ -322,7 +362,7 @@ def record_run(dry_run: bool = True) -> None:
     child = start_recording(cast_file, cwd=str(DEMO_DIR))
 
     try:
-        type_comment(child, "# Step 4: fabprint run — build and send to printer")
+        type_comment(child, "# Build and send to printer")
         cmd = "fabprint run --dry-run" if dry_run else "fabprint run"
         type_command(child, cmd)
 
@@ -355,15 +395,15 @@ def record_run(dry_run: bool = True) -> None:
     status(f"run phase saved to {cast_file}")
 
 
-def record_status() -> None:
-    """Record the status phase."""
-    cast_file = PHASE_FILES["status"]
-    status("RECORDING PHASE: status")
+def record_status_w() -> None:
+    """Record the status -w phase (live dashboard)."""
+    cast_file = PHASE_FILES["status-w"]
+    status("RECORDING PHASE: status-w")
 
     child = start_recording(cast_file)
 
     try:
-        type_comment(child, "# Step 5: fabprint status -w — live printer dashboard")
+        type_comment(child, "# Live printer dashboard")
         type_command(child, "fabprint status -w --interval 1")
 
         # Let the dashboard refresh a few times
@@ -376,7 +416,7 @@ def record_status() -> None:
     finally:
         stop_recording(child)
 
-    status(f"status phase saved to {cast_file}")
+    status(f"status-w phase saved to {cast_file}")
 
 
 # ---------------------------------------------------------------------------
@@ -422,7 +462,10 @@ def merge_casts(phase_order: list[str], gap: float = 1.5) -> Path:
     for phase in phase_order:
         cast_path = PHASE_FILES[phase]
         if not cast_path.exists():
-            print(f"WARNING: {cast_path} not found, skipping phase '{phase}'", file=sys.stderr)
+            print(
+                f"WARNING: {cast_path} not found, skipping phase '{phase}'",
+                file=sys.stderr,
+            )
             continue
 
         phase_header, events = parse_cast(cast_path)
@@ -456,11 +499,13 @@ def merge_casts(phase_order: list[str], gap: float = 1.5) -> Path:
 # Main
 # ---------------------------------------------------------------------------
 
-PHASE_RECORDERS = {
+PHASE_RECORDERS: dict[str, object] = {
+    "status": record_status,
     "init": record_init,
+    "profiles-pin": record_profiles_pin,
     "validate": record_validate,
     "run": record_run,
-    "status": record_status,
+    "status-w": record_status_w,
 }
 
 
@@ -470,16 +515,18 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Record fabprint demo phases and merge into a single GIF.",
         epilog="Examples:\n"
-        "  record_demo.py                    # record all auto phases + merge\n"
-        "  record_demo.py --phases init,run  # re-record only init and run\n"
-        "  record_demo.py --phases none      # just merge existing cast files\n",
+        "  record_demo.py                              # record all auto phases + merge\n"
+        "  record_demo.py --phases init,run            # re-record only init and run\n"
+        "  record_demo.py --phases none                # just merge existing cast files\n"
+        "  record_demo.py --phases profiles-pin,validate  # re-record two phases\n",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
         "--phases",
         type=str,
         default=",".join(AUTO_PHASES),
-        help="Comma-separated phases to record (init,validate,run,status), "
+        help="Comma-separated phases to record "
+        f"({', '.join(AUTO_PHASES)}), "
         "or 'none' to skip recording and just merge. Default: all auto phases.",
     )
     parser.add_argument(
@@ -502,12 +549,17 @@ def main() -> None:
         phases_to_record = [p.strip() for p in args.phases.split(",")]
         for p in phases_to_record:
             if p == "setup":
-                print("ERROR: setup phase is pre-recorded (use setup.fixed.cast).", file=sys.stderr)
-                print("Re-record it manually when needed.", file=sys.stderr)
+                print(
+                    "ERROR: setup is pre-recorded. Use scripts/record_setup.py to re-record it.",
+                    file=sys.stderr,
+                )
                 sys.exit(1)
             if p not in PHASE_RECORDERS:
                 valid = ", ".join(AUTO_PHASES)
-                print(f"ERROR: unknown phase '{p}'. Choose from: {valid}", file=sys.stderr)
+                print(
+                    f"ERROR: unknown phase '{p}'. Choose from: {valid}",
+                    file=sys.stderr,
+                )
                 sys.exit(1)
 
     # Record requested phases
@@ -515,7 +567,7 @@ def main() -> None:
         if phase == "run":
             record_run(dry_run=dry_run)
         else:
-            PHASE_RECORDERS[phase]()
+            PHASE_RECORDERS[phase]()  # type: ignore[operator]
 
     # Merge all phases into demo.cast
     if not args.no_merge:
