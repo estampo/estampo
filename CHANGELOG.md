@@ -2,6 +2,12 @@
 
 All notable changes to fabprint are documented here.
 
+## 0.1.137 — 2026-03-22
+
+- Make GIF recording script modular: each phase (init, validate, run, status) records separately, then merges
+- Add `--phases` flag to re-record only specific phases
+- Setup phase uses pre-recorded cast file (no interactive login needed for rebuild)
+
 ## 0.1.136 — 2026-03-22
 
 - Fix Docker image: override cadquery-ocp to 7.9+ for VTK 9.4+ compatibility, enabling STEP file loading
