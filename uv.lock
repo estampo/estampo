@@ -597,7 +597,7 @@ wheels = [
 
 [[package]]
 name = "fabprint"
-version = "0.1.135"
+version = "0.1.136"
 source = { editable = "." }
 dependencies = [
     { name = "bambu-lab-cloud-api" },
