@@ -7,6 +7,8 @@ All notable changes to fabprint are documented here.
 - Add `fabprint status --clear` to clear FAILED state (sends resume command)
 - Add `fabprint status --cancel` to cancel the current print job
 - Supports bambu-cloud (via MQTT) and moonraker printers
+- Auto-publish: push to main rebuilds Docker images and publishes to TestPyPI
+- Split release workflow: tags publish to real PyPI with immutable Docker tags
 
 ## 0.1.139 — 2026-03-22
 
