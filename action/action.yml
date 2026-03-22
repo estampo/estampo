@@ -141,7 +141,7 @@ runs:
         } >> "$GITHUB_STEP_SUMMARY"
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: fabprint-${{ steps.metrics.outputs.project-name || 'output' }}
         path: ${{ inputs.output-dir }}/
@@ -149,7 +149,7 @@ runs:
 
     - name: Post PR comment
       if: ${{ inputs.comment == 'true' && (github.event_name == 'pull_request' || github.event_name == 'workflow_run') }}
-      uses: actions/github-script@v7
+      uses: actions/github-script@v8
       env:
         PRINT_TIME: ${{ steps.metrics.outputs.print-time }}
         FILAMENT_GRAMS: ${{ steps.metrics.outputs.filament-grams }}

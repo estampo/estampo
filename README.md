@@ -212,7 +212,7 @@ jobs:
   slice:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: pzfreo/fabprint@main
         with:
           orca-version: "2.3.1"
