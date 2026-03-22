@@ -1,6 +1,6 @@
 [project]
 name = "fabprint"
-version = "0.1.136"
+version = "0.1.137"
 description = "Reproducible 3D print builds. Define parts, slicer settings, and printer targets in code."
 readme = "README.md"
 requires-python = ">=3.11"
