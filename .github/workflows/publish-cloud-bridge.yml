@@ -70,6 +70,7 @@ jobs:
           push: true
           tags: |
             fabprint/cloud-bridge:${{ steps.version.outputs.version }}
+            fabprint/cloud-bridge:latest
             ghcr.io/${{ github.repository }}/cloud-bridge:${{ steps.version.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -96,9 +97,9 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            fabprint/fabprint:${{ steps.version.outputs.version }}
+            fabprint/fabprint:orca-2.3.1-${{ steps.version.outputs.version }}
             fabprint/fabprint:orca-2.3.1
-            ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version }}
+            ghcr.io/${{ github.repository }}:orca-2.3.1-${{ steps.version.outputs.version }}
             ghcr.io/${{ github.repository }}:orca-2.3.1
           build-args: ORCA_VERSION=2.3.1
           cache-from: type=gha
