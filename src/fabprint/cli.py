@@ -538,13 +538,18 @@ def _render_printer(status: dict, name: str, serial: str) -> list[str]:
     return lines
 
 
-def _status_action(printers: list[tuple[str, dict]], clear: bool, cancel: bool) -> None:
-    """Execute --clear or --cancel action on printers."""
+def _status_action(
+    printers: list[tuple[str, dict]],
+    stop: bool = False,
+    resume: bool = False,
+    clear: bool = False,
+) -> None:
+    """Execute --stop, --resume, or --clear action on printers."""
     for name, creds in printers:
         ptype = creds.get("type", "unknown")
 
         if ptype == "bambu-cloud":
-            from fabprint.cloud import cloud_cancel, cloud_clear_error
+            from fabprint.cloud import cloud_cancel, cloud_clear_status, cloud_resume
             from fabprint.credentials import cloud_token_json
 
             serial = creds.get("serial")
@@ -553,31 +558,32 @@ def _status_action(printers: list[tuple[str, dict]], clear: bool, cancel: bool) 
                 continue
 
             with cloud_token_json() as token_file:
-                if cancel:
+                if stop:
                     cloud_cancel(serial, token_file)
-                    print(f"{name}: cancel sent")
+                    print(f"{name}: stop sent")
+                if resume:
+                    cloud_resume(serial, token_file)
+                    print(f"{name}: resume sent")
                 if clear:
-                    cloud_clear_error(serial, token_file)
-                    print(f"{name}: clear sent (resume to IDLE)")
+                    cloud_clear_status(serial, token_file)
+                    print(f"{name}: clear sent (error dismissed)")
 
         elif ptype == "bambu-lan":
-            print(f"{name}: --clear/--cancel not yet supported for bambu-lan")
+            print(f"{name}: printer control not yet supported for bambu-lan")
 
         elif ptype == "moonraker":
-            if cancel:
-                import requests
+            import requests
 
-                url = creds.get("url", "").rstrip("/")
-                api_key = creds.get("api_key")
-                headers = {"X-Api-Key": api_key} if api_key else {}
+            url = creds.get("url", "").rstrip("/")
+            api_key = creds.get("api_key")
+            headers = {"X-Api-Key": api_key} if api_key else {}
+            if stop:
                 requests.post(f"{url}/printer/print/cancel", headers=headers, timeout=10)
-                print(f"{name}: cancel sent")
+                print(f"{name}: stop sent")
+            if resume:
+                requests.post(f"{url}/printer/print/resume", headers=headers, timeout=10)
+                print(f"{name}: resume sent")
             if clear:
-                import requests
-
-                url = creds.get("url", "").rstrip("/")
-                api_key = creds.get("api_key")
-                headers = {"X-Api-Key": api_key} if api_key else {}
                 requests.post(
                     f"{url}/printer/gcode/script",
                     json={"script": "FIRMWARE_RESTART"},
@@ -598,10 +604,11 @@ def status(
     ] = None,
     watch: Annotated[bool, typer.Option("-w", "--watch", help="Live dashboard mode")] = False,
     interval: Annotated[int, typer.Option(help="Refresh interval in seconds (with --watch)")] = 10,
+    stop: Annotated[bool, typer.Option("--stop", help="Stop the current print job")] = False,
+    resume: Annotated[bool, typer.Option("--resume", help="Resume a paused print")] = False,
     clear: Annotated[
-        bool, typer.Option("--clear", help="Clear FAILED state (resume to IDLE)")
+        bool, typer.Option("--clear", help="Clear FAILED state and dismiss error")
     ] = False,
-    cancel: Annotated[bool, typer.Option("--cancel", help="Cancel the current print job")] = False,
     verbose: Annotated[bool, typer.Option("-v", "--verbose", help="Enable debug logging")] = False,
 ) -> None:
     """Query printer status (all configured or by name).
@@ -613,8 +620,8 @@ def status(
 
     printers = _resolve_status_printers(printer, serial, list_printers, load_printer_credentials)
 
-    if clear or cancel:
-        _status_action(printers, clear=clear, cancel=cancel)
+    if stop or resume or clear:
+        _status_action(printers, stop=stop, resume=resume, clear=clear)
         return
 
     if not watch:

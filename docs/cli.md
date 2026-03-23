@@ -179,10 +179,10 @@ You cannot combine `--until` and `--only`.
 
 ## `fabprint status`
 
-Query printer status, clear errors, or cancel jobs.
+Query printer status or control a running/failed print.
 
 ```
-fabprint status [--printer NAME] [--watch] [--interval SECONDS] [--clear] [--cancel]
+fabprint status [--printer NAME] [--watch] [--interval SECONDS] [--stop] [--resume] [--clear]
 ```
 
 | Option              | Description                                      |
@@ -190,8 +190,9 @@ fabprint status [--printer NAME] [--watch] [--interval SECONDS] [--clear] [--can
 | `--printer NAME`    | Query a specific printer (default: all)          |
 | `-w, --watch`       | Live dashboard mode with auto-refresh            |
 | `--interval SECONDS`| Refresh interval in watch mode (default: 10)     |
-| `--clear`           | Clear FAILED state (sends resume, returns to IDLE) |
-| `--cancel`          | Cancel the current print job                     |
+| `--stop`            | Stop the current print job                       |
+| `--resume`          | Resume a paused print                            |
+| `--clear`           | Clear FAILED state and dismiss error dialog      |
 
 Without `--printer`, shows all configured printers. Add `-w` for a live dashboard.
 
@@ -200,8 +201,9 @@ Without `--printer`, shows all configured printers. Add `-w` for a live dashboar
 ```bash
 fabprint status                             # show all printers
 fabprint status --printer workshop -w       # live dashboard for one printer
-fabprint status --printer workshop --cancel # stop current print
-fabprint status --printer workshop --clear  # clear FAILED → IDLE
+fabprint status --printer workshop --stop   # stop current print
+fabprint status --printer workshop --resume # resume paused print
+fabprint status --printer workshop --clear  # clear FAILED state
 ```
 
 ## `fabprint watch`

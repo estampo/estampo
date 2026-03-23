@@ -459,13 +459,13 @@ def cloud_cancel(
         )
 
 
-def cloud_clear_error(
+def cloud_resume(
     device_id: str,
     token_file: Path,
     *,
     verbose: bool = False,
 ) -> None:
-    """Send a resume command to clear FAILED state and return to IDLE.
+    """Send a resume command to unpause a paused print.
 
     Uses the bridge's send-mqtt command to send a resume MQTT message.
     """
@@ -479,5 +479,69 @@ def cloud_clear_error(
         payload,
         "--wait",
         "5",
+    ]
+    _run_bridge(args, timeout=BRIDGE_SEND_MQTT_TIMEOUT, verbose=verbose)
+
+
+def cloud_clear_status(
+    device_id: str,
+    token_file: Path,
+    *,
+    verbose: bool = False,
+) -> None:
+    """Clear FAILED state on a Bambu printer.
+
+    Sends clean_print_error + uiop (dismiss dialog) via MQTT.
+    Reads current status first to get the error code.
+    """
+    require_file(token_file, "Token file")
+
+    # Get current status to extract print_error code
+    status = cloud_status(device_id, token_file, verbose=verbose)
+    print_error = status.get("print_error", 0)
+    error_hex = f"{int(print_error):08X}" if print_error else "00000000"
+
+    # Step 1: clear the print error
+    clean_cmd = json.dumps(
+        {
+            "print": {
+                "sequence_id": "0",
+                "command": "clean_print_error",
+                "subtask_id": "",
+                "print_error": 0,
+            }
+        }
+    )
+    args = [
+        "send-mqtt",
+        device_id,
+        str(token_file.resolve()),
+        clean_cmd,
+        "--wait",
+        "3",
+    ]
+    _run_bridge(args, timeout=BRIDGE_SEND_MQTT_TIMEOUT, verbose=verbose)
+
+    # Step 2: dismiss the error dialog on the touchscreen
+    uiop_cmd = json.dumps(
+        {
+            "system": {
+                "sequence_id": "0",
+                "command": "uiop",
+                "name": "print_error",
+                "action": "close",
+                "source": 1,
+                "type": "dialog",
+                "err": error_hex,
+            }
+        }
+    )
+    args = [
+        "send-mqtt",
+        device_id,
+        str(token_file.resolve()),
+        uiop_cmd,
+        "--wait",
+        "3",
     ]
     _run_bridge(args, timeout=BRIDGE_SEND_MQTT_TIMEOUT, verbose=verbose)
