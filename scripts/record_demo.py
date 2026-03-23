@@ -453,6 +453,18 @@ def compress_events(events: list[list], max_idle: float = MAX_IDLE) -> list[list
     return [[round(min(e[0], max_idle), 3), *e[1:]] for e in events]
 
 
+def strip_exit(events: list[list]) -> list[list]:
+    """Remove trailing 'exit' command and shell exit output from events."""
+    # Walk backwards and drop events until we pass the exit command
+    i = len(events) - 1
+    while i >= 0:
+        text = events[i][2] if len(events[i]) > 2 else ""
+        i -= 1
+        if "exit" in text and len(text) < 20:
+            break
+    return events[: i + 1] if i >= 0 else events
+
+
 def merge_casts(phase_order: list[str], gap: float = 1.5) -> Path:
     """Merge multiple phase cast files into a single demo.cast.
 
@@ -476,6 +488,7 @@ def merge_casts(phase_order: list[str], gap: float = 1.5) -> Path:
             header = phase_header
 
         events = compress_events(events)
+        events = strip_exit(events)
 
         # Add a gap before this phase (except the first)
         if merged_events:
