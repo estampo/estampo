@@ -468,14 +468,18 @@ def compress_events(events: list[list], max_idle: float = MAX_IDLE) -> list[list
 
 def strip_exit(events: list[list]) -> list[list]:
     """Remove trailing 'exit' command and shell exit output from events."""
-    # Walk backwards and drop events until we pass the exit command
-    i = len(events) - 1
-    while i >= 0:
+    # Walk backwards from the end, drop everything from the first 'exit' onwards.
+    # There are typically multiple exit-related events: the typed command, the
+    # shell echo, and the exit status. Drop them all by finding the earliest one.
+    first_exit = len(events)
+    for i in range(len(events) - 1, -1, -1):
         text = events[i][2] if len(events[i]) > 2 else ""
-        i -= 1
-        if "exit" in text and len(text) < 20:
+        if "exit" in text and len(text) < 30:
+            first_exit = i
+        elif first_exit < len(events):
+            # We've passed all the exit events — also drop the prompt before them
             break
-    return events[: i + 1] if i >= 0 else events
+    return events[:first_exit]
 
 
 def merge_casts(phase_order: list[str], gap: float = 1.5) -> Path:
