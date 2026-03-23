@@ -179,10 +179,20 @@ def record_init() -> None:
     status("RECORDING PHASE: init")
 
     # Clean up for fresh demo
+    import shutil
+
     fabprint_toml = DEMO_DIR / "fabprint.toml"
     if fabprint_toml.exists():
         fabprint_toml.unlink()
         status("removed existing fabprint.toml")
+    profiles_dir = DEMO_DIR / "profiles"
+    if profiles_dir.exists():
+        shutil.rmtree(profiles_dir)
+        status("removed existing profiles/")
+    output_dir = DEMO_DIR / "fabprint_output"
+    if output_dir.exists():
+        shutil.rmtree(output_dir)
+        status("removed existing fabprint_output/")
 
     child = start_recording(cast_file)
 
@@ -328,7 +338,10 @@ def record_profiles_pin() -> None:
         expect(child, "Pinned.*profile")
         time.sleep(3)
         status("profiles pinned")
-        time.sleep(1)
+
+        type_comment(child, "# fabprint.toml and profiles/ are ready to commit")
+        type_command(child, "ls -l")
+        time.sleep(2)
     finally:
         stop_recording(child)
 
