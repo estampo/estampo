@@ -190,7 +190,7 @@ def record_init() -> None:
         type_comment(child, "# a fabprint project is just CAD files + fabprint.toml")
         type_command(child, "cd repos/decoy-case")
         time.sleep(0.5)
-        type_command(child, "ls -l *.py *.step")
+        type_command(child, "ls -l")
         time.sleep(1.5)
         type_comment(child, "# fabprint init creates the config from your project")
         type_command(child, "fabprint init")
