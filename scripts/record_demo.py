@@ -179,17 +179,30 @@ def record_init() -> None:
     status("RECORDING PHASE: init")
 
     # Clean up for fresh demo
+    import shutil
+
     fabprint_toml = DEMO_DIR / "fabprint.toml"
     if fabprint_toml.exists():
         fabprint_toml.unlink()
         status("removed existing fabprint.toml")
+    profiles_dir = DEMO_DIR / "profiles"
+    if profiles_dir.exists():
+        shutil.rmtree(profiles_dir)
+        status("removed existing profiles/")
+    output_dir = DEMO_DIR / "fabprint_output"
+    if output_dir.exists():
+        shutil.rmtree(output_dir)
+        status("removed existing fabprint_output/")
 
     child = start_recording(cast_file)
 
     try:
-        type_comment(child, "# cd to project directory and run fabprint init")
+        type_comment(child, "# a fabprint project is just CAD files + fabprint.toml")
         type_command(child, "cd repos/decoy-case")
         time.sleep(0.5)
+        type_command(child, "ls -l")
+        time.sleep(1.5)
+        type_comment(child, "# fabprint init creates the config from your project")
         type_command(child, "fabprint init")
 
         # Project name — accept default
@@ -325,7 +338,10 @@ def record_profiles_pin() -> None:
         expect(child, "Pinned.*profile")
         time.sleep(3)
         status("profiles pinned")
-        time.sleep(1)
+
+        type_comment(child, "# fabprint.toml and profiles/ are ready to commit")
+        type_command(child, "ls -l")
+        time.sleep(2)
     finally:
         stop_recording(child)
 
@@ -450,6 +466,24 @@ def compress_events(events: list[list], max_idle: float = MAX_IDLE) -> list[list
     return [[round(min(e[0], max_idle), 3), *e[1:]] for e in events]
 
 
+def strip_exit(events: list[list]) -> list[list]:
+    """Remove trailing 'exit' command and shell exit output from events."""
+    # Find the earliest 'exit' event in the tail and drop everything from there.
+    # Non-exit events (ANSI escapes, prompts) may be interleaved, so scan the
+    # entire tail rather than stopping at the first non-match.
+    first_exit = len(events)
+    for i in range(len(events) - 1, max(len(events) - 20, -1), -1):
+        text = events[i][2] if len(events[i]) > 2 else ""
+        if "exit" in text and len(text) < 30:
+            first_exit = i
+    # Also drop the prompt line immediately before the first exit
+    if first_exit > 0:
+        prev = events[first_exit - 1][2] if len(events[first_exit - 1]) > 2 else ""
+        if prev.rstrip().endswith("$") or prev.rstrip().endswith("$ "):
+            first_exit -= 1
+    return events[:first_exit]
+
+
 def merge_casts(phase_order: list[str], gap: float = 1.5) -> Path:
     """Merge multiple phase cast files into a single demo.cast.
 
@@ -473,6 +507,7 @@ def merge_casts(phase_order: list[str], gap: float = 1.5) -> Path:
             header = phase_header
 
         events = compress_events(events)
+        events = strip_exit(events)
 
         # Add a gap before this phase (except the first)
         if merged_events:
