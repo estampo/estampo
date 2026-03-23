@@ -187,9 +187,12 @@ def record_init() -> None:
     child = start_recording(cast_file)
 
     try:
-        type_comment(child, "# cd to project directory and run fabprint init")
+        type_comment(child, "# a fabprint project is just CAD files + fabprint.toml")
         type_command(child, "cd repos/decoy-case")
         time.sleep(0.5)
+        type_command(child, "ls -l *.py *.step")
+        time.sleep(1.5)
+        type_comment(child, "# fabprint init creates the config from your project")
         type_command(child, "fabprint init")
 
         # Project name — accept default
