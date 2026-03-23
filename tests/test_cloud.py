@@ -258,8 +258,13 @@ class TestPersistentBridge:
                 with pytest.raises(RuntimeError, match="timed out"):
                     bridge.status(timeout=5)
 
-    def test_status_non_json_raises(self, token_file):
-        mock_proc = self._make_mock_proc(status_line="not json at all\n")
+    def test_status_non_json_then_eof_raises(self, token_file):
+        """Non-JSON output followed by EOF should raise."""
+        mock_proc = self._make_mock_proc()
+        # After ready line: non-JSON, then empty (EOF)
+        mock_proc.stdout.readline = MagicMock(
+            side_effect=['{"ready":true}\n', "not json at all\n", ""]
+        )
 
         mock_sel = MagicMock()
         mock_sel.select.return_value = [True]
@@ -269,8 +274,28 @@ class TestPersistentBridge:
             patch("selectors.DefaultSelector", return_value=mock_sel),
         ):
             with PersistentBridge(token_file, "DEV123") as bridge:
-                with pytest.raises(RuntimeError, match="non-JSON"):
+                with pytest.raises(RuntimeError, match="ended unexpectedly"):
                     bridge.status()
+
+    def test_status_skips_non_json_lines(self, token_file):
+        """Non-JSON lines should be skipped, valid JSON returned."""
+        status_json = '{"print":{"gcode_state":"RUNNING"}}\n'
+        mock_proc = self._make_mock_proc()
+        # After ready line: debug line, then valid JSON
+        mock_proc.stdout.readline = MagicMock(
+            side_effect=['{"ready":true}\n', "mqtt keepalive\n", status_json]
+        )
+
+        mock_sel = MagicMock()
+        mock_sel.select.return_value = [True]
+
+        with (
+            patch("fabprint.cloud.bridge.subprocess.Popen", return_value=mock_proc),
+            patch("selectors.DefaultSelector", return_value=mock_sel),
+        ):
+            with PersistentBridge(token_file, "DEV123") as bridge:
+                result = bridge.status()
+                assert result["gcode_state"] == "RUNNING"
 
     def test_token_file_mounted_readonly(self, token_file):
         """Token file should be mounted as read-only in the container."""
