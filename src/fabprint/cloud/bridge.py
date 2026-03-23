@@ -257,8 +257,13 @@ class PersistentBridge:
             self._proc = None
 
     def status(self, device_id: str = "", *, timeout: int = BRIDGE_STATUS_TIMEOUT) -> dict:
-        """Send a status query and read the JSON response."""
+        """Send a status query and read the JSON response.
+
+        The bridge may output non-JSON lines (MQTT debug messages, keepalives).
+        Read lines until we get valid JSON or timeout.
+        """
         import selectors
+        import time as _time
 
         assert self._proc is not None
         assert self._proc.stdin is not None
@@ -266,20 +271,30 @@ class PersistentBridge:
         self._proc.stdin.write("status\n")
         self._proc.stdin.flush()
 
+        deadline = _time.monotonic() + timeout
         sel = selectors.DefaultSelector()
         sel.register(self._proc.stdout, selectors.EVENT_READ)
-        ready = sel.select(timeout=timeout)
-        sel.close()
-        if not ready:
-            raise RuntimeError("Status query timed out")
-        line = self._proc.stdout.readline()
         try:
-            data = json.loads(line.strip())
-            if "error" in data:
-                raise RuntimeError(f"Bridge error: {data['error']}")
-            return data.get("print", data)
-        except json.JSONDecodeError:
-            raise RuntimeError(f"Bridge returned non-JSON: {line[:200]}")
+            while True:
+                remaining = deadline - _time.monotonic()
+                if remaining <= 0:
+                    raise RuntimeError("Status query timed out")
+                ready = sel.select(timeout=remaining)
+                if not ready:
+                    raise RuntimeError("Status query timed out")
+                line = self._proc.stdout.readline()
+                if not line:
+                    raise RuntimeError("Bridge process ended unexpectedly")
+                try:
+                    data = json.loads(line.strip())
+                    if "error" in data:
+                        raise RuntimeError(f"Bridge error: {data['error']}")
+                    return data.get("print", data)
+                except json.JSONDecodeError:
+                    log.debug("Skipping non-JSON bridge output: %s", line.strip()[:100])
+                    continue
+        finally:
+            sel.close()
 
 
 def cloud_print(
