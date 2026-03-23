@@ -468,17 +468,19 @@ def compress_events(events: list[list], max_idle: float = MAX_IDLE) -> list[list
 
 def strip_exit(events: list[list]) -> list[list]:
     """Remove trailing 'exit' command and shell exit output from events."""
-    # Walk backwards from the end, drop everything from the first 'exit' onwards.
-    # There are typically multiple exit-related events: the typed command, the
-    # shell echo, and the exit status. Drop them all by finding the earliest one.
+    # Find the earliest 'exit' event in the tail and drop everything from there.
+    # Non-exit events (ANSI escapes, prompts) may be interleaved, so scan the
+    # entire tail rather than stopping at the first non-match.
     first_exit = len(events)
-    for i in range(len(events) - 1, -1, -1):
+    for i in range(len(events) - 1, max(len(events) - 20, -1), -1):
         text = events[i][2] if len(events[i]) > 2 else ""
         if "exit" in text and len(text) < 30:
             first_exit = i
-        elif first_exit < len(events):
-            # We've passed all the exit events — also drop the prompt before them
-            break
+    # Also drop the prompt line immediately before the first exit
+    if first_exit > 0:
+        prev = events[first_exit - 1][2] if len(events[first_exit - 1]) > 2 else ""
+        if prev.rstrip().endswith("$") or prev.rstrip().endswith("$ "):
+            first_exit -= 1
     return events[:first_exit]
 
 
