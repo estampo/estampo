@@ -565,8 +565,18 @@ def _status_action(
                     cloud_resume(serial, token_file)
                     print(f"{name}: resume sent")
                 if clear:
-                    cloud_clear_status(serial, token_file)
-                    print(f"{name}: clear sent (error dismissed)")
+                    from fabprint.cloud import cloud_status
+
+                    pre = cloud_status(serial, token_file)
+                    err = pre.get("print_error", 0)
+                    if err:
+                        cloud_clear_status(serial, token_file)
+                        print(f"{name}: cleared print_error={err}")
+                    else:
+                        print(
+                            f"{name}: no active error (print_error=0). "
+                            "FAILED state clears when a new print starts."
+                        )
 
         elif ptype == "bambu-lan":
             print(f"{name}: printer control not yet supported for bambu-lan")
@@ -594,6 +604,18 @@ def _status_action(
 
         else:
             print(f"{name}: unsupported printer type '{ptype}'")
+
+        # Show status after action
+        import time
+
+        time.sleep(2)  # give printer time to update
+        try:
+            st = _query_printer_status(name, creds)
+            for line in _render_printer(st, name, creds.get("serial", "")):
+                print(line)
+        except Exception as e:
+            print(f"  \033[31merror reading status: {e}\033[0m")
+        print()
 
 
 @app.command()
