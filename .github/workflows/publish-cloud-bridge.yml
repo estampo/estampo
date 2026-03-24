@@ -93,7 +93,17 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/setup-buildx-action@v3
 
+      - name: Check if orca-base already exists
+        id: base_exists
+        run: |
+          if docker pull "fabprint/orca-base:${{ matrix.orca-version }}" 2>/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build and push orca-base
+        if: steps.base_exists.outputs.exists == 'false'
         uses: docker/build-push-action@v6
         with:
           context: .

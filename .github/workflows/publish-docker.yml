@@ -3,6 +3,12 @@ name: Publish Docker images
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      rebuild-base:
+        description: "Rebuild orca-base images (normally only on release tags)"
+        type: boolean
+        default: false
 
 jobs:
   detect-changes:
@@ -52,13 +58,45 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # Only rebuild the fabprint Python layer on push to main.
-  # The orca-base image is immutable per OrcaSlicer version and only
-  # rebuilt on release tags (publish-cloud-bridge.yml) to ensure
-  # reproducible slicer behavior.
+  # Rebuild orca-base only when explicitly requested via workflow_dispatch.
+  # These images are immutable per OrcaSlicer version to ensure reproducible builds.
+  orca-base:
+    if: github.event_name == 'workflow_dispatch' && inputs.rebuild-base
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    strategy:
+      matrix:
+        orca-version: ["2.3.1", "2.3.2"]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.orca-base
+          platforms: linux/amd64
+          push: true
+          tags: |
+            fabprint/orca-base:${{ matrix.orca-version }}
+            ghcr.io/${{ github.repository }}/orca-base:${{ matrix.orca-version }}
+          build-args: ORCA_VERSION=${{ matrix.orca-version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Rebuild the fabprint Python layer on push to main or manual dispatch.
   fabprint-images:
     needs: detect-changes
-    if: needs.detect-changes.outputs.fabprint == 'true'
+    if: needs.detect-changes.outputs.fabprint == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       packages: write
