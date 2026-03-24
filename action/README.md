@@ -29,7 +29,7 @@ jobs:
 | Input | Default | Description |
 |-------|---------|-------------|
 | `config` | `fabprint.toml` | Path to your fabprint config file |
-| `orca-version` | `2.3.2` | OrcaSlicer version |
+| `orca-version` | `2.3.1` | OrcaSlicer version |
 | `until` | `slice` | Pipeline stage to stop at (`load`, `arrange`, `plate`, `slice`) |
 | `output-dir` | `fabprint_output` | Output directory for sliced files (relative to repo root) |
 | `comment` | `true` | Post/update a PR comment with build metrics |
@@ -59,4 +59,4 @@ jobs:
 
 ## Supported OrcaSlicer versions
 
-Only versions with a published `ghcr.io/pzfreo/fabprint:orca-<version>` image are supported. Currently: `2.3.2` (default), `2.3.1`.
+Only versions with a published `ghcr.io/pzfreo/fabprint:orca-<version>` image are supported. Currently: `2.3.1` (default).
