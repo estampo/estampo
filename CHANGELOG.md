@@ -9,6 +9,8 @@ All notable changes to fabprint are documented here.
 - Release workflow split into separate jobs for PyPI, Docker images, and profile extraction
 - Fix: orca-base images are now immutable — only rebuilt on release tags, not push to main
   (prevents accidental slicer behavior changes from system package updates)
+- Fix: explicitly set `use_relative_e_distances=0` in flattened process profiles to prevent
+  OrcaSlicer platform-dependent defaults from breaking reproducible builds
 
 ## 0.1.140 — 2026-03-22
 

@@ -273,6 +273,12 @@ def _resolve_profiles(
         data = resolve_profile_data(process, engine, "process", project_dir, profiles_dir)
         if overrides:
             data = _apply_overrides(data, overrides, process)
+        # Ensure critical settings have explicit values so OrcaSlicer doesn't
+        # fall back to platform-dependent compiled defaults. Without this,
+        # rebuilt Docker images with different system packages can change slicer
+        # behavior and break reproducible builds.
+        if "use_relative_e_distances" not in data or data["use_relative_e_distances"] is None:
+            data["use_relative_e_distances"] = "0"
         path = _write_tmp_profile(data, tmp_dir, "process")
         settings.append(str(path))
 
