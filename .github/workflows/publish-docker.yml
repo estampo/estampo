@@ -60,6 +60,7 @@ jobs:
 
   # Rebuild orca-base only when explicitly requested via workflow_dispatch.
   # These images are immutable per OrcaSlicer version to ensure reproducible builds.
+  # Uses no-cache to avoid GHA layer cache returning stale system packages.
   orca-base:
     if: github.event_name == 'workflow_dispatch' && inputs.rebuild-base
     runs-on: ubuntu-latest
@@ -86,12 +87,11 @@ jobs:
           file: Dockerfile.orca-base
           platforms: linux/amd64
           push: true
+          no-cache: true
           tags: |
             fabprint/orca-base:${{ matrix.orca-version }}
             ghcr.io/${{ github.repository }}/orca-base:${{ matrix.orca-version }}
           build-args: ORCA_VERSION=${{ matrix.orca-version }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
   # Rebuild the fabprint Python layer on push to main or manual dispatch.
   fabprint-images:
