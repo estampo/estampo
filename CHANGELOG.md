@@ -4,13 +4,13 @@ All notable changes to fabprint are documented here.
 
 ## 0.1.141 — 2026-03-24
 
-- Add OrcaSlicer 2.3.2 support (new default); 2.3.1 remains available
-- Docker publish workflows use matrix strategy to build both versions in parallel
+- Fix: when slicing via Docker, resolve profiles from the Docker image instead of the local
+  OrcaSlicer install — prevents version mismatch between local profiles and Docker slicer
+- Fix: orca-base images are now immutable — only rebuilt via manual dispatch or release tags
+- Fix: add `libopengl0`, `libglu1-mesa`, `libmspack0` to orca-base runtime deps
+- Fix: explicitly set `use_relative_e_distances=0` in flattened process profiles
+- Revert OrcaSlicer 2.3.2 support (upstream CLI segfault on `--load-filaments` unfixed)
 - Release workflow split into separate jobs for PyPI, Docker images, and profile extraction
-- Fix: orca-base images are now immutable — only rebuilt on release tags, not push to main
-  (prevents accidental slicer behavior changes from system package updates)
-- Fix: explicitly set `use_relative_e_distances=0` in flattened process profiles to prevent
-  OrcaSlicer platform-dependent defaults from breaking reproducible builds
 
 ## 0.1.140 — 2026-03-22
 

@@ -287,13 +287,15 @@ def resolve_profile(
     category: str,
     project_dir: Path | None = None,
     profiles_dir: str = "profiles",
+    docker_profile_dir: Path | None = None,
 ) -> Path:
     """Resolve a profile name or path to an absolute file path.
 
     Resolution order:
     1. If it looks like a path, use it directly
     2. Check <project_dir>/<profiles_dir>/<category>/<name>.json
-    3. Check slicer system directory
+    3. Check Docker-extracted profiles (if provided)
+    4. Check slicer system directory
     """
     if _is_path(name_or_path):
         if ".." in Path(name_or_path).parts:
@@ -309,6 +311,13 @@ def resolve_profile(
         if local.exists():
             log.debug("Resolved '%s' from pinned profiles: %s", name_or_path, local)
             return local
+
+    # Check Docker-extracted profiles (version-matched)
+    if docker_profile_dir:
+        docker = docker_profile_dir / category / f"{name_or_path}.json"
+        if docker.exists():
+            log.debug("Resolved '%s' from Docker image profiles: %s", name_or_path, docker)
+            return docker
 
     # Check system directory
     base = SYSTEM_DIRS.get(engine)
@@ -330,13 +339,16 @@ def resolve_profile_data(
     category: str,
     project_dir: Path | None = None,
     profiles_dir: str = "profiles",
+    docker_profile_dir: Path | None = None,
 ) -> dict:
     """Resolve a profile and flatten its full inheritance chain.
 
     Returns a merged dict with all inherited values resolved,
     with the 'inherits' key removed so the slicer uses it as-is.
     """
-    path = resolve_profile(name_or_path, engine, category, project_dir, profiles_dir)
+    path = resolve_profile(
+        name_or_path, engine, category, project_dir, profiles_dir, docker_profile_dir
+    )
     base = SYSTEM_DIRS.get(engine)
 
     chain = []

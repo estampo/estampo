@@ -251,6 +251,7 @@ def _resolve_profiles(
     project_dir: Path | None,
     tmp_dir: Path,
     profiles_dir: str = "profiles",
+    docker_profile_dir: Path | None = None,
 ) -> tuple[str | None, str | None]:
     """Resolve and flatten all profiles into tmp_dir.
 
@@ -259,7 +260,9 @@ def _resolve_profiles(
     """
     settings = []
     if printer:
-        data = resolve_profile_data(printer, engine, "machine", project_dir, profiles_dir)
+        data = resolve_profile_data(
+            printer, engine, "machine", project_dir, profiles_dir, docker_profile_dir
+        )
         # Validate: machine_model profiles define the printer but can't be sliced
         if data.get("type") == "machine_model":
             raise FabprintError(
@@ -270,15 +273,17 @@ def _resolve_profiles(
         path = _write_tmp_profile(data, tmp_dir, "machine")
         settings.append(str(path))
     if process:
-        data = resolve_profile_data(process, engine, "process", project_dir, profiles_dir)
+        data = resolve_profile_data(
+            process, engine, "process", project_dir, profiles_dir, docker_profile_dir
+        )
         if overrides:
             data = _apply_overrides(data, overrides, process)
-        # Ensure critical settings have explicit values so OrcaSlicer doesn't
-        # fall back to platform-dependent compiled defaults. Without this,
-        # rebuilt Docker images with different system packages can change slicer
-        # behavior and break reproducible builds.
-        if "use_relative_e_distances" not in data or data["use_relative_e_distances"] is None:
-            data["use_relative_e_distances"] = "0"
+        # When not using Docker-extracted profiles (i.e. local system profiles),
+        # ensure use_relative_e_distances has an explicit value so OrcaSlicer
+        # doesn't fall back to platform-dependent compiled defaults.
+        if not docker_profile_dir:
+            if "use_relative_e_distances" not in data or data["use_relative_e_distances"] is None:
+                data["use_relative_e_distances"] = "0"
         path = _write_tmp_profile(data, tmp_dir, "process")
         settings.append(str(path))
 
@@ -289,7 +294,9 @@ def _resolve_profiles(
         first_path: str | None = None
         for i, f in enumerate(filaments):
             if f:
-                data = resolve_profile_data(f, engine, "filament", project_dir, profiles_dir)
+                data = resolve_profile_data(
+                    f, engine, "filament", project_dir, profiles_dir, docker_profile_dir
+                )
                 path = _write_tmp_profile(data, tmp_dir, f"filament_{i}")
                 resolved.append(str(path))
                 if first_path is None:
@@ -537,6 +544,16 @@ def slice_plate(
     else:
         tmp_dir = Path(tempfile.mkdtemp(prefix="fabprint_"))
 
+    # When slicing via Docker, extract profiles from the Docker image so we
+    # use version-matched profiles instead of the local system install (which
+    # may be a different OrcaSlicer version with incompatible gcode templates).
+    docker_profile_dir = None
+    if use_docker and docker_version:
+        from fabprint.profiles import extract_docker_profiles
+
+        docker_profile_dir = extract_docker_profiles(version=docker_version)
+        log.info("Extracted Docker image profiles to %s", docker_profile_dir)
+
     try:
         settings_arg, filament_arg = _resolve_profiles(
             engine,
@@ -547,6 +564,7 @@ def slice_plate(
             project_dir,
             tmp_dir,
             profiles_dir,
+            docker_profile_dir,
         )
 
         if use_docker:
@@ -608,6 +626,8 @@ def slice_plate(
 
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
+        if docker_profile_dir:
+            shutil.rmtree(docker_profile_dir, ignore_errors=True)
 
 
 def parse_gcode_stats(output_dir: Path) -> dict[str, str | float | int]:

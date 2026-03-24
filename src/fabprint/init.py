@@ -29,7 +29,7 @@ padding = 5.0           # gap between parts in mm
 
 [slicer]
 engine = "orca"
-# version = "2.3.2"                        # pin OrcaSlicer version for reproducibility
+# version = "2.3.1"                        # pin OrcaSlicer version for reproducibility
 printer = "Bambu Lab P1S 0.4 nozzle"       # machine profile name
 process = "0.20mm Standard @BBL X1C"       # process/quality profile
 filaments = ["Generic PLA @base"]          # filament profiles (one per AMS slot)
@@ -127,7 +127,7 @@ def validate_config(path: Path) -> ValidationResult:
     # Check slicer version pinning
     if not cfg.slicer.version:
         warnings.append(
-            'slicer.version is not set — pin it for reproducible builds (e.g. version = "2.3.2")'
+            'slicer.version is not set — pin it for reproducible builds (e.g. version = "2.3.1")'
         )
     else:
         passes.append(f"Slicer version pinned: {cfg.slicer.version}")

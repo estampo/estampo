@@ -12,7 +12,7 @@ inputs:
   orca-version:
     description: "OrcaSlicer version to use"
     required: false
-    default: "2.3.2"
+    default: "2.3.1"
   until:
     description: "Run pipeline up to this stage (default: slice)"
     required: false

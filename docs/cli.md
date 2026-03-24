@@ -123,7 +123,7 @@ If `config` is omitted, fabprint looks for `fabprint.toml` in the current direct
 | `--only STAGE`      | Run only this stage (fails if prerequisites missing)  |
 | `--scale FACTOR`    | Scale all parts (multiplies per-part scale)           |
 | `--local`           | Force local slicer (fail if not installed)            |
-| `--docker-version`  | Pin OrcaSlicer Docker image version (e.g. `2.3.2`)   |
+| `--docker-version`  | Pin OrcaSlicer Docker image version (e.g. `2.3.1`)   |
 | `--filament-type`   | Override filament profile name                        |
 | `--filament-slot`   | AMS slot for `--filament-type` (default: 1)           |
 | `--dry-run`         | Do everything except send to printer                  |
@@ -158,7 +158,7 @@ fabprint run --until plate
 fabprint run --only slice
 
 # Slice with a specific Docker image version
-fabprint run --until slice --docker-version 2.3.2
+fabprint run --until slice --docker-version 2.3.1
 
 # Dry run — do everything except actually send to printer
 fabprint run --dry-run
