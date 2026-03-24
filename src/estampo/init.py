@@ -118,7 +118,7 @@ def validate_config(path: Path) -> ValidationResult:
     """
     from estampo.config import load_config
     from estampo.pipeline import STAGE_OUTPUTS
-    from estampo.profiles import discover_profile_names
+    from estampo.profiles import discover_profile_names, validate_override_keys
 
     cfg = load_config(path)
     passes: list[str] = []
@@ -194,6 +194,19 @@ def validate_config(path: Path) -> ValidationResult:
             "Run 'estampo profiles pin' or "
             f"'python scripts/extract_profiles.py {cfg.slicer.version or '<version>'}' to add one."
         )
+
+    # Check slicer override keys against process profile
+    if cfg.slicer.overrides:
+        override_warnings = validate_override_keys(
+            cfg.slicer.overrides,
+            cfg.slicer.engine,
+            cfg.slicer.process,
+            project_dir=cfg.base_dir,
+        )
+        if override_warnings:
+            warnings.extend(override_warnings)
+        else:
+            passes.append(f"Slicer override keys valid ({len(cfg.slicer.overrides)} override(s))")
 
     # Check printer credentials reference
     if cfg.printer:

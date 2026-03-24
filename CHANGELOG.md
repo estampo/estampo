@@ -16,6 +16,11 @@ All notable changes to this project are documented here.
 - New project URL: https://estampo.dev
 - New repo: https://github.com/estampo/estampo
 
+## 0.2.1 — 2026-03-29
+
+- Validate slicer override keys against process profile in `estampo validate` and at the start of `estampo run`
+- Warn when override keys are not found in the resolved process profile (likely typos or unsupported keys)
+
 ## 0.1.141 — 2026-03-24
 
 - Fix: when slicing via Docker, resolve profiles from the Docker image instead of the local
@@ -39,6 +44,11 @@ All notable changes to this project are documented here.
 
 - Make profiles directory configurable via `profiles_dir` in `[slicer]` config (default: `"profiles"`)
 - `fabprint profiles pin` now handles existing directories (overwrite/rename) and auto-updates `fabprint.toml`
+
+## 0.1.141 — 2026-03-24
+
+- Validate slicer override keys against process profile in `fabprint validate` and at the start of `fabprint run`
+- Warn when override keys are not found in the resolved process profile (likely typos or unsupported keys)
 
 ## 0.1.138 — 2026-03-22
 

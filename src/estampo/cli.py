@@ -318,6 +318,22 @@ def _run_pipeline(
     cfg = load_config(config)
     stages = cfg.pipeline.stages
 
+    # Warn about unrecognised slicer override keys early
+    if cfg.slicer.overrides:
+        from estampo.profiles import validate_override_keys
+
+        override_warnings = validate_override_keys(
+            cfg.slicer.overrides,
+            cfg.slicer.engine,
+            cfg.slicer.process,
+            project_dir=cfg.base_dir,
+        )
+        if override_warnings:
+            from estampo import ui
+
+            for w in override_warnings:
+                ui.warn(w)
+
     if output_dir:
         out_dir = output_dir
     elif cfg.name:

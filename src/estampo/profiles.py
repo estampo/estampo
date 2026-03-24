@@ -382,6 +382,33 @@ def resolve_profile_data(
     return merged
 
 
+def validate_override_keys(
+    overrides: dict[str, object],
+    engine: str,
+    process: str | None,
+    project_dir: Path | None = None,
+) -> list[str]:
+    """Check that override keys exist in the resolved process profile.
+
+    Returns a list of warning strings for unknown keys.
+    """
+    if not overrides or not process:
+        return []
+
+    try:
+        data = resolve_profile_data(process, engine, "process", project_dir)
+    except (EstampoError, FileNotFoundError, OSError):
+        log.debug("Cannot resolve process profile for override validation", exc_info=True)
+        return []
+
+    unknown = [k for k in overrides if k not in data]
+    return [
+        f"slicer.overrides key '{k}' not found in process profile '{process}' "
+        f"— it will be injected but may be ignored by the slicer"
+        for k in unknown
+    ]
+
+
 def pin_profiles(
     engine: str,
     printer: str | None,
