@@ -153,7 +153,7 @@ def _inject_paint_data(output: Path, scene: trimesh.Scene) -> None:
 
     # Only post-process if any geometry has pre-painted data.
     # Config-assigned filament_id is NOT injected as paint_color because
-    # OrcaSlicer 2.3.1 CLI segfaults on paint_color + --load-filaments.
+    # OrcaSlicer 2.3.1 CLI segfaults on paint_color + --load-filaments (fixed in 2.3.2).
     if not any(geom.metadata.get("paint_colors") for geom in geometries):
         return
 

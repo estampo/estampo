@@ -34,7 +34,7 @@ filament = 2                    # AMS slot 2: PLA
 
 [slicer]
 engine = "orca"
-version = "2.3.1"               # pinned for reproducibility
+version = "2.3.2"               # pinned for reproducibility
 printer = "Bambu Lab P1S 0.4 nozzle"
 process = "0.20mm Standard @BBL X1C"
 filaments = ["Generic PETG-CF @base", "Generic PLA @base"]
@@ -58,7 +58,7 @@ fabprint run        # arrange → slice → print, one command
 ✔ Arranged 3 parts onto plate  (256×256mm)
 ✔ Plate exported → plate.3mf
 ✔ Preview exported → plate_preview.3mf
-✔ Sliced with OrcaSlicer 2.3.1 in 48s
+✔ Sliced with OrcaSlicer 2.3.2 in 48s
 ✔ Print time: 3h 42m, 24.6g filament
 ✔ Sent to printer "workshop"
 ```
@@ -154,7 +154,7 @@ padding = 5.0
 
 [slicer]
 engine = "orca"
-version = "2.3.1"       # pin OrcaSlicer version for reproducibility
+version = "2.3.2"       # pin OrcaSlicer version for reproducibility
 printer = "Bambu Lab P1S 0.4 nozzle"
 process = "0.20mm Standard @BBL X1C"
 
@@ -198,7 +198,7 @@ fabprint profiles pin          # copies slicer profiles into ./profiles/
 git add profiles/              # commit to lock them
 ```
 
-Combined with `version = "2.3.1"` in `[slicer]` (which pins the Docker image), the same config always produces the same gcode.
+Combined with `version = "2.3.2"` in `[slicer]` (which pins the Docker image), the same config always produces the same gcode.
 
 ### CI/CD example
 
@@ -215,7 +215,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: pzfreo/fabprint@main
         with:
-          orca-version: "2.3.1"
+          orca-version: "2.3.2"
 ```
 
 The action slices your model, uploads G-code as an artifact, and posts print time / filament stats as a PR comment. See [`action/README.md`](action/README.md) for all options.
