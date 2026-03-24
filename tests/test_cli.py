@@ -248,6 +248,33 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
     assert exc_info.value.code == 1
 
 
+def test_run_warns_on_unknown_override_keys(tmp_path, capsys):
+    """Run should warn when override keys don't exist in the process profile."""
+    profiles = tmp_path / "profiles" / "process"
+    profiles.mkdir(parents=True)
+    (profiles / "MyProcess.json").write_text(
+        '{"type": "process", "layer_height": "0.2", "wall_loops": "2"}'
+    )
+    toml = tmp_path / "fabprint.toml"
+    toml.write_text(f"""
+[plate]
+size = [256, 256]
+
+[slicer]
+engine = "orca"
+process = "MyProcess"
+
+[slicer.overrides]
+bogus_key = "42"
+
+[[parts]]
+file = "{_posix(FIXTURES / "cube_10mm.stl")}"
+""")
+    main(["run", str(toml), "-o", str(tmp_path / "out"), "--until", "plate"])
+    captured = capsys.readouterr()
+    assert "bogus_key" in captured.out
+
+
 def test_profiles_list(capsys):
     """Profiles list should run and produce output."""
     main(["profiles", "list", "--engine", "orca", "--category", "machine"])

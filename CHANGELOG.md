@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here.
 
-## 0.2.0 — 2026-03-29
+## Unreleased
 
 **Project renamed from `fabprint` to `estampo`.**
 
@@ -15,9 +15,6 @@ All notable changes to this project are documented here.
 - `FabprintError` → `EstampoError` (old name kept as alias)
 - New project URL: https://estampo.dev
 - New repo: https://github.com/estampo/estampo
-
-## 0.2.1 — 2026-03-29
-
 - Validate slicer override keys against process profile in `estampo validate` and at the start of `estampo run`
 - Warn when override keys are not found in the resolved process profile (likely typos or unsupported keys)
 
