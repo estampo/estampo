@@ -2,6 +2,12 @@
 
 All notable changes to fabprint are documented here.
 
+## 0.1.141 — 2026-03-23
+
+- Add OrcaSlicer 2.3.2 support (new default); 2.3.1 remains available
+- Docker publish workflows use matrix strategy to build both versions in parallel
+- Release workflow split into separate jobs for PyPI, Docker images, and profile extraction
+
 ## 0.1.140 — 2026-03-22
 
 - `fabprint status --stop` to stop a running print job

@@ -3,8 +3,8 @@ services:
     build:
       context: .
       args:
-        ORCA_VERSION: "2.3.1"
-    image: fabprint:orca-2.3.1
+        ORCA_VERSION: "2.3.2"
+    image: fabprint:orca-2.3.2
     platform: linux/amd64
     volumes:
       - .:/project

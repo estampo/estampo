@@ -35,7 +35,7 @@ Two automated pipelines handle publishing:
 
 Every merge to main triggers:
 - **TestPyPI** — publishes a `.dev` package (e.g. `0.1.140.dev42`)
-- **Docker** — rebuilds images with mutable tags (`orca-2.3.1`) when relevant files change
+- **Docker** — rebuilds images with mutable tags (`orca-2.3.2`) when relevant files change
 
 No version bump needed for day-to-day work.
 
@@ -65,7 +65,7 @@ Pre-built OrcaSlicer images are on [Docker Hub](https://hub.docker.com/r/fabprin
 ./scripts/build-docker.sh 2.3.2 --push   # build and push
 ```
 
-fabprint auto-detects Docker and uses it for slicing when available, falling back to a local slicer install. Force local with `--local`, or pin a Docker version with `--docker-version 2.3.1`.
+fabprint auto-detects Docker and uses it for slicing when available, falling back to a local slicer install. Force local with `--local`, or pin a Docker version with `--docker-version 2.3.2`.
 
 ## Platform support
 

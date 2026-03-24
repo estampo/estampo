@@ -10,7 +10,7 @@ on:
       orca_version:
         description: "OrcaSlicer version"
         required: true
-        default: "2.3.1"
+        default: "2.3.2"
 
 jobs:
   slice:

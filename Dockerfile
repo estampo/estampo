@@ -8,7 +8,7 @@
 #   docker build --build-arg ORCA_VERSION=2.3.1 -t fabprint/fabprint:orca-2.3.1 .
 #   docker run --rm -v "$PWD:/project" fabprint/fabprint:orca-2.3.1 slice fabprint.toml
 
-ARG ORCA_VERSION=2.3.1
+ARG ORCA_VERSION=2.3.2
 FROM fabprint/orca-base:${ORCA_VERSION}
 
 LABEL org.opencontainers.image.description="fabprint with OrcaSlicer ${ORCA_VERSION}"
