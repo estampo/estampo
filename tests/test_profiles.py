@@ -175,6 +175,37 @@ def test_load_bundled_profiles_missing(tmp_path):
     assert result == {}
 
 
+def test_bundled_profiles_exist():
+    """Real bundled profiles must be shipped with the package."""
+    from estampo.profiles import _BUNDLED_DIR
+
+    profiles = sorted(_BUNDLED_DIR.glob("profiles.orca.*.json"))
+    assert profiles, f"No bundled profiles found in {_BUNDLED_DIR}"
+
+
+def test_bundled_profiles_valid():
+    """Bundled profile files must be valid JSON with required structure."""
+    from estampo.profiles import _BUNDLED_DIR
+
+    for path in sorted(_BUNDLED_DIR.glob("profiles.orca.*.json")):
+        data = json.load(open(path))
+        assert data.get("engine") == "orca", f"{path.name}: bad engine"
+        assert "version" in data, f"{path.name}: missing version"
+        for cat in ("machine", "process", "filament"):
+            assert cat in data, f"{path.name}: missing {cat}"
+            assert isinstance(data[cat], list), f"{path.name}: {cat} not a list"
+            assert len(data[cat]) > 0, f"{path.name}: {cat} is empty"
+
+
+def test_bundled_profiles_loadable():
+    """load_bundled_profiles returns real data from shipped profiles."""
+    result = load_bundled_profiles("orca")
+    assert result, "load_bundled_profiles returned empty — profiles not bundled?"
+    assert len(result["machine"]) > 10, "Expected many machine profiles"
+    assert len(result["process"]) > 10, "Expected many process profiles"
+    assert len(result["filament"]) > 10, "Expected many filament profiles"
+
+
 # ---------------------------------------------------------------------------
 # discover_profile_names
 # ---------------------------------------------------------------------------

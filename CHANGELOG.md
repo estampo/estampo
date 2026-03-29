@@ -2,13 +2,17 @@
 
 All notable changes to this project are documented here.
 
-## Unreleased
+## 0.2.2 — 2026-03-29
 
+- Bundle OrcaSlicer profiles in the pip package (fixes `estampo init` for pip/pipx users)
+- Add tests to verify bundled profiles exist, are valid, and are loadable
 - Fix `estampo status` showing cryptic "non-JSON output" error when Docker is not running; now reports "Docker is not running. Start Docker..." clearly
 - Fix release-readiness skipping builds on tag pushes (workflow_call inherits caller's push event)
 - Fix profiles job in release workflow: install project before running extract_profiles.py
 - Restructure release workflow: build all artifacts before publishing any of them
-- Move profile extraction + commit to release-readiness (runs on push to main), not release
+- Move profile extraction to release-readiness (runs on push to main), keeping profiles up-to-date in source
+- Fix release-readiness: add workflow files to change filter, fix job conditions for tag pushes
+- Graceful fallback when GitHub Actions cannot create PRs for profile updates
 
 ## 0.2.1 — 2026-03-29
 
