@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Record fabprint demo phases and merge into a single GIF.
+"""Record estampo demo phases and merge into a single GIF.
 
 Each phase is recorded as a separate .cast file. The setup phase uses a
 pre-recorded cast file since it requires interactive login.
@@ -121,7 +121,7 @@ def start_recording(cast_file: Path, cwd: str | None = None) -> pexpect.spawn:
 
     env = {
         **os.environ,
-        "FABPRINT_SKIP_SLICER_DETECT": "1",
+        "ESTAMPO_SKIP_SLICER_DETECT": "1",
         "PROMPT_TOOLKIT_NO_CPR": "1",
     }
 
@@ -164,7 +164,7 @@ def record_status() -> None:
 
     try:
         type_comment(child, "# Check printer status")
-        type_command(child, "fabprint status")
+        type_command(child, "estampo status")
         expect(child, r"IDLE|RUNNING|FINISH|FAILED|State:", timeout=30)
         time.sleep(3)
     finally:
@@ -181,29 +181,29 @@ def record_init() -> None:
     # Clean up for fresh demo
     import shutil
 
-    fabprint_toml = DEMO_DIR / "fabprint.toml"
-    if fabprint_toml.exists():
-        fabprint_toml.unlink()
-        status("removed existing fabprint.toml")
+    estampo_toml = DEMO_DIR / "estampo.toml"
+    if estampo_toml.exists():
+        estampo_toml.unlink()
+        status("removed existing estampo.toml")
     profiles_dir = DEMO_DIR / "profiles"
     if profiles_dir.exists():
         shutil.rmtree(profiles_dir)
         status("removed existing profiles/")
-    output_dir = DEMO_DIR / "fabprint_output"
+    output_dir = DEMO_DIR / "estampo_output"
     if output_dir.exists():
         shutil.rmtree(output_dir)
-        status("removed existing fabprint_output/")
+        status("removed existing estampo_output/")
 
     child = start_recording(cast_file)
 
     try:
-        type_comment(child, "# a fabprint project is just CAD files + fabprint.toml")
+        type_comment(child, "# an estampo project is just CAD files + estampo.toml")
         type_command(child, "cd repos/decoy-case")
         time.sleep(0.5)
         type_command(child, "ls -l")
         time.sleep(1.5)
-        type_comment(child, "# fabprint init creates the config from your project")
-        type_command(child, "fabprint init")
+        type_comment(child, "# estampo init creates the config from your project")
+        type_command(child, "estampo init")
 
         # Project name — accept default
         expect(child, "Project name")
@@ -314,9 +314,9 @@ def record_init() -> None:
         time.sleep(2)
         child.sendline("w")
 
-        expect(child, "Wrote fabprint.toml")
+        expect(child, "Wrote estampo.toml")
         time.sleep(2)
-        status("init complete — wrote fabprint.toml")
+        status("init complete — wrote estampo.toml")
         time.sleep(1)
     finally:
         stop_recording(child)
@@ -333,13 +333,13 @@ def record_profiles_pin() -> None:
 
     try:
         type_comment(child, "# Pin slicer profiles for reproducibility")
-        type_command(child, "fabprint profiles pin")
+        type_command(child, "estampo profiles pin")
 
         expect(child, "Pinned.*profile")
         time.sleep(3)
         status("profiles pinned")
 
-        type_comment(child, "# fabprint.toml and profiles/ are ready to commit")
+        type_comment(child, "# estampo.toml and profiles/ are ready to commit")
         type_command(child, "ls -l")
         time.sleep(2)
     finally:
@@ -357,7 +357,7 @@ def record_validate() -> None:
 
     try:
         type_comment(child, "# Validate config")
-        type_command(child, "fabprint validate")
+        type_command(child, "estampo validate")
 
         expect(child, "checks passed|warning")
         time.sleep(3)
@@ -379,7 +379,7 @@ def record_run(dry_run: bool = True) -> None:
 
     try:
         type_comment(child, "# Build and send to printer")
-        cmd = "fabprint run --dry-run" if dry_run else "fabprint run"
+        cmd = "estampo run --dry-run" if dry_run else "estampo run"
         type_command(child, cmd)
 
         expect(child, "Loaded.*part")
@@ -420,7 +420,7 @@ def record_status_w() -> None:
 
     try:
         type_comment(child, "# Live printer dashboard")
-        type_command(child, "fabprint status -w --interval 1")
+        type_command(child, "estampo status -w --interval 1")
 
         # Let the dashboard refresh a few times
         time.sleep(10)
@@ -548,7 +548,7 @@ def main() -> None:
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Record fabprint demo phases and merge into a single GIF.",
+        description="Record estampo demo phases and merge into a single GIF.",
         epilog="Examples:\n"
         "  record_demo.py                              # record all auto phases + merge\n"
         "  record_demo.py --phases init,run            # re-record only init and run\n"

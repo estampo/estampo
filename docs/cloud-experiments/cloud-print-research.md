@@ -8,7 +8,7 @@ with the goal of triggering a cloud print from third-party code (not BambuStudio
 **Printer:** Bambu Lab P1S, serial `<DEVICE_ID>`, with 4-slot AMS
 **Branch:** `cloud-print-test`
 **Working solution:** `scripts/bambu_cloud_bridge.cpp` — C++ bridge to `libbambu_networking.so`
-**Python wrapper:** `src/fabprint/cloud.py`
+**Python wrapper:** `src/estampo/cloud.py`
 **Docker image:** `Dockerfile.cloud-bridge`
 
 **Status: CLOUD PRINT WORKING** via C++ bridge wrapping `libbambu_networking.so`.
@@ -401,7 +401,7 @@ project
 - **Broker:** `us.mqtt.bambulab.com:8883` (TLS required)
 - **Username:** `u_{user_id}` (user_id from `/my/preference`, integer as string)
 - **Password:** Access token (from login)
-- **Client ID:** Any unique string (e.g., `fabprint-test-{device_id[:8]}`)
+- **Client ID:** Any unique string (e.g., `estampo-test-{device_id[:8]}`)
 - **Keepalive:** 60 seconds
 - **TLS:** `ssl.CERT_REQUIRED`, `ssl.PROTOCOL_TLS`
 - **Publish topic:** `device/{device_id}/request`
@@ -413,7 +413,7 @@ project
 - **Broker:** `{printer_ip}:8883` (TLS, self-signed cert)
 - **Username:** `bblp` (hardcoded)
 - **Password:** Access code (from GET /user/print, e.g., `19236776`)
-- **Client ID:** Any unique string (e.g., `fabprint-lan-{serial[:8]}`)
+- **Client ID:** Any unique string (e.g., `estampo-lan-{serial[:8]}`)
 - **Keepalive:** 60 seconds
 - **TLS:** `ssl.CERT_NONE`, `check_hostname = False` (printer uses self-signed cert)
 - **Topics:** Same format as cloud but uses serial instead of dev_id
@@ -708,7 +708,7 @@ Response: {"accessToken": "eyJ..."}
 
 ### Token Caching
 
-- Stored in `~/.config/fabprint/credentials.toml` `[cloud]` section (via `fabprint login` or `fabprint setup`)
+- Stored in `~/.config/estampo/credentials.toml` `[cloud]` section (via `estampo login` or `estampo setup`)
 - Legacy location: `~/.bambu_cloud_token` (used by standalone test scripts only)
 - Format in credentials.toml: `token`, `refresh_token`, `email`, `uid` fields
 - Validation: attempt `GET /my/preference` with cached token; fall back to fresh login on failure
@@ -895,8 +895,8 @@ Solved by using the library bridge instead of direct HTTP.
 
 ## Key Files
 
-- `/app/workspaces/pzfreo/fabprint/scripts/test_cloud_print.py` — main test script
-- `/app/workspaces/pzfreo/fabprint/examples/gib-tuners-c13-10/output/plate_sliced.gcode.3mf` — test 3mf file (3.2MB, sliced for P1S, uses PETG-CF filament)
+- `scripts/test_cloud_print.py` — main test script
+- `examples/gib-tuners-c13-10/output/plate_sliced.gcode.3mf` — test 3mf file (3.2MB, sliced for P1S, uses PETG-CF filament)
 - `/tmp/bambu_studio_src/src/slic3r/GUI/Jobs/PrintJob.cpp` — BambuStudio cloud print flow
 - `/tmp/bambu_studio_src/src/slic3r/Utils/bambu_networking.hpp` — Error codes, PrintParams struct
 
@@ -930,7 +930,7 @@ and calls its functions directly. This is the same approach BambuStudio and Orca
 ### Architecture
 
 ```
-fabprint pipeline
+estampo pipeline
     → cloud.py (Python wrapper)
         → bambu_cloud_bridge (C++ CLI binary)
             → libbambu_networking.so (proprietary, loaded via dlopen)
@@ -966,7 +966,7 @@ X-BBL-Client-Name:    BambuStudio
 X-BBL-Client-Version: 02.05.01.52
 X-BBL-OS-Type:        linux
 X-BBL-OS-Version:     6.8.0
-X-BBL-Device-ID:      <unique-id>      (e.g. "fabprint-headless-001")
+X-BBL-Device-ID:      <unique-id>      (e.g. "estampo-headless-001")
 X-BBL-Language:       en
 ```
 
@@ -1308,7 +1308,7 @@ with open('file.3mf', 'rb') as f:
 **Status: TASK CREATED BUT PRINTER REJECTS — task appears in Bambu Handy but printer does not start
 (MQTT command rejected: "MQTT Command verification failed"). Signing is required — see below.**
 
-**Implemented as `mode = "cloud-http"` (experimental) in fabprint.**
+**Implemented as `mode = "cloud-http"` (experimental) in estampo.**
 
 **Flow (8 steps, REST-only — captured from BambuConnect v2.2.1 TLS traffic, Mar 2026):**
 
@@ -1813,9 +1813,9 @@ OpenSSL structures or PEM/DER encoding. See "Approach 9" below for the latest at
 7. PATCH /v1/iot-service/api/user/project/{id} — set **gcode upload URL** + **gcode.3mf MD5**
 8. POST /v1/user-service/my/task — create task (**requires RSA signing to avoid printer rejection**)
 
-**Implementation:** `src/fabprint/cloud.py` provides both `cloud_print()` (bridge-based,
+**Implementation:** `src/estampo/cloud.py` provides both `cloud_print()` (bridge-based,
 recommended) and `cloud_print_http()` (pure Python, unsigned). Callable via
-`mode = "cloud-bridge"` (default) or `mode = "cloud-http" --experimental` in fabprint.
+`mode = "cloud-bridge"` (default) or `mode = "cloud-http" --experimental` in estampo.
 
 ---
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Record the fabprint setup phase (interactive — requires login).
+"""Record the estampo setup phase (interactive — requires login).
 
 Usage:
     python scripts/record_setup.py
@@ -46,7 +46,7 @@ def read_clipboard() -> str:
 def record_setup(password: str) -> None:
     """Record the setup phase."""
     # Back up and clear credentials for a fresh setup demo
-    cred_path = Path.home() / ".config" / "fabprint" / "credentials.toml"
+    cred_path = Path.home() / ".config" / "estampo" / "credentials.toml"
     cred_backup = None
     if cred_path.exists():
         cred_backup = cred_path.read_text()
@@ -56,8 +56,8 @@ def record_setup(password: str) -> None:
     child = start_recording(CAST_FILE)
 
     try:
-        type_comment(child, "# Step 1: fabprint setup — run once per printer")
-        type_command(child, "fabprint setup")
+        type_comment(child, "# Step 1: estampo setup — run once per printer")
+        type_command(child, "estampo setup")
 
         # Printer name — accept default "workshop"
         expect(child, "Printer name")
@@ -140,7 +140,7 @@ def record_setup(password: str) -> None:
 
 
 def main() -> None:
-    print("=== fabprint setup recorder ===", file=sys.stderr)
+    print("=== estampo setup recorder ===", file=sys.stderr)
     print(f"Email: {EMAIL}", file=sys.stderr)
     password = getpass.getpass("Bambu Cloud password (won't appear in recording): ")
     if not password:
