@@ -2,8 +2,9 @@
 
 All notable changes to this project are documented here.
 
-## Unreleased
+## 0.2.1 — 2026-03-29
 
+- Fix profiles extraction: use correct Docker image tag format (`orca-<version>`)
 - Consolidate Docker image tag construction into single `docker_image()` function in `slicer.py`
 - Add consistency test to catch Docker image tag drift across the codebase
 - Add release-readiness workflow: e2e Docker build, smoke test, profile extraction, and real slice test
@@ -13,10 +14,6 @@ All notable changes to this project are documented here.
 - Remove forced `use_relative_e_distances=0` — let OrcaSlicer profile chain decide
 - Add nightly schedule to release-readiness workflow
 - Gate release workflow on release-readiness passing first
-
-## 0.2.1 — 2026-03-29
-
-- Fix profiles extraction: use correct Docker image tag format (`orca-<version>`)
 
 ## 0.2.0 — 2026-03-29
 
