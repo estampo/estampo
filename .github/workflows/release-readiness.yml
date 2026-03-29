@@ -27,7 +27,7 @@ env:
 
 jobs:
   detect-changes:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
     runs-on: ubuntu-latest
     outputs:
       relevant: ${{ steps.filter.outputs.relevant }}
@@ -47,7 +47,7 @@ jobs:
 
   build-estampo-image:
     needs: detect-changes
-    if: always() && !failure() && !cancelled() && (github.event_name != 'push' || needs.detect-changes.outputs.relevant == 'true')
+    if: always() && !failure() && !cancelled() && (needs.detect-changes.result == 'skipped' || needs.detect-changes.outputs.relevant == 'true')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -85,7 +85,7 @@ jobs:
 
   build-cloud-bridge:
     needs: detect-changes
-    if: always() && !failure() && !cancelled() && (github.event_name != 'push' || needs.detect-changes.outputs.relevant == 'true')
+    if: always() && !failure() && !cancelled() && (needs.detect-changes.result == 'skipped' || needs.detect-changes.outputs.relevant == 'true')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
