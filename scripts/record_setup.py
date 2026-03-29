@@ -125,6 +125,13 @@ def record_setup(password: str) -> None:
         expect(child, "Wrote.*credentials")
         time.sleep(2)
         status("setup complete")
+
+        # Quick status check to show printer is connected
+        time.sleep(1)
+        type_comment(child, "# Check printer status")
+        type_command(child, "estampo status")
+        expect(child, r"IDLE|RUNNING|FINISH|FAILED|State:", timeout=30)
+        time.sleep(3)
     finally:
         stop_recording(child)
 
