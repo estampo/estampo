@@ -5,7 +5,14 @@ on:
     tags: ["v*"]
 
 jobs:
+  readiness:
+    uses: ./.github/workflows/release-readiness.yml
+    with:
+      orca_version: "2.3.1"
+    secrets: inherit
+
   release:
+    needs: readiness
     runs-on: ubuntu-latest
     permissions:
       contents: write

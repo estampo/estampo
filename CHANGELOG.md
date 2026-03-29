@@ -11,6 +11,8 @@ All notable changes to this project are documented here.
 - Fix profile extraction: use direct path instead of symlink in Docker container
 - Slicer now falls back to local OrcaSlicer when Docker image is unavailable (even with pinned version)
 - Remove forced `use_relative_e_distances=0` — let OrcaSlicer profile chain decide
+- Add nightly schedule to release-readiness workflow
+- Gate release workflow on release-readiness passing first
 
 ## 0.2.1 — 2026-03-29
 
