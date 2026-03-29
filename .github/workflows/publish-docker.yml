@@ -95,8 +95,8 @@ jobs:
 
   # Rebuild the estampo Python layer on push to main or manual dispatch.
   estampo-images:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.estampo == 'true' || github.event_name == 'workflow_dispatch'
+    needs: [detect-changes, orca-base]
+    if: always() && !failure() && (needs.detect-changes.outputs.estampo == 'true' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     permissions:
       packages: write
