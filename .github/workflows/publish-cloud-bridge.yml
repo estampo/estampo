@@ -11,13 +11,10 @@ jobs:
       orca_version: "2.3.1"
     secrets: inherit
 
-  release:
+  # ── Stage 1: Verify version ──────────────────────────────────────────
+  version:
     needs: readiness
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      id-token: write
-      packages: write
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
@@ -38,66 +35,37 @@ jobs:
             exit 1
           fi
 
+  # ── Stage 2: Build everything (no publishing) ───────────────────────
+  build-pypi:
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
-      - name: Build and publish to PyPI
+      - name: Build package
         run: |
           pip install build
           python -m build
 
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-
-      - name: Build and push cloud-bridge
-        run: echo "Cloud bridge built in docker-images job"
-
-      - uses: docker/login-action@v3
+      - uses: actions/upload-artifact@v7
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/setup-buildx-action@v3
+          name: pypi-dist
+          path: dist/
+          retention-days: 1
 
-      - name: Build and push cloud-bridge
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: Dockerfile.cloud-bridge
-          platforms: linux/amd64
-          push: true
-          tags: |
-            estampo/cloud-bridge:${{ steps.version.outputs.version }}
-            estampo/cloud-bridge:latest
-            ghcr.io/${{ github.repository }}/cloud-bridge:${{ steps.version.outputs.version }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  docker-images:
-    needs: release
+  build-docker:
+    needs: version
     runs-on: ubuntu-latest
-    permissions:
-      packages: write
     strategy:
       matrix:
         orca-version: ["2.3.1"]
     steps:
       - uses: actions/checkout@v6
-      - uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/setup-buildx-action@v3
 
       - name: Check if orca-base already exists
@@ -109,75 +77,153 @@ jobs:
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Build and push orca-base
+      - name: Build orca-base (if needed)
         if: steps.base_exists.outputs.exists == 'false'
         uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile.orca-base
           platforms: linux/amd64
-          push: true
-          tags: |
-            estampo/orca-base:${{ matrix.orca-version }}
-            ghcr.io/${{ github.repository }}/orca-base:${{ matrix.orca-version }}
+          push: false
+          load: true
+          tags: estampo/orca-base:${{ matrix.orca-version }}
           build-args: ORCA_VERSION=${{ matrix.orca-version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build and push estampo image
+      - name: Build estampo image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile
           platforms: linux/amd64
-          push: true
-          tags: |
-            estampo/estampo:orca-${{ matrix.orca-version }}-${{ needs.release.outputs.version }}
-            estampo/estampo:orca-${{ matrix.orca-version }}
-            ghcr.io/${{ github.repository }}:orca-${{ matrix.orca-version }}-${{ needs.release.outputs.version }}
-            ghcr.io/${{ github.repository }}:orca-${{ matrix.orca-version }}
+          push: false
+          load: true
+          tags: estampo/estampo:orca-${{ matrix.orca-version }}
           build-args: ORCA_VERSION=${{ matrix.orca-version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  profiles:
-    needs: [release, docker-images]
+      - name: Save image as artifact
+        run: |
+          docker save estampo/estampo:orca-${{ matrix.orca-version }} \
+            -o estampo-image.tar
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: docker-image-${{ matrix.orca-version }}
+          path: estampo-image.tar
+          retention-days: 1
+
+  build-cloud-bridge:
+    needs: version
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
     steps:
       - uses: actions/checkout@v6
+      - uses: docker/setup-buildx-action@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - name: Build cloud-bridge image
+        uses: docker/build-push-action@v6
         with:
-          python-version: "3.11"
+          context: .
+          file: Dockerfile.cloud-bridge
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: estampo/cloud-bridge:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Install project
-        run: |
-          pip install uv
-          uv sync
+      - name: Save image as artifact
+        run: docker save estampo/cloud-bridge:latest -o cloud-bridge.tar
 
-      - name: Extract profiles for all OrcaSlicer versions
-        run: |
-          uv run python scripts/extract_profiles.py 2.3.1
+      - uses: actions/upload-artifact@v7
+        with:
+          name: cloud-bridge-image
+          path: cloud-bridge.tar
+          retention-days: 1
 
-      - name: Open PR for bundled profile updates
+  # ── Stage 3: Publish everything ─────────────────────────────────────
+  publish-pypi:
+    needs: [version, build-pypi, build-docker, build-cloud-bridge]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: pypi-dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  publish-docker:
+    needs: [version, build-pypi, build-docker, build-cloud-bridge]
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    strategy:
+      matrix:
+        orca-version: ["2.3.1"]
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: docker-image-${{ matrix.orca-version }}
+
+      - name: Load image
+        run: docker load -i estampo-image.tar
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag and push estampo image
         run: |
-          git diff --quiet src/estampo/data/ && echo "No profile changes" && exit 0
-          VERSION="${{ needs.release.outputs.version }}"
-          BRANCH="update-orca-profiles-${VERSION}"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -b "$BRANCH"
-          git add src/estampo/data/
-          git commit -m "Update bundled OrcaSlicer profiles (2.3.1, 2.3.2)"
-          git push origin "$BRANCH"
-          gh pr create \
-            --title "Update bundled OrcaSlicer profiles" \
-            --body "Auto-generated profile update from release ${VERSION}." \
-            --base main \
-            --head "$BRANCH"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION="${{ needs.version.outputs.version }}"
+          ORCA="${{ matrix.orca-version }}"
+          docker tag "estampo/estampo:orca-${ORCA}" "estampo/estampo:orca-${ORCA}-${VERSION}"
+          docker tag "estampo/estampo:orca-${ORCA}" "ghcr.io/${{ github.repository }}:orca-${ORCA}-${VERSION}"
+          docker tag "estampo/estampo:orca-${ORCA}" "ghcr.io/${{ github.repository }}:orca-${ORCA}"
+          docker push "estampo/estampo:orca-${ORCA}"
+          docker push "estampo/estampo:orca-${ORCA}-${VERSION}"
+          docker push "ghcr.io/${{ github.repository }}:orca-${ORCA}-${VERSION}"
+          docker push "ghcr.io/${{ github.repository }}:orca-${ORCA}"
+
+  publish-cloud-bridge:
+    needs: [version, build-pypi, build-docker, build-cloud-bridge]
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: cloud-bridge-image
+
+      - name: Load image
+        run: docker load -i cloud-bridge.tar
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag and push cloud-bridge
+        run: |
+          VERSION="${{ needs.version.outputs.version }}"
+          docker tag estampo/cloud-bridge:latest "estampo/cloud-bridge:${VERSION}"
+          docker tag estampo/cloud-bridge:latest "ghcr.io/${{ github.repository }}/cloud-bridge:${VERSION}"
+          docker push "estampo/cloud-bridge:${VERSION}"
+          docker push estampo/cloud-bridge:latest
+          docker push "ghcr.io/${{ github.repository }}/cloud-bridge:${VERSION}"
