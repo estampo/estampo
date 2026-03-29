@@ -426,7 +426,17 @@ def _detect_orca_version() -> str | None:
     where launching OrcaSlicer --help may hang).
     """
     skip_detect = os.environ.get("ESTAMPO_SKIP_SLICER_DETECT")
-    skip_detect = skip_detect or os.environ.get("FABPRINT_SKIP_SLICER_DETECT")
+    if not skip_detect:
+        skip_detect = os.environ.get("FABPRINT_SKIP_SLICER_DETECT")
+        if skip_detect:
+            import warnings
+
+            warnings.warn(
+                "FABPRINT_SKIP_SLICER_DETECT is deprecated"
+                " — use ESTAMPO_SKIP_SLICER_DETECT instead",
+                DeprecationWarning,
+                stacklevel=2,
+            )
     if skip_detect:
         return None
     try:

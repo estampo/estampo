@@ -81,7 +81,17 @@ def _migrate_config_dir() -> None:
 
 def _credentials_path() -> Path:
     """Return the path to the credentials file."""
-    env = os.environ.get("ESTAMPO_CREDENTIALS") or os.environ.get("FABPRINT_CREDENTIALS")
+    env = os.environ.get("ESTAMPO_CREDENTIALS")
+    if not env:
+        env = os.environ.get("FABPRINT_CREDENTIALS")
+        if env:
+            import warnings
+
+            warnings.warn(
+                "FABPRINT_CREDENTIALS is deprecated — use ESTAMPO_CREDENTIALS instead",
+                DeprecationWarning,
+                stacklevel=2,
+            )
     if env:
         return Path(env)
     _migrate_config_dir()

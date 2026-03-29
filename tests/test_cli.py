@@ -30,7 +30,7 @@ def _docker_orca_version() -> str | None:
     """Return the OrcaSlicer Docker image version to test with.
 
     Uses ESTAMPO_TEST_ORCA_VERSION env var if set, otherwise auto-detects
-    the first available fabprint:orca-* image.
+    the first available estampo:orca-* image.
     """
     env_ver = os.environ.get("ESTAMPO_TEST_ORCA_VERSION")
     if env_ver:
@@ -446,17 +446,13 @@ def test_resolve_config_path_missing(tmp_path, monkeypatch):
         _resolve_config_path(None)
 
 
-def test_resolve_config_path_legacy_fabprint_toml(tmp_path, monkeypatch):
+def test_resolve_config_path_legacy_fabprint_toml(tmp_path, monkeypatch, capsys):
     """Falls back to fabprint.toml with deprecation warning when estampo.toml is absent."""
     monkeypatch.chdir(tmp_path)
     (tmp_path / "fabprint.toml").write_text("[slicer]\n")
-    import warnings
-
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
-        result = _resolve_config_path(None)
-        assert result == Path("fabprint.toml")
-        assert any("fabprint.toml is deprecated" in str(warning.message) for warning in w)
+    result = _resolve_config_path(None)
+    assert result == Path("fabprint.toml")
+    assert "fabprint.toml is deprecated" in capsys.readouterr().err
 
 
 # --- _resolve_status_printers ---

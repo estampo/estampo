@@ -71,12 +71,11 @@ def _resolve_config_path(config: Path | None) -> Path:
     if not candidate.exists():
         legacy = Path("fabprint.toml")
         if legacy.exists():
-            import warnings
+            import sys
 
-            warnings.warn(
-                "fabprint.toml is deprecated — rename it to estampo.toml",
-                DeprecationWarning,
-                stacklevel=2,
+            print(
+                "Warning: fabprint.toml is deprecated — rename it to estampo.toml",
+                file=sys.stderr,
             )
             return legacy
     if not candidate.exists():

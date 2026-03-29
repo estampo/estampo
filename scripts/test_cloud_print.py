@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Standalone test for Bambu Lab cloud printing via MQTT.
 
-DEPRECATED: Use `fabprint run` with a bambu-cloud printer instead.
-Credentials are now stored in ~/.config/fabprint/credentials.toml.
+DEPRECATED: Use `estampo run` with a bambu-cloud printer instead.
+Credentials are now stored in ~/.config/estampo/credentials.toml.
 
-This legacy script is kept for standalone MQTT testing without fabprint installed.
+This legacy script is kept for standalone MQTT testing without estampo installed.
 It reads from ~/.bambu_cloud_token (old location, written by bambu_cloud_login.py).
 
 Zero third-party dependencies beyond paho-mqtt and requests.

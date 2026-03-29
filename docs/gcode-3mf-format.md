@@ -288,7 +288,7 @@ For 3MF inputs, per-object extruder assignment is stored in
 The `id` attribute must match the object IDs in `3D/3dmodel.model`. The
 `extruder` value is 1-indexed (matches AMS slot numbers).
 
-This is what fabprint uses: `export_plate()` writes a `model_settings.config`
+This is what estampo uses: `export_plate()` writes a `model_settings.config`
 with per-object extruder metadata so OrcaSlicer slices each part with the
 correct filament.
 

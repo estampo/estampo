@@ -151,7 +151,7 @@ def cloud_print_http(
     """Start a cloud print job via pure Python HTTP (no C++ bridge needed).
 
     Uses BambuConnect client headers to call Bambu Lab's REST API directly.
-    Requires 'requests': pip install fabprint[cloud]
+    Requires 'requests': pip install estampo[cloud]
 
     Args:
         threemf_path: Path to the sliced .gcode.3mf file
