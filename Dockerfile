@@ -6,7 +6,7 @@
 #
 # Usage:
 #   docker build --build-arg ORCA_VERSION=2.3.1 -t estampo/estampo:orca-2.3.1 .
-#   docker run --rm -v "$PWD:/project" estampo/estampo:orca-2.3.1 slice estampo.toml
+#   docker run --rm -v "$PWD:/project" estampo/estampo:orca-2.3.1 run estampo.toml
 
 ARG ORCA_VERSION=2.3.1
 FROM estampo/orca-base:${ORCA_VERSION}

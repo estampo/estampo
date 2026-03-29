@@ -7,6 +7,8 @@ All notable changes to this project are documented here.
 - Consolidate Docker image tag construction into single `docker_image()` function in `slicer.py`
 - Add consistency test to catch Docker image tag drift across the codebase
 - Add release-readiness workflow: e2e Docker build, smoke test, profile extraction, and real slice test
+- Fix Docker CLI command: `slice` -> `run` in workflows, Dockerfile comment
+- Fix profile extraction: use direct path instead of symlink in Docker container
 
 ## 0.2.1 — 2026-03-29
 
