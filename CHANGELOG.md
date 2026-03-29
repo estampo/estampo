@@ -2,6 +2,10 @@
 
 All notable changes to this project are documented here.
 
+## Unreleased
+
+- Fix profiles extraction: use correct Docker image tag format (`orca-<version>`)
+
 ## 0.2.0 — 2026-03-29
 
 **Project renamed from `fabprint` to `estampo`.**

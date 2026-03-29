@@ -72,7 +72,7 @@ def main() -> None:
     parser.add_argument("versions", nargs="+", help="OrcaSlicer version(s) to extract")
     parser.add_argument(
         "--image",
-        help="Docker image to use (default: estampo/estampo:<version>). "
+        help="Docker image to use (default: estampo/estampo:orca-<version>). "
         "Only valid when a single version is given.",
     )
     args = parser.parse_args()
@@ -83,7 +83,7 @@ def main() -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
     for version in args.versions:
-        image = args.image or f"estampo/estampo:{version}"
+        image = args.image or f"estampo/estampo:orca-{version}"
         data = extract(version, image)
         out = OUT_DIR / f"profiles.orca.{version}.json"
         out.write_text(json.dumps(data, indent=2) + "\n")
