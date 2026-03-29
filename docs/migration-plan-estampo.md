@@ -84,7 +84,7 @@ This is the core change. Everything else depends on it.
 ```toml
 [project]
 name = "estampo"
-version = "1.0.0"  # major version bump for the rename
+version = "0.2.0"  # continuation of the fabprint version series
 description = "Reproducible 3D print builds. Define parts, slicer settings, and printer targets in code."
 keywords = ["3d-printing", "bambu", "orcaslicer", "gcode", "3mf", "slicer", "pipeline", "estampo"]
 
@@ -107,8 +107,8 @@ In `config.py`, add fallback loading order:
 ### 1.5 User data migration
 
 On first run, if `~/.fabprint/` exists but `~/.estampo/` does not:
-- Copy/symlink `~/.fabprint/` → `~/.estampo/`
-- Print one-time migration notice
+- Copy `~/.fabprint/` → `~/.estampo/` (full copy, not symlink)
+- Print one-time migration notice suggesting user delete `~/.fabprint/` once satisfied
 
 ---
 
@@ -133,7 +133,7 @@ fabprint-wrapper/
 name = "fabprint"
 version = "0.2.0"  # bump minor to signal change
 description = "DEPRECATED: fabprint has been renamed to estampo. This package is a compatibility wrapper."
-dependencies = ["estampo>=1.0.0"]
+dependencies = ["estampo>=0.2.0"]
 
 [project.scripts]
 fabprint = "fabprint.cli:main"
@@ -215,14 +215,16 @@ main()
 
 ### 4.1 New image names
 
+Same structure as fabprint, just replacing the name:
+
 | Before | After |
 |--------|-------|
-| `fabprint/orca-base:*` | `estampo/orca-slicer:*` |
+| `fabprint/orca-base:*` | `estampo/orca-base:*` |
 | `fabprint/fabprint:orca-*` | `estampo/estampo:orca-*` |
 | `fabprint/cloud-bridge:*` | `estampo/cloud-bridge:*` |
 | `ghcr.io/pzfreo/fabprint:orca-*` | `ghcr.io/estampo/estampo:orca-*` |
 | `ghcr.io/pzfreo/fabprint/cloud-bridge:*` | `ghcr.io/estampo/estampo/cloud-bridge:*` |
-| `ghcr.io/pzfreo/fabprint/orca-base:*` | `ghcr.io/estampo/estampo/orca-slicer:*` |
+| `ghcr.io/pzfreo/fabprint/orca-base:*` | `ghcr.io/estampo/estampo/orca-base:*` |
 
 ### 4.2 Files to update (4 Dockerfiles, 3 workflows, 2 scripts)
 
@@ -387,8 +389,8 @@ Phase 8  Clean up miscellaneous files
 
 | Package | Version | Notes |
 |---------|---------|-------|
-| `estampo` | `1.0.0` | Major version bump signals the rename |
-| `fabprint` (wrapper) | `0.2.0` | Minor bump, depends on `estampo>=1.0.0` |
+| `estampo` | `0.2.0` | Continues the fabprint version series |
+| `fabprint` (wrapper) | `0.2.0` | Minor bump, depends on `estampo>=0.2.0` |
 
 ---
 
@@ -396,7 +398,7 @@ Phase 8  Clean up miscellaneous files
 
 | Date | Action |
 |------|--------|
-| T+0 | Publish `estampo` 1.0.0 to PyPI |
+| T+0 | Publish `estampo` 0.2.0 to PyPI |
 | T+0 | Publish `fabprint` 0.2.0 wrapper to PyPI |
 | T+0 | Push Docker images to both old and new names |
 | T+0 | GitHub repo transfer + rename |
@@ -411,7 +413,7 @@ Phase 8  Clean up miscellaneous files
 
 - [ ] **PyPI name squatting**: Register `estampo` on PyPI ASAP (Phase 0)
 - [ ] **Broken CI**: Transfer repo before updating workflow image refs
-- [ ] **User config loss**: `~/.fabprint/` migration must be non-destructive (copy, don't move)
+- [ ] **User config loss**: `~/.fabprint/` migration must be non-destructive (copy to `~/.estampo/`, suggest deletion of old dir)
 - [ ] **Docker cache invalidation**: Users with `fabprint/*` in their Dockerfiles will break after old images are removed — give 3+ months notice
 - [ ] **GitHub Action users**: Automatic redirect works, but users should update their workflows
 - [ ] **Codecov**: May need re-linking after org transfer
