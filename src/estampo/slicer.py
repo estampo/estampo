@@ -488,14 +488,24 @@ def slice_plate(
         use_docker = False
         slicer = find_slicer(engine)
     elif docker_version is not None:
-        # Explicit Docker version requested
-        use_docker = True
-        if not _ensure_docker_image(image):
-            raise FileNotFoundError(
-                f"Docker image '{image}' not found locally or on Docker Hub. "
-                f"Check your Docker login or build locally with: docker build "
-                f"--build-arg ORCA_VERSION={docker_version or 'X.Y.Z'} -t {image} ."
-            )
+        # Explicit Docker version requested — try Docker, fall back to local
+        if _ensure_docker_image(image):
+            use_docker = True
+        else:
+            try:
+                slicer = find_slicer(engine)
+                use_docker = False
+                print(
+                    f"  \033[33mWarning: Docker image '{image}' not available, "
+                    f"using local slicer.\033[0m"
+                )
+            except FileNotFoundError:
+                raise FileNotFoundError(
+                    f"Docker image '{image}' not found locally or on Docker Hub, "
+                    f"and no local slicer installed. Either:\n"
+                    f"  docker pull {image}\n"
+                    f"  or install OrcaSlicer locally"
+                )
     else:
         # Default: try Docker first, fall back to local
         if _ensure_docker_image(image):
