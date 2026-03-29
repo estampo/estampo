@@ -10,6 +10,7 @@ All notable changes to this project are documented here.
 - Fix Docker CLI command: `slice` -> `run` in workflows, Dockerfile comment
 - Fix profile extraction: use direct path instead of symlink in Docker container
 - Slicer now falls back to local OrcaSlicer when Docker image is unavailable (even with pinned version)
+- Remove forced `use_relative_e_distances=0` — let OrcaSlicer profile chain decide
 
 ## 0.2.1 — 2026-03-29
 
