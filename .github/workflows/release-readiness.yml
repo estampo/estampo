@@ -39,7 +39,7 @@ jobs:
       - id: filter
         run: |
           CHANGED=$(git diff --name-only HEAD~1 HEAD)
-          if echo "$CHANGED" | grep -qE '^(Dockerfile|Dockerfile\.|scripts/extract_profiles\.py|src/estampo/|pyproject\.toml|uv\.lock|examples/)'; then
+          if echo "$CHANGED" | grep -qE '^(Dockerfile|Dockerfile\.|scripts/extract_profiles\.py|src/estampo/|pyproject\.toml|uv\.lock|examples/|\.github/workflows/)'; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"
           else
             echo "relevant=false" >> "$GITHUB_OUTPUT"
@@ -102,7 +102,7 @@ jobs:
 
   smoke-test:
     needs: build-estampo-image
-    if: always() && !failure() && !cancelled()
+    if: needs.build-estampo-image.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v7
@@ -124,7 +124,7 @@ jobs:
 
   profile-extraction:
     needs: build-estampo-image
-    if: always() && !failure() && !cancelled()
+    if: needs.build-estampo-image.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -191,7 +191,7 @@ jobs:
 
   slice-test:
     needs: build-estampo-image
-    if: always() && !failure() && !cancelled()
+    if: needs.build-estampo-image.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
