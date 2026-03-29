@@ -126,6 +126,9 @@ jobs:
     needs: build-estampo-image
     if: always() && !failure() && !cancelled()
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v6
 
@@ -166,6 +169,25 @@ jobs:
               print(f'  {cat}: {n} profiles')
           print('Profile extraction OK')
           "
+
+      - name: Commit updated profiles
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          git diff --quiet src/estampo/data/ && echo "No profile changes" && exit 0
+          BRANCH="update-orca-profiles-$(date +%Y%m%d)"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add src/estampo/data/
+          git commit -m "Update bundled OrcaSlicer profiles (${{ env.ORCA_VERSION }})"
+          git push origin "$BRANCH"
+          gh pr create \
+            --title "Update bundled OrcaSlicer profiles" \
+            --body "Auto-extracted from estampo/estampo:orca-${{ env.ORCA_VERSION }}-test." \
+            --base main \
+            --head "$BRANCH"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   slice-test:
     needs: build-estampo-image
