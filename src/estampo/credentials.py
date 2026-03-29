@@ -66,8 +66,12 @@ def _migrate_config_dir() -> None:
         old_dir = Path.home() / ".config/fabprint"
         new_dir = Path.home() / ".config/estampo"
 
-    if old_dir.exists() and not new_dir.exists():
-        shutil.copytree(old_dir, new_dir)
+    if old_dir.exists() and not new_dir.exists() and not old_dir.is_symlink():
+        try:
+            shutil.copytree(old_dir, new_dir)
+        except OSError as exc:
+            log.warning("Config migration failed: %s", exc)
+            return
         log.info("Migrated config: %s → %s", old_dir, new_dir)
         print(
             f"Migrated config from {old_dir} to {new_dir}.\n"
@@ -77,7 +81,7 @@ def _migrate_config_dir() -> None:
 
 def _credentials_path() -> Path:
     """Return the path to the credentials file."""
-    env = os.environ.get("ESTAMPO_CREDENTIALS")
+    env = os.environ.get("ESTAMPO_CREDENTIALS") or os.environ.get("FABPRINT_CREDENTIALS")
     if env:
         return Path(env)
     _migrate_config_dir()

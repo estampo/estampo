@@ -51,7 +51,7 @@ jobs:
 
 ## Requirements
 
-- A `estampo.toml` in your repo (see [config docs](../docs/config.md))
+- An `estampo.toml` in your repo (see [config docs](../docs/config.md))
 - STL/3MF/STEP model files referenced in your config
 - The GHCR package must be public, or you must authenticate with `docker login ghcr.io` before this action runs
 - If using the `comment` feature, your job needs `permissions: pull-requests: write`

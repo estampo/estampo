@@ -44,8 +44,8 @@ def _docker_orca_version() -> str | None:
         )
         versions = []
         for line in r.stdout.splitlines():
-            if line.startswith("fabprint:orca-"):
-                versions.append(line.split("fabprint:orca-", 1)[1])
+            if line.startswith("estampo:orca-"):
+                versions.append(line.split("estampo:orca-", 1)[1])
         # Prefer stable releases over pre-releases, sorted by version number
         stable = [v for v in versions if not Version(v).is_prerelease]
         if stable:
@@ -59,7 +59,7 @@ def _docker_orca_version() -> str | None:
 
 _docker_version = _docker_orca_version()
 skip_no_docker = pytest.mark.skipif(
-    _docker_version is None, reason="Docker not running or no fabprint:orca-* image"
+    _docker_version is None, reason="Docker not running or no estampo:orca-* image"
 )
 
 
@@ -279,7 +279,7 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
 
 def _docker_work_dir(suffix: str = "") -> Path:
     """Return a work directory suitable for Docker volume mounts."""
-    work_dir = Path.home() / ".cache" / f"fabprint-test{suffix}"
+    work_dir = Path.home() / ".cache" / f"estampo-test{suffix}"
     work_dir.mkdir(parents=True, exist_ok=True)
     return work_dir
 
@@ -289,7 +289,7 @@ def _write_slice_config(
     filaments: list[str] | None = None,
     version: str | None = None,
 ) -> Path:
-    """Write a estampo.toml for slicing tests."""
+    """Write an estampo.toml for slicing tests."""
     filaments = filaments or ["Generic PLA @base"]
     filament_toml = ", ".join(f'"{f}"' for f in filaments)
     version_line = f'version = "{version}"' if version else ""
@@ -444,6 +444,19 @@ def test_resolve_config_path_missing(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     with pytest.raises(EstampoError, match="No config file specified"):
         _resolve_config_path(None)
+
+
+def test_resolve_config_path_legacy_fabprint_toml(tmp_path, monkeypatch):
+    """Falls back to fabprint.toml with deprecation warning when estampo.toml is absent."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "fabprint.toml").write_text("[slicer]\n")
+    import warnings
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        result = _resolve_config_path(None)
+        assert result == Path("fabprint.toml")
+        assert any("fabprint.toml is deprecated" in str(warning.message) for warning in w)
 
 
 # --- _resolve_status_printers ---

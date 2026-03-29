@@ -425,7 +425,9 @@ def _detect_orca_version() -> str | None:
     Set ESTAMPO_SKIP_SLICER_DETECT=1 to skip (useful in headless environments
     where launching OrcaSlicer --help may hang).
     """
-    if os.environ.get("ESTAMPO_SKIP_SLICER_DETECT"):
+    skip_detect = os.environ.get("ESTAMPO_SKIP_SLICER_DETECT")
+    skip_detect = skip_detect or os.environ.get("FABPRINT_SKIP_SLICER_DETECT")
+    if skip_detect:
         return None
     try:
         from estampo.slicer import SLICER_PATHS, _detect_slicer_version

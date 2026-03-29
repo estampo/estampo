@@ -107,7 +107,7 @@ Then use the same `estampo.toml` approach as build123d above.
 
 ## Reproducible builds
 
-Three things make a estampo build fully reproducible:
+Three things make an estampo build fully reproducible:
 
 1. **Pin the OrcaSlicer version** — `version = "2.3.1"` in `[slicer]` ensures Docker uses the exact same slicer binary everywhere.
 

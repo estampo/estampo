@@ -88,9 +88,9 @@ def test_docker_image_versioned():
 def test_has_docker_image_true():
     mock_result = MagicMock(returncode=0)
     with patch("estampo.slicer.subprocess.run", return_value=mock_result) as mock_run:
-        assert _has_docker_image("fabprint:orca-2.3.1") is True
+        assert _has_docker_image("estampo:orca-2.3.1") is True
         mock_run.assert_called_once_with(
-            ["docker", "image", "inspect", "fabprint:orca-2.3.1"],
+            ["docker", "image", "inspect", "estampo:orca-2.3.1"],
             capture_output=True,
             timeout=10,
         )
@@ -99,12 +99,12 @@ def test_has_docker_image_true():
 def test_has_docker_image_false_no_image():
     mock_result = MagicMock(returncode=1)
     with patch("estampo.slicer.subprocess.run", return_value=mock_result):
-        assert _has_docker_image("fabprint:orca-2.3.1") is False
+        assert _has_docker_image("estampo:orca-2.3.1") is False
 
 
 def test_has_docker_image_false_no_docker():
     with patch("estampo.slicer.subprocess.run", side_effect=FileNotFoundError):
-        assert _has_docker_image("fabprint:orca-2.3.1") is False
+        assert _has_docker_image("estampo:orca-2.3.1") is False
 
 
 # --- _slice_via_docker ---
@@ -132,14 +132,14 @@ def test_slice_via_docker_command(tmp_path):
             profile_dir,
             settings_arg,
             filament_arg,
-            "fabprint:orca-2.3.1",
+            "estampo:orca-2.3.1",
         )
 
     cmd = mock_run.call_args[0][0]
     assert "docker" == cmd[0]
     assert "--platform" in cmd
     assert "linux/amd64" in cmd
-    assert "fabprint:orca-2.3.1" in cmd
+    assert "estampo:orca-2.3.1" in cmd
     assert "--entrypoint" in cmd
     assert "orca-slicer" in cmd
     # Verify profile paths rewritten to container paths under /work/output/
@@ -167,7 +167,7 @@ def test_slice_via_docker_failure(tmp_path):
                 profile_dir,
                 None,
                 None,
-                "fabprint:latest",
+                "estampo:latest",
             )
 
 

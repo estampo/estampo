@@ -36,7 +36,7 @@ estampo init -o myproject.toml            # wizard writes to custom path
 
 ## `estampo validate`
 
-Check a `estampo.toml` for issues and print actionable warnings.
+Check an `estampo.toml` for issues and print actionable warnings.
 
 ```
 estampo validate [config]

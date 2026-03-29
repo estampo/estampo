@@ -48,7 +48,8 @@ def _should_pull_image() -> bool:
     in auto mode, a timestamp file to avoid pulling more than once
     per ``_PULL_INTERVAL_SECONDS``.
     """
-    mode = os.environ.get("ESTAMPO_DOCKER_PULL", "auto").lower()
+    mode = os.environ.get("ESTAMPO_DOCKER_PULL") or os.environ.get("FABPRINT_DOCKER_PULL") or "auto"
+    mode = mode.lower()
     if mode == "always":
         return True
     if mode == "never":
