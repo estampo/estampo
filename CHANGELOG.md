@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here.
 
-## Unreleased
+## 0.2.1 — 2026-03-29
 
 - Fix profiles extraction: use correct Docker image tag format (`orca-<version>`)
 
