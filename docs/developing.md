@@ -36,6 +36,7 @@ Two automated pipelines handle publishing:
 Every merge to main triggers:
 - **TestPyPI** — publishes a `.dev` package (e.g. `0.1.140.dev42`)
 - **Docker** — rebuilds images with mutable tags (`orca-2.3.1`) when relevant files change
+- **Release readiness** — builds Docker images, runs smoke tests, profile extraction, and a real slice (only when relevant files change)
 
 No version bump needed for day-to-day work.
 
@@ -44,17 +45,34 @@ No version bump needed for day-to-day work.
 To publish a release:
 
 ```bash
-# 1. Bump version in pyproject.toml and src/estampo/__init__.py
-# 2. Update CHANGELOG.md
-# 3. Commit, tag, and push
-git tag v0.1.141
-git push origin v0.1.141
+# 1. Run release-readiness check first
+gh workflow run release-readiness.yml -f orca_version=2.3.1
+# 2. Wait for all 5 jobs to pass
+# 3. Bump version in pyproject.toml
+# 4. Rename "## Unreleased" to "## <version> — YYYY-MM-DD" in CHANGELOG.md
+# 5. Commit, tag, and push
+git tag v0.2.1
+git push origin v0.2.1
 ```
 
 This triggers:
 - **PyPI** — publishes the release version
-- **Docker** — tags images immutably (e.g. `estampo/estampo:0.1.141`)
-- **Profiles** — extracts slicer profiles and opens a PR if changed
+- **Docker** — tags images immutably (e.g. `estampo/estampo:orca-2.3.1-v0.2.1`)
+- **Profiles** — extracts slicer profiles from the Docker image and opens a PR with bundled profile data
+
+### Release readiness
+
+The `release-readiness.yml` workflow exercises the full release pipeline without publishing:
+
+| Job | What it tests |
+|-----|---------------|
+| `build-estampo-image` | Docker image builds successfully |
+| `build-cloud-bridge` | Cloud bridge image builds and binary works |
+| `smoke-test` | `estampo --help` and `estampo run --help` work inside the container |
+| `profile-extraction` | `extract_profiles.py` runs and produces valid JSON with profiles |
+| `slice-test` | Real end-to-end slice using `examples/estampo.toml` |
+
+Run it manually before tagging: `gh workflow run release-readiness.yml -f orca_version=2.3.1`
 
 ## Docker images
 
@@ -65,7 +83,7 @@ Pre-built OrcaSlicer images are on [Docker Hub](https://hub.docker.com/r/estampo
 ./scripts/build-docker.sh 2.3.1 --push   # build and push
 ```
 
-estampo auto-detects Docker and uses it for slicing when available, falling back to a local slicer install. Force local with `--local`, or pin a Docker version with `--docker-version 2.3.1`.
+estampo auto-detects Docker and uses it for slicing when available, falling back to a local OrcaSlicer install with a warning. This fallback works even when a slicer version is pinned in config — so running inside a Docker container (e.g. the GitHub Action) works without `--local`. Force local with `--local` if you want to skip the Docker check entirely.
 
 ## Platform support
 
