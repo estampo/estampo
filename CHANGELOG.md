@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here.
 
-## 0.2.0 — 2026-03-29
+## Unreleased
 
 **Project renamed from `fabprint` to `estampo`.**
 
