@@ -16,6 +16,7 @@ from estampo.profiles import (
     pin_profiles,
     resolve_profile,
     resolve_profile_data,
+    validate_override_keys,
 )
 
 ORCA_SYSTEM = SYSTEM_DIRS.get("orca")
@@ -421,3 +422,60 @@ def test_pin_profiles_no_docker_version_raises(tmp_path):
             filaments=[],
             project_dir=project,
         )
+
+
+# ---------------------------------------------------------------------------
+# validate_override_keys
+# ---------------------------------------------------------------------------
+
+
+def test_validate_override_keys_valid(tmp_path):
+    """Known keys produce no warnings."""
+    profiles = tmp_path / "profiles" / "process"
+    profiles.mkdir(parents=True)
+    (profiles / "Fast.json").write_text(
+        json.dumps({"type": "process", "layer_height": "0.3", "wall_loops": "2"})
+    )
+    warnings = validate_override_keys(
+        {"layer_height": "0.2", "wall_loops": "4"},
+        engine="orca",
+        process="Fast",
+        project_dir=tmp_path,
+    )
+    assert warnings == []
+
+
+def test_validate_override_keys_unknown(tmp_path):
+    """Unknown keys produce warnings."""
+    profiles = tmp_path / "profiles" / "process"
+    profiles.mkdir(parents=True)
+    (profiles / "Fast.json").write_text(json.dumps({"type": "process", "layer_height": "0.3"}))
+    warnings = validate_override_keys(
+        {"layer_height": "0.2", "bogus_key": "1"},
+        engine="orca",
+        process="Fast",
+        project_dir=tmp_path,
+    )
+    assert len(warnings) == 1
+    assert "bogus_key" in warnings[0]
+
+
+def test_validate_override_keys_no_process():
+    """No process profile means no warnings (nothing to check against)."""
+    assert validate_override_keys({"k": "v"}, engine="orca", process=None) == []
+
+
+def test_validate_override_keys_no_overrides():
+    """Empty overrides produce no warnings."""
+    assert validate_override_keys({}, engine="orca", process="Fast") == []
+
+
+def test_validate_override_keys_unresolvable_profile():
+    """Unresolvable profile is silently skipped (no crash)."""
+    warnings = validate_override_keys(
+        {"layer_height": "0.2"},
+        engine="orca",
+        process="NonexistentProfile",
+        project_dir=None,
+    )
+    assert warnings == []
