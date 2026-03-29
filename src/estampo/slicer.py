@@ -278,12 +278,6 @@ def _resolve_profiles(
         )
         if overrides:
             data = _apply_overrides(data, overrides, process)
-        # When not using Docker-extracted profiles (i.e. local system profiles),
-        # ensure use_relative_e_distances has an explicit value so OrcaSlicer
-        # doesn't fall back to platform-dependent compiled defaults.
-        if not docker_profile_dir:
-            if "use_relative_e_distances" not in data or data["use_relative_e_distances"] is None:
-                data["use_relative_e_distances"] = "0"
         path = _write_tmp_profile(data, tmp_dir, "process")
         settings.append(str(path))
 
