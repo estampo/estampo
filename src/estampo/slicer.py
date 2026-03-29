@@ -42,7 +42,7 @@ def _slicer_paths() -> dict[str, Path]:
 SLICER_PATHS = _slicer_paths()
 
 
-def _docker_image(version: str | None = None) -> str:
+def docker_image(version: str | None = None) -> str:
     """Return the Docker image name for a given OrcaSlicer version."""
     if version:
         return f"{DOCKERHUB_REPO}:orca-{version}"
@@ -481,7 +481,7 @@ def slice_plate(
             'Pin a version (e.g. version = "2.3.1") for reproducible builds.\033[0m'
         )
 
-    image = _docker_image(docker_version)
+    image = docker_image(docker_version)
 
     if local:
         # Force local — no Docker fallback

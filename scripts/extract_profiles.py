@@ -18,6 +18,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from estampo.slicer import docker_image
+
 PROFILE_ROOT = "/home/estampo/.config/OrcaSlicer/system/BBL"
 CATEGORIES = ("machine", "process", "filament")
 OUT_DIR = Path(__file__).parent.parent / "src" / "estampo" / "data"
@@ -72,7 +74,7 @@ def main() -> None:
     parser.add_argument("versions", nargs="+", help="OrcaSlicer version(s) to extract")
     parser.add_argument(
         "--image",
-        help="Docker image to use (default: estampo/estampo:orca-<version>). "
+        help=f"Docker image to use (default: {docker_image('<version>')}). "
         "Only valid when a single version is given.",
     )
     args = parser.parse_args()
@@ -83,7 +85,7 @@ def main() -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
     for version in args.versions:
-        image = args.image or f"estampo/estampo:orca-{version}"
+        image = args.image or docker_image(version)
         data = extract(version, image)
         out = OUT_DIR / f"profiles.orca.{version}.json"
         out.write_text(json.dumps(data, indent=2) + "\n")

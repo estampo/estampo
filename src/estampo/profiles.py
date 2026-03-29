@@ -168,11 +168,9 @@ _DOCKER_PROFILE_ROOT = "/opt/orca-slicer/resources/profiles/BBL"
 
 def _docker_image_for_version(version: str | None) -> str:
     """Build the Docker image name for a given OrcaSlicer version."""
-    from estampo.slicer import DOCKERHUB_REPO
+    from estampo.slicer import docker_image
 
-    if version:
-        return f"{DOCKERHUB_REPO}:orca-{version}"
-    return f"{DOCKERHUB_REPO}:latest"
+    return docker_image(version)
 
 
 def extract_docker_profiles(
