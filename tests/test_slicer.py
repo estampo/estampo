@@ -8,9 +8,9 @@ import pytest
 from estampo.slicer import (
     SLICER_PATHS,
     _apply_overrides,
-    _docker_image,
     _has_docker_image,
     _slice_via_docker,
+    docker_image,
     find_slicer,
     parse_gcode_stats,
     slice_plate,
@@ -70,16 +70,53 @@ def test_apply_overrides():
     assert result is data  # modifies in place
 
 
-# --- _docker_image ---
+# --- docker_image ---
 
 
 def test_docker_image_default():
-    assert _docker_image() == "estampo/estampo:latest"
+    assert docker_image() == "estampo/estampo:latest"
 
 
 def test_docker_image_versioned():
-    assert _docker_image("2.3.1") == "estampo/estampo:orca-2.3.1"
-    assert _docker_image("2.3.2") == "estampo/estampo:orca-2.3.2"
+    assert docker_image("2.3.1") == "estampo/estampo:orca-2.3.1"
+    assert docker_image("2.3.2") == "estampo/estampo:orca-2.3.2"
+
+
+def test_docker_image_tag_consistency():
+    """All hardcoded Docker image tags in the repo must match docker_image()."""
+    import re
+
+    repo_root = Path(__file__).parent.parent
+    tag_pattern = re.compile(r"estampo/estampo:orca-(\S+)")
+    # Files that construct the tag dynamically (variable interpolation) — skip them
+    skip = {
+        "scripts/build-docker.sh",
+        ".github/workflows/publish-docker.yml",
+        ".github/workflows/publish-cloud-bridge.yml",
+    }
+
+    errors = []
+    for path in sorted(repo_root.rglob("*")):
+        if path.is_dir() or ".git/" in str(path) or path.suffix in {".pyc", ".lock"}:
+            continue
+        rel = str(path.relative_to(repo_root))
+        if rel in skip:
+            continue
+        try:
+            text = path.read_text(errors="ignore")
+        except Exception:
+            continue
+        for match in tag_pattern.finditer(text):
+            version = match.group(1)
+            # Skip template/variable patterns
+            if "$" in version or "{" in version or "<" in version:
+                continue
+            expected = docker_image(version)
+            actual = match.group(0)
+            if actual != expected:
+                errors.append(f"{rel}: found '{actual}', expected '{expected}'")
+
+    assert not errors, "Docker image tag inconsistencies:\n" + "\n".join(errors)
 
 
 # --- _has_docker_image ---
