@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       config:
-        description: "Path to fabprint.toml"
+        description: "Path to estampo.toml"
         required: true
-        default: "fabprint.toml"
+        default: "estampo.toml"
       orca_version:
         description: "OrcaSlicer version"
         required: true
@@ -20,23 +20,23 @@ jobs:
 
       - name: Pull or build orca-base image
         run: |
-          docker pull fabprint/orca-base:${{ inputs.orca_version }} 2>/dev/null \
+          docker pull estampo/orca-base:${{ inputs.orca_version }} 2>/dev/null \
             || docker build --platform linux/amd64 \
               -f Dockerfile.orca-base \
               --build-arg ORCA_VERSION=${{ inputs.orca_version }} \
-              -t fabprint/orca-base:${{ inputs.orca_version }} .
+              -t estampo/orca-base:${{ inputs.orca_version }} .
 
-      - name: Build fabprint image
+      - name: Build estampo image
         run: |
           docker build \
             --build-arg ORCA_VERSION=${{ inputs.orca_version }} \
-            -t fabprint:orca-${{ inputs.orca_version }} .
+            -t estampo:orca-${{ inputs.orca_version }} .
 
       - name: Generate plate and slice
         run: |
           docker run --rm \
             -v "${{ github.workspace }}:/project" \
-            fabprint:orca-${{ inputs.orca_version }} \
+            estampo:orca-${{ inputs.orca_version }} \
             slice "${{ inputs.config }}" -v
 
       - name: Upload gcode

@@ -5,7 +5,7 @@ logging, and extensible hooks without modifying any pipeline node code.
 
 Usage::
 
-    from fabprint.adapters import TimingAdapter, ProgressAdapter
+    from estampo.adapters import TimingAdapter, ProgressAdapter
 
     dr = (
         driver.Builder()

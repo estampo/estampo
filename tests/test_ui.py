@@ -5,7 +5,7 @@ from __future__ import annotations
 from io import StringIO
 from unittest.mock import patch
 
-from fabprint.ui import (
+from estampo.ui import (
     choice_table,
     color_swatch,
     console,
@@ -75,51 +75,51 @@ class TestOutputHelpers:
 
 
 class TestPromptHelpers:
-    @patch("fabprint.ui.Prompt.ask", return_value="hello")
+    @patch("estampo.ui.Prompt.ask", return_value="hello")
     def test_prompt_str_returns_value(self, mock_ask):
         result = prompt_str("Name")
         assert result == "hello"
         mock_ask.assert_called_once()
 
-    @patch("fabprint.ui.Prompt.ask", return_value="hello")
+    @patch("estampo.ui.Prompt.ask", return_value="hello")
     def test_prompt_str_with_default(self, mock_ask):
         result = prompt_str("Name", default="world")
         assert result == "hello"
         args, kwargs = mock_ask.call_args
         assert kwargs["default"] == "world"
 
-    @patch("fabprint.ui.Prompt.ask", return_value=None)
+    @patch("estampo.ui.Prompt.ask", return_value=None)
     def test_prompt_str_none_returns_empty(self, mock_ask):
         result = prompt_str("Name")
         assert result == ""
 
-    @patch("fabprint.ui.IntPrompt.ask", return_value=42)
+    @patch("estampo.ui.IntPrompt.ask", return_value=42)
     def test_prompt_int_returns_value(self, mock_ask):
         result = prompt_int("Count", default=10)
         assert result == 42
         args, kwargs = mock_ask.call_args
         assert kwargs["default"] == 10
 
-    @patch("fabprint.ui.Confirm.ask", return_value=True)
+    @patch("estampo.ui.Confirm.ask", return_value=True)
     def test_prompt_yn_returns_bool(self, mock_ask):
         result = prompt_yn("Continue?")
         assert result is True
 
-    @patch("fabprint.ui.Confirm.ask", return_value=False)
+    @patch("estampo.ui.Confirm.ask", return_value=False)
     def test_prompt_yn_default_false(self, mock_ask):
         result = prompt_yn("Continue?", default=False)
         assert result is False
         args, kwargs = mock_ask.call_args
         assert kwargs["default"] is False
 
-    @patch("fabprint.ui.Prompt.ask", return_value="s3cret")
+    @patch("estampo.ui.Prompt.ask", return_value="s3cret")
     def test_prompt_password(self, mock_ask):
         result = prompt_password("Token")
         assert result == "s3cret"
         args, kwargs = mock_ask.call_args
         assert kwargs["password"] is True
 
-    @patch("fabprint.ui.Prompt.ask", return_value=None)
+    @patch("estampo.ui.Prompt.ask", return_value=None)
     def test_prompt_password_none_returns_empty(self, mock_ask):
         result = prompt_password("Token")
         assert result == ""
@@ -133,7 +133,7 @@ class TestPromptHelpers:
 class TestPreviewToml:
     def test_preview_toml_renders_panel(self):
         out = _capture(preview_toml, '[section]\nkey = "value"')
-        assert "fabprint.toml" in out
+        assert "estampo.toml" in out
 
 
 # ---------------------------------------------------------------------------
@@ -203,7 +203,7 @@ class TestColorSwatch:
 
 
 class TestPick:
-    @patch("fabprint.ui.success")
+    @patch("estampo.ui.success")
     def test_single_select(self, mock_success):
         with patch("questionary.select") as mock_select:
             mock_select.return_value.ask.return_value = "c"
@@ -211,7 +211,7 @@ class TestPick:
         assert result == [2]
         mock_success.assert_called_once_with("c")
 
-    @patch("fabprint.ui.success")
+    @patch("estampo.ui.success")
     def test_multi_select(self, mock_success):
         with patch("questionary.checkbox") as mock_cb:
             mock_cb.return_value.ask.return_value = ["a", "c"]
@@ -237,7 +237,7 @@ class TestPick:
             except KeyboardInterrupt:
                 pass
 
-    @patch("fabprint.ui.success")
+    @patch("estampo.ui.success")
     def test_single_uses_search_filter(self, mock_success):
         with patch("questionary.select") as mock_select:
             mock_select.return_value.ask.return_value = "x"
@@ -249,7 +249,7 @@ class TestPick:
                 use_jk_keys=False,
             )
 
-    @patch("fabprint.ui.success")
+    @patch("estampo.ui.success")
     def test_multi_uses_checkbox(self, mock_success):
         with patch("questionary.checkbox") as mock_cb:
             mock_cb.return_value.ask.return_value = ["x"]

@@ -4,15 +4,15 @@ from pathlib import Path
 
 import pytest
 
-from fabprint import FabprintError
-from fabprint.config import load_config
+from estampo import EstampoError
+from estampo.config import load_config
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
 
 def _write_toml(tmp_path: Path, content: str, create_files: list[str] | None = None) -> Path:
     """Write a toml file and optionally create referenced part files."""
-    toml_path = tmp_path / "fabprint.toml"
+    toml_path = tmp_path / "estampo.toml"
     toml_path.write_text(content)
     for f in create_files or []:
         (tmp_path / f).touch()
@@ -89,7 +89,7 @@ def test_missing_parts(tmp_path):
 size = [200, 200]
 """,
     )
-    with pytest.raises(FabprintError, match="At least one"):
+    with pytest.raises(EstampoError, match="At least one"):
         load_config(path)
 
 
@@ -103,7 +103,7 @@ orient = "diagonal"
 """,
         create_files=["cube.stl"],
     )
-    with pytest.raises(FabprintError, match="orient"):
+    with pytest.raises(EstampoError, match="orient"):
         load_config(path)
 
 
@@ -119,7 +119,7 @@ file = "cube.stl"
 """,
         create_files=["cube.stl"],
     )
-    with pytest.raises(FabprintError, match="plate.size"):
+    with pytest.raises(EstampoError, match="plate.size"):
         load_config(path)
 
 
@@ -131,7 +131,7 @@ def test_missing_file(tmp_path):
 file = "nonexistent.stl"
 """,
     )
-    with pytest.raises(FabprintError, match="nonexistent.stl"):
+    with pytest.raises(EstampoError, match="nonexistent.stl"):
         load_config(path)
 
 
@@ -158,7 +158,7 @@ filament = 0
 """,
         create_files=["cube.stl"],
     )
-    with pytest.raises(FabprintError, match="filament"):
+    with pytest.raises(EstampoError, match="filament"):
         load_config(path)
 
 
@@ -172,7 +172,7 @@ copies = 0
 """,
         create_files=["cube.stl"],
     )
-    with pytest.raises(FabprintError, match="copies"):
+    with pytest.raises(EstampoError, match="copies"):
         load_config(path)
 
 
@@ -188,7 +188,7 @@ file = "cube.stl"
 """,
         create_files=["cube.stl"],
     )
-    with pytest.raises(FabprintError, match="engine"):
+    with pytest.raises(EstampoError, match="engine"):
         load_config(path)
 
 
@@ -229,7 +229,7 @@ scale = 0
 """,
         create_files=["cube.stl"],
     )
-    with pytest.raises(FabprintError, match="scale"):
+    with pytest.raises(EstampoError, match="scale"):
         load_config(path)
 
 
@@ -317,7 +317,7 @@ file = "cube.stl"
 """,
             create_files=["cube.stl"],
         )
-        with pytest.raises(FabprintError, match=f"printer.{field}"):
+        with pytest.raises(EstampoError, match=f"printer.{field}"):
             load_config(path)
 
 
@@ -345,7 +345,7 @@ file = "cube.stl"
 """,
         create_files=["cube.stl"],
     )
-    with pytest.raises(FabprintError, match="printer.name is required"):
+    with pytest.raises(EstampoError, match="printer.name is required"):
         load_config(path)
 
 
@@ -373,7 +373,7 @@ rotate = [90, 0]
 """,
         create_files=["cube.stl"],
     )
-    with pytest.raises(FabprintError, match="rotate"):
+    with pytest.raises(EstampoError, match="rotate"):
         load_config(path)
 
 
@@ -387,7 +387,7 @@ rotate = 45
 """,
         create_files=["cube.stl"],
     )
-    with pytest.raises(FabprintError, match="rotate"):
+    with pytest.raises(EstampoError, match="rotate"):
         load_config(path)
 
 
@@ -401,7 +401,7 @@ scale = -1.0
 """,
         create_files=["cube.stl"],
     )
-    with pytest.raises(FabprintError, match="scale"):
+    with pytest.raises(EstampoError, match="scale"):
         load_config(path)
 
 
@@ -498,7 +498,7 @@ filament = "Generic ABS @base"
 """,
         create_files=["cube.stl"],
     )
-    with pytest.raises(FabprintError, match="not in"):
+    with pytest.raises(EstampoError, match="not in"):
         load_config(path)
 
 
@@ -517,7 +517,7 @@ filament = "Generic PLA @base"
 """,
         create_files=["a.stl", "b.stl"],
     )
-    with pytest.raises(FabprintError, match="Cannot mix"):
+    with pytest.raises(EstampoError, match="Cannot mix"):
         load_config(path)
 
 
@@ -550,7 +550,7 @@ filament = ""
 """,
         create_files=["cube.stl"],
     )
-    with pytest.raises(FabprintError, match="empty"):
+    with pytest.raises(EstampoError, match="empty"):
         load_config(path)
 
 
@@ -642,7 +642,7 @@ filament = 3
 """,
         create_files=["frame.stl"],
     )
-    with pytest.raises(FabprintError, match="slot 3 not defined"):
+    with pytest.raises(EstampoError, match="slot 3 not defined"):
         load_config(path)
 
 
@@ -660,7 +660,7 @@ filament = "Generic PLA @base"
 """,
         create_files=["cube.stl"],
     )
-    with pytest.raises(FabprintError, match="slot must be >= 1"):
+    with pytest.raises(EstampoError, match="slot must be >= 1"):
         load_config(path)
 
 
@@ -780,7 +780,7 @@ inlay = "Generic ABS @base"
 """,
         create_files=["widget.3mf"],
     )
-    with pytest.raises(FabprintError, match="inlay.*not in"):
+    with pytest.raises(EstampoError, match="inlay.*not in"):
         load_config(path)
 
 
@@ -835,7 +835,7 @@ object = ""
 """,
         create_files=["widget.3mf"],
     )
-    with pytest.raises(FabprintError, match="object must be a non-empty string"):
+    with pytest.raises(EstampoError, match="object must be a non-empty string"):
         load_config(path)
 
 
@@ -854,7 +854,7 @@ body = 2
 """,
         create_files=["widget.3mf"],
     )
-    with pytest.raises(FabprintError, match="cannot use both 'object' and"):
+    with pytest.raises(EstampoError, match="cannot use both 'object' and"):
         load_config(path)
 
 
@@ -907,7 +907,7 @@ sequence = 0
 """,
         create_files=["cube.stl"],
     )
-    with pytest.raises(FabprintError, match="sequence must be >= 1"):
+    with pytest.raises(EstampoError, match="sequence must be >= 1"):
         load_config(path)
 
 
@@ -953,5 +953,5 @@ file = "cube.stl"
 """,
         create_files=["cube.stl"],
     )
-    with pytest.raises(FabprintError, match="name must be a non-empty string"):
+    with pytest.raises(EstampoError, match="name must be a non-empty string"):
         load_config(path)

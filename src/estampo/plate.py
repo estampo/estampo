@@ -12,8 +12,8 @@ from pathlib import Path
 import trimesh
 from defusedxml import ElementTree as SafeET  # safe fromstring for untrusted 3MF XML
 
-from fabprint.arrange import Placement
-from fabprint.constants import NS_3MF
+from estampo.arrange import Placement
+from estampo.constants import NS_3MF
 
 log = logging.getLogger(__name__)
 

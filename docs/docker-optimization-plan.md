@@ -1,14 +1,14 @@
 # Docker Optimization Plan
 
-Goal: speed up Docker usage for both the OrcaSlicer (fabprint/fabprint) and
-cloud-bridge (fabprint/cloud-bridge) images without sacrificing robustness.
+Goal: speed up Docker usage for both the OrcaSlicer (estampo/estampo) and
+cloud-bridge (estampo/cloud-bridge) images without sacrificing robustness.
 
 ---
 
 ## 1. Skip redundant `docker pull` in cloud-bridge
 
-**Problem:** Every call to `_run_bridge()` in `src/fabprint/cloud/bridge.py:90`
-runs `docker pull fabprint/cloud-bridge`, adding 5-15 seconds even when the
+**Problem:** Every call to `_run_bridge()` in `src/estampo/cloud/bridge.py:90`
+runs `docker pull estampo/cloud-bridge`, adding 5-15 seconds even when the
 image is already up to date. This happens on every print, status check, cancel,
 and task list.
 
@@ -18,9 +18,9 @@ than a configurable threshold (default 24 hours).
 ### Steps
 
 1. Add a module-level constant `_PULL_INTERVAL_SECONDS = 86400` (24h) in
-   `src/fabprint/cloud/bridge.py`.
+   `src/estampo/cloud/bridge.py`.
 2. Add a helper `_should_pull_image() -> bool` that:
-   - Reads a timestamp file at `~/.cache/fabprint/cloud-bridge-pull-ts`.
+   - Reads a timestamp file at `~/.cache/estampo/cloud-bridge-pull-ts`.
    - Returns `True` if the file is missing or older than `_PULL_INTERVAL_SECONDS`.
    - Returns `False` otherwise.
 3. Add a helper `_record_pull()` that writes `time.time()` to the timestamp
@@ -66,7 +66,7 @@ dependency install cache, causing a full reinstall (~30-60s).
 1. In `Dockerfile`, replace lines 58-64:
    ```dockerfile
    # Install dependencies (cached unless lockfile changes)
-   WORKDIR /opt/fabprint
+   WORKDIR /opt/estampo
    COPY pyproject.toml uv.lock README.md LICENSE ./
    RUN uv python install 3.12 \
        && uv sync --frozen --no-dev --no-editable --python 3.12
@@ -184,11 +184,11 @@ pull times.
    COPY --from=builder /usr/local/bin/bambu_cloud_bridge /usr/local/bin/
    ```
 
-2. Build and verify: `docker run --rm fabprint/cloud-bridge:test --help`
+2. Build and verify: `docker run --rm estampo/cloud-bridge:test --help`
 
 3. Compare image sizes:
    ```bash
-   docker images fabprint/cloud-bridge --format '{{.Size}}'
+   docker images estampo/cloud-bridge --format '{{.Size}}'
    ```
 
 ### Tests
@@ -197,7 +197,7 @@ pull times.
 - Add a CI smoke test step to `publish-cloud-bridge.yml`:
   ```yaml
   - name: Smoke test cloud-bridge image
-    run: docker run --rm fabprint/cloud-bridge:${{ env.VERSION }} --help
+    run: docker run --rm estampo/cloud-bridge:${{ env.VERSION }} --help
   ```
 
 ### Estimated savings
@@ -209,7 +209,7 @@ pull times.
 ## 5. Publish an OrcaSlicer base image
 
 **Problem:** The OrcaSlicer AppImage extraction + system deps (~800MB) take
-minutes to build but rarely change. Every fabprint code change triggers a full
+minutes to build but rarely change. Every estampo code change triggers a full
 rebuild of these layers (unless local Docker cache is warm).
 
 **Fix:** Publish a pre-built base image with OrcaSlicer + runtime deps.
@@ -233,42 +233,42 @@ rebuild of these layers (unless local Docker cache is warm).
 
    FROM --platform=linux/amd64 ubuntu:24.04
    ARG ORCA_VERSION=2.3.1
-   LABEL fabprint.orca-version="${ORCA_VERSION}"
+   LABEL estampo.orca-version="${ORCA_VERSION}"
    RUN apt-get update && apt-get install -y --no-install-recommends \
        libgl1 libgl1-mesa-dri libegl1 libgtk-3-0 libwebkit2gtk-4.1-0 \
        libgstreamer1.0-0 libgstreamer-plugins-base1.0-0 xvfb ca-certificates \
        && rm -rf /var/lib/apt/lists/*
    COPY --from=orca /opt/orca-slicer /opt/orca-slicer
    RUN ln -s /opt/orca-slicer/bin/orca-slicer /usr/bin/orca-slicer
-   ENV HOME=/home/fabprint
-   RUN useradd -m -d /home/fabprint fabprint \
-       && mkdir -p /home/fabprint/.config/OrcaSlicer/system \
+   ENV HOME=/home/estampo
+   RUN useradd -m -d /home/estampo estampo \
+       && mkdir -p /home/estampo/.config/OrcaSlicer/system \
        && ln -s /opt/orca-slicer/resources/profiles/BBL \
-                /home/fabprint/.config/OrcaSlicer/system/BBL
+                /home/estampo/.config/OrcaSlicer/system/BBL
    ```
 
 2. Simplify `Dockerfile` to use the base:
    ```dockerfile
    ARG ORCA_VERSION=2.3.1
-   FROM fabprint/orca-base:${ORCA_VERSION}
+   FROM estampo/orca-base:${ORCA_VERSION}
    COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
-   WORKDIR /opt/fabprint
+   WORKDIR /opt/estampo
    COPY pyproject.toml uv.lock README.md LICENSE ./
    RUN uv python install 3.12 \
        && uv sync --frozen --no-dev --no-editable --python 3.12
    COPY src/ ./src/
    RUN uv sync --frozen --no-dev --no-editable --python 3.12 \
        && uv cache clean
-   ENV PATH="/opt/fabprint/.venv/bin:$PATH"
-   USER fabprint
+   ENV PATH="/opt/estampo/.venv/bin:$PATH"
+   USER estampo
    WORKDIR /project
-   ENTRYPOINT ["fabprint"]
+   ENTRYPOINT ["estampo"]
    CMD ["--help"]
    ```
 
 3. Add a separate CI workflow `publish-orca-base.yml`:
    - Triggered manually or when `Dockerfile.orca-base` changes.
-   - Publishes `fabprint/orca-base:2.3.1` to Docker Hub + GHCR.
+   - Publishes `estampo/orca-base:2.3.1` to Docker Hub + GHCR.
 
 4. Update `publish-cloud-bridge.yml` to use the base image for the orca build.
 

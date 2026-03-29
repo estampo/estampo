@@ -1,12 +1,12 @@
 [project]
-name = "fabprint"
-version = "0.1.140"
+name = "estampo"
+version = "0.2.0"
 description = "Reproducible 3D print builds. Define parts, slicer settings, and printer targets in code."
 readme = "README.md"
 requires-python = ">=3.11"
 license = {file = "LICENSE"}
 authors = [{name = "Paul Fremantle", email = "paul@fremantle.org"}]
-keywords = ["3d-printing", "bambu", "orcaslicer", "gcode", "3mf", "slicer", "pipeline"]
+keywords = ["3d-printing", "bambu", "orcaslicer", "gcode", "3mf", "slicer", "pipeline", "estampo"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -32,15 +32,15 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/pzfreo/fabprint"
-Repository = "https://github.com/pzfreo/fabprint"
-Issues = "https://github.com/pzfreo/fabprint/issues"
+Homepage = "https://estampo.dev"
+Repository = "https://github.com/estampo/estampo"
+Issues = "https://github.com/estampo/estampo/issues"
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0.0", "pytest-cov>=6.0.0", "ruff>=0.4.0", "packaging>=23.0", "mypy>=1.10.0"]
 
 [project.scripts]
-fabprint = "fabprint.cli:main"
+estampo = "estampo.cli:main"
 
 [build-system]
 requires = ["hatchling"]

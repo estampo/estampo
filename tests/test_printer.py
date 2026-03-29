@@ -5,11 +5,11 @@ from unittest.mock import patch
 
 import pytest
 
-from fabprint import FabprintError
-from fabprint.config import PrinterConfig
-from fabprint.credentials import load_printer_credentials
-from fabprint.gcode import parse_gcode_metadata
-from fabprint.printer import (
+from estampo import EstampoError
+from estampo.config import PrinterConfig
+from estampo.credentials import load_printer_credentials
+from estampo.gcode import parse_gcode_metadata
+from estampo.printer import (
     send_print,
     wrap_gcode_3mf,
 )
@@ -33,7 +33,7 @@ access_code = "abc"
 serial = "SN123"
 """,
     )
-    monkeypatch.setenv("FABPRINT_CREDENTIALS", str(cred_path))
+    monkeypatch.setenv("ESTAMPO_CREDENTIALS", str(cred_path))
     monkeypatch.delenv("BAMBU_PRINTER_IP", raising=False)
     monkeypatch.delenv("BAMBU_ACCESS_CODE", raising=False)
     monkeypatch.delenv("BAMBU_SERIAL", raising=False)
@@ -55,7 +55,7 @@ access_code = "abc"
 serial = "SN123"
 """,
     )
-    monkeypatch.setenv("FABPRINT_CREDENTIALS", str(cred_path))
+    monkeypatch.setenv("ESTAMPO_CREDENTIALS", str(cred_path))
     monkeypatch.setenv("BAMBU_PRINTER_IP", "192.168.1.99")
     monkeypatch.setenv("BAMBU_ACCESS_CODE", "override_code")
     monkeypatch.setenv("BAMBU_SERIAL", "OVERRIDE_SN")
@@ -75,10 +75,10 @@ def test_load_credentials_no_name(monkeypatch):
 
 
 def test_load_credentials_missing_file(tmp_path, monkeypatch):
-    monkeypatch.setenv("FABPRINT_CREDENTIALS", str(tmp_path / "nonexistent.toml"))
-    from fabprint import FabprintError
+    monkeypatch.setenv("ESTAMPO_CREDENTIALS", str(tmp_path / "nonexistent.toml"))
+    from estampo import EstampoError
 
-    with pytest.raises(FabprintError, match="not found"):
+    with pytest.raises(EstampoError, match="not found"):
         load_printer_credentials("workshop")
 
 
@@ -91,10 +91,10 @@ type = "bambu-lan"
 ip = "10.0.0.1"
 """,
     )
-    monkeypatch.setenv("FABPRINT_CREDENTIALS", str(cred_path))
-    from fabprint import FabprintError
+    monkeypatch.setenv("ESTAMPO_CREDENTIALS", str(cred_path))
+    from estampo import EstampoError
 
-    with pytest.raises(FabprintError, match="workshop.*not found"):
+    with pytest.raises(EstampoError, match="workshop.*not found"):
         load_printer_credentials("workshop")
 
 
@@ -109,14 +109,14 @@ access_code = "abc"
 serial = "SN123"
 """,
     )
-    monkeypatch.setenv("FABPRINT_CREDENTIALS", str(cred_path))
+    monkeypatch.setenv("ESTAMPO_CREDENTIALS", str(cred_path))
     monkeypatch.delenv("BAMBU_PRINTER_IP", raising=False)
     monkeypatch.delenv("BAMBU_ACCESS_CODE", raising=False)
     monkeypatch.delenv("BAMBU_SERIAL", raising=False)
     gcode = tmp_path / "test.gcode"
     gcode.write_text("; test gcode")
     config = PrinterConfig(name="workshop")
-    with patch("fabprint.printer._send_lan") as mock_send:
+    with patch("estampo.printer._send_lan") as mock_send:
         send_print(gcode, config, dry_run=True)
         mock_send.assert_called_once_with(
             gcode,
@@ -138,13 +138,13 @@ type = "bambu-cloud"
 serial = "SN123"
 """,
     )
-    monkeypatch.setenv("FABPRINT_CREDENTIALS", str(cred_path))
+    monkeypatch.setenv("ESTAMPO_CREDENTIALS", str(cred_path))
     monkeypatch.delenv("BAMBU_SERIAL", raising=False)
     gcode = tmp_path / "test.gcode"
     gcode.write_text("; test gcode")
     config = PrinterConfig(name="workshop")
 
-    with patch("fabprint.printer._send_cloud_bridge") as mock_send:
+    with patch("estampo.printer._send_cloud_bridge") as mock_send:
         send_print(gcode, config, dry_run=True)
         mock_send.assert_called_once_with(
             gcode, serial="SN123", dry_run=True, verbose=False, skip_ams_mapping=False
@@ -162,12 +162,12 @@ url = "http://voron.local:7125"
 api_key = "test-key"
 """,
     )
-    monkeypatch.setenv("FABPRINT_CREDENTIALS", str(cred_path))
+    monkeypatch.setenv("ESTAMPO_CREDENTIALS", str(cred_path))
     gcode = tmp_path / "test.gcode"
     gcode.write_text("; test gcode")
     config = PrinterConfig(name="voron")
 
-    with patch("fabprint.printer._send_moonraker") as mock_send:
+    with patch("estampo.printer._send_moonraker") as mock_send:
         send_print(gcode, config, dry_run=True)
         mock_send.assert_called_once_with(
             gcode,
@@ -188,10 +188,10 @@ access_code = "abc"
 serial = "SN123"
 """,
     )
-    monkeypatch.setenv("FABPRINT_CREDENTIALS", str(cred_path))
+    monkeypatch.setenv("ESTAMPO_CREDENTIALS", str(cred_path))
     monkeypatch.delenv("BAMBU_PRINTER_IP", raising=False)
     config = PrinterConfig(name="workshop")
-    with pytest.raises(FabprintError, match="ip"):
+    with pytest.raises(EstampoError, match="ip"):
         send_print(Path("dummy.gcode"), config)
 
 
@@ -205,10 +205,10 @@ ip = "10.0.0.1"
 serial = "SN123"
 """,
     )
-    monkeypatch.setenv("FABPRINT_CREDENTIALS", str(cred_path))
+    monkeypatch.setenv("ESTAMPO_CREDENTIALS", str(cred_path))
     monkeypatch.delenv("BAMBU_ACCESS_CODE", raising=False)
     config = PrinterConfig(name="workshop")
-    with pytest.raises(FabprintError, match="access_code"):
+    with pytest.raises(EstampoError, match="access_code"):
         send_print(Path("dummy.gcode"), config)
 
 
@@ -222,10 +222,10 @@ ip = "10.0.0.1"
 access_code = "abc"
 """,
     )
-    monkeypatch.setenv("FABPRINT_CREDENTIALS", str(cred_path))
+    monkeypatch.setenv("ESTAMPO_CREDENTIALS", str(cred_path))
     monkeypatch.delenv("BAMBU_SERIAL", raising=False)
     config = PrinterConfig(name="workshop")
-    with pytest.raises(FabprintError, match="serial"):
+    with pytest.raises(EstampoError, match="serial"):
         send_print(Path("dummy.gcode"), config)
 
 
@@ -238,10 +238,10 @@ def test_send_print_no_type(tmp_path, monkeypatch):
 ip = "10.0.0.1"
 """,
     )
-    monkeypatch.setenv("FABPRINT_CREDENTIALS", str(cred_path))
+    monkeypatch.setenv("ESTAMPO_CREDENTIALS", str(cred_path))
     monkeypatch.delenv("BAMBU_PRINTER_IP", raising=False)
     config = PrinterConfig(name="workshop")
-    with pytest.raises(FabprintError, match="no 'type'"):
+    with pytest.raises(EstampoError, match="no 'type'"):
         send_print(Path("dummy.gcode"), config)
 
 
@@ -257,7 +257,7 @@ access_code = "abc"
 serial = "SN123"
 """,
     )
-    monkeypatch.setenv("FABPRINT_CREDENTIALS", str(cred_path))
+    monkeypatch.setenv("ESTAMPO_CREDENTIALS", str(cred_path))
     monkeypatch.delenv("BAMBU_PRINTER_IP", raising=False)
     monkeypatch.delenv("BAMBU_ACCESS_CODE", raising=False)
     monkeypatch.delenv("BAMBU_SERIAL", raising=False)
@@ -265,7 +265,7 @@ serial = "SN123"
     gcode.write_text("; test gcode")
     config = PrinterConfig(name="workshop")
 
-    with patch("fabprint.printer._send_lan") as mock_send:
+    with patch("estampo.printer._send_lan") as mock_send:
         send_print(gcode, config, dry_run=False)
         mock_send.assert_called_once_with(
             gcode,
@@ -308,14 +308,12 @@ def test_get_moonraker_status(monkeypatch):
     # Force re-import so the function picks up the mocked requests
     import importlib
 
-    import fabprint.printer
+    import estampo.printer
 
-    importlib.reload(fabprint.printer)
+    importlib.reload(estampo.printer)
 
     try:
-        status = fabprint.printer.get_moonraker_status(
-            "http://voron.local:7125", api_key="test-key"
-        )
+        status = estampo.printer.get_moonraker_status("http://voron.local:7125", api_key="test-key")
         assert status["gcode_state"] == "RUNNING"
         assert status["subtask_name"] == "test.gcode"
         assert status["mc_percent"] == 25
@@ -324,12 +322,12 @@ def test_get_moonraker_status(monkeypatch):
         mock_requests.get.assert_called_once()
     finally:
         # Restore original module
-        importlib.reload(fabprint.printer)
+        importlib.reload(estampo.printer)
 
 
 def test_resolve_status_printers_by_name(tmp_path, monkeypatch):
     """Test --printer flag resolves a single printer."""
-    from fabprint.cli import _resolve_status_printers
+    from estampo.cli import _resolve_status_printers
 
     creds = {"type": "bambu-lan", "ip": "10.0.0.1"}
     result = _resolve_status_printers("workshop", None, lambda: {}, lambda name: creds)
@@ -339,7 +337,7 @@ def test_resolve_status_printers_by_name(tmp_path, monkeypatch):
 
 def test_resolve_status_printers_all(tmp_path, monkeypatch):
     """Test default resolves all configured printers."""
-    from fabprint.cli import _resolve_status_printers
+    from estampo.cli import _resolve_status_printers
 
     all_printers = {
         "workshop": {"type": "bambu-lan"},
@@ -354,10 +352,10 @@ def test_resolve_status_printers_all(tmp_path, monkeypatch):
 
 def test_resolve_status_printers_no_printers():
     """Test error when no printers configured."""
-    from fabprint import FabprintError
-    from fabprint.cli import _resolve_status_printers
+    from estampo import EstampoError
+    from estampo.cli import _resolve_status_printers
 
-    with pytest.raises(FabprintError, match="No printers configured"):
+    with pytest.raises(EstampoError, match="No printers configured"):
         _resolve_status_printers(None, None, lambda: {}, lambda name: {})
 
 

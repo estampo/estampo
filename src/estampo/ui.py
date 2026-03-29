@@ -74,7 +74,7 @@ def prompt_password(prompt: str) -> str:
 def preview_toml(text: str) -> None:
     """Show TOML content with syntax highlighting in a panel."""
     syntax = Syntax(text, "toml", theme="monokai", line_numbers=False)
-    console.print(Panel(syntax, title="fabprint.toml", border_style="dim"))
+    console.print(Panel(syntax, title="estampo.toml", border_style="dim"))
 
 
 def choice_table(

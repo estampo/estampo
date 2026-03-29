@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from fabprint.cloud import (
+from estampo.cloud import (
     PersistentBridge,
     _build_ams_mapping,
     _build_ams_mapping_from_state,
@@ -62,7 +62,7 @@ class TestFindBridge:
     def test_not_found(self, monkeypatch):
         monkeypatch.delenv("BAMBU_BRIDGE_PATH", raising=False)
         # Mock which to return None
-        with patch("fabprint.cloud.bridge.shutil.which", return_value=None):
+        with patch("estampo.cloud.bridge.shutil.which", return_value=None):
             # It should check common paths too; none will exist
             result = _find_bridge()
             # Could be None or a valid path if bridge exists locally
@@ -87,7 +87,7 @@ class TestCloudPrint:
         mock_result.stderr = ""
         mock_result.returncode = 0
 
-        with patch("fabprint.cloud.bridge._run_bridge", return_value=mock_result):
+        with patch("estampo.cloud.bridge._run_bridge", return_value=mock_result):
             result = cloud_print(threemf_file, "DEV123", token_file)
             assert result["result"] == "success"
             assert result["return_code"] == 0
@@ -98,7 +98,7 @@ class TestCloudPrint:
         mock_result.stderr = "error details"
         mock_result.returncode = 1
 
-        with patch("fabprint.cloud.bridge._run_bridge", return_value=mock_result):
+        with patch("estampo.cloud.bridge._run_bridge", return_value=mock_result):
             with pytest.raises(RuntimeError, match="non-JSON"):
                 cloud_print(threemf_file, "DEV123", token_file)
 
@@ -112,7 +112,7 @@ class TestCloudPrint:
         )
         mock_result.stderr = ""
 
-        with patch("fabprint.cloud.bridge._run_bridge", return_value=mock_result) as mock_run:
+        with patch("estampo.cloud.bridge._run_bridge", return_value=mock_result) as mock_run:
             cloud_print(threemf_file, "DEV", token_file, config_3mf=config)
             args = mock_run.call_args[0][0]
             assert "--config-3mf" in args
@@ -128,7 +128,7 @@ class TestCloudStatus:
         mock_result.stdout = '{"print":{"gcode_state":"IDLE","bed_temper":22.5}}'
         mock_result.returncode = 0
 
-        with patch("fabprint.cloud.bridge._run_bridge", return_value=mock_result):
+        with patch("estampo.cloud.bridge._run_bridge", return_value=mock_result):
             status = cloud_status("DEV123", token_file)
             assert status["gcode_state"] == "IDLE"
             assert status["bed_temper"] == 22.5
@@ -138,7 +138,7 @@ class TestCloudStatus:
         mock_result.stdout = ""
         mock_result.returncode = 2
 
-        with patch("fabprint.cloud.bridge._run_bridge", return_value=mock_result):
+        with patch("estampo.cloud.bridge._run_bridge", return_value=mock_result):
             with pytest.raises(RuntimeError, match="No status"):
                 cloud_status("DEV123", token_file)
 
@@ -153,7 +153,7 @@ class TestCloudTasks:
         mock_result.stdout = '{"total":2,"hits":[{"id":1,"title":"job1"},{"id":2,"title":"job2"}]}'
         mock_result.returncode = 0
 
-        with patch("fabprint.cloud.bridge._run_bridge", return_value=mock_result):
+        with patch("estampo.cloud.bridge._run_bridge", return_value=mock_result):
             tasks = cloud_tasks(token_file, limit=5)
             assert len(tasks) == 2
             assert tasks[0]["title"] == "job1"
@@ -169,7 +169,7 @@ class TestCloudCancel:
         mock_result.stdout = '{"command":"stop","device_id":"DEV123","sent":true}'
         mock_result.returncode = 0
 
-        with patch("fabprint.cloud.bridge._run_bridge", return_value=mock_result):
+        with patch("estampo.cloud.bridge._run_bridge", return_value=mock_result):
             result = cloud_cancel("DEV123", token_file)
             assert result["sent"] is True
             assert result["device_id"] == "DEV123"
@@ -195,7 +195,7 @@ class TestPersistentBridge:
 
     def test_enter_starts_watch(self, token_file):
         mock_proc = self._make_mock_proc()
-        with patch("fabprint.cloud.bridge.subprocess.Popen", return_value=mock_proc) as mock_popen:
+        with patch("estampo.cloud.bridge.subprocess.Popen", return_value=mock_proc) as mock_popen:
             bridge = PersistentBridge(token_file, "DEV123")
             bridge.__enter__()
 
@@ -209,7 +209,7 @@ class TestPersistentBridge:
 
     def test_exit_sends_quit(self, token_file):
         mock_proc = self._make_mock_proc()
-        with patch("fabprint.cloud.bridge.subprocess.Popen", return_value=mock_proc):
+        with patch("estampo.cloud.bridge.subprocess.Popen", return_value=mock_proc):
             bridge = PersistentBridge(token_file, "DEV123")
             bridge.__enter__()
             bridge.__exit__(None, None, None)
@@ -233,7 +233,7 @@ class TestPersistentBridge:
         mock_sel.select.return_value = [True]
 
         with (
-            patch("fabprint.cloud.bridge.subprocess.Popen", return_value=mock_proc),
+            patch("estampo.cloud.bridge.subprocess.Popen", return_value=mock_proc),
             patch("selectors.DefaultSelector", return_value=mock_sel),
         ):
             with PersistentBridge(token_file, "DEV123") as bridge:
@@ -251,7 +251,7 @@ class TestPersistentBridge:
         mock_sel.select.return_value = []  # timeout
 
         with (
-            patch("fabprint.cloud.bridge.subprocess.Popen", return_value=mock_proc),
+            patch("estampo.cloud.bridge.subprocess.Popen", return_value=mock_proc),
             patch("selectors.DefaultSelector", return_value=mock_sel),
         ):
             with PersistentBridge(token_file, "DEV123") as bridge:
@@ -270,7 +270,7 @@ class TestPersistentBridge:
         mock_sel.select.return_value = [True]
 
         with (
-            patch("fabprint.cloud.bridge.subprocess.Popen", return_value=mock_proc),
+            patch("estampo.cloud.bridge.subprocess.Popen", return_value=mock_proc),
             patch("selectors.DefaultSelector", return_value=mock_sel),
         ):
             with PersistentBridge(token_file, "DEV123") as bridge:
@@ -290,7 +290,7 @@ class TestPersistentBridge:
         mock_sel.select.return_value = [True]
 
         with (
-            patch("fabprint.cloud.bridge.subprocess.Popen", return_value=mock_proc),
+            patch("estampo.cloud.bridge.subprocess.Popen", return_value=mock_proc),
             patch("selectors.DefaultSelector", return_value=mock_sel),
         ):
             with PersistentBridge(token_file, "DEV123") as bridge:
@@ -300,7 +300,7 @@ class TestPersistentBridge:
     def test_token_file_mounted_readonly(self, token_file):
         """Token file should be mounted as read-only in the container."""
         mock_proc = self._make_mock_proc()
-        with patch("fabprint.cloud.bridge.subprocess.Popen", return_value=mock_proc) as mock_popen:
+        with patch("estampo.cloud.bridge.subprocess.Popen", return_value=mock_proc) as mock_popen:
             bridge = PersistentBridge(token_file, "DEV123")
             bridge.__enter__()
 
@@ -314,7 +314,7 @@ class TestPersistentBridge:
     def test_enter_fails_on_non_ready(self, token_file):
         """Should raise if bridge doesn't signal ready."""
         mock_proc = self._make_mock_proc(ready_line='{"ready":false}\n')
-        with patch("fabprint.cloud.bridge.subprocess.Popen", return_value=mock_proc):
+        with patch("estampo.cloud.bridge.subprocess.Popen", return_value=mock_proc):
             bridge = PersistentBridge(token_file, "DEV123")
             with pytest.raises(RuntimeError, match="failed to start"):
                 bridge.__enter__()
@@ -331,8 +331,8 @@ class TestShouldPullImage:
     def test_returns_true_when_no_timestamp(self, tmp_path, monkeypatch):
         """First run (no timestamp file) should trigger a pull."""
         ts_path = tmp_path / "cloud-bridge-pull-ts"
-        monkeypatch.setattr("fabprint.cloud.bridge._PULL_TS_PATH", ts_path)
-        monkeypatch.delenv("FABPRINT_DOCKER_PULL", raising=False)
+        monkeypatch.setattr("estampo.cloud.bridge._PULL_TS_PATH", ts_path)
+        monkeypatch.delenv("ESTAMPO_DOCKER_PULL", raising=False)
         assert _should_pull_image() is True
 
     def test_returns_false_when_recent(self, tmp_path, monkeypatch):
@@ -341,8 +341,8 @@ class TestShouldPullImage:
 
         ts_path = tmp_path / "cloud-bridge-pull-ts"
         ts_path.write_text(str(time.time() - 60))  # 1 minute ago
-        monkeypatch.setattr("fabprint.cloud.bridge._PULL_TS_PATH", ts_path)
-        monkeypatch.delenv("FABPRINT_DOCKER_PULL", raising=False)
+        monkeypatch.setattr("estampo.cloud.bridge._PULL_TS_PATH", ts_path)
+        monkeypatch.delenv("ESTAMPO_DOCKER_PULL", raising=False)
         assert _should_pull_image() is False
 
     def test_returns_true_when_stale(self, tmp_path, monkeypatch):
@@ -351,31 +351,31 @@ class TestShouldPullImage:
 
         ts_path = tmp_path / "cloud-bridge-pull-ts"
         ts_path.write_text(str(time.time() - 90000))  # >24h ago
-        monkeypatch.setattr("fabprint.cloud.bridge._PULL_TS_PATH", ts_path)
-        monkeypatch.delenv("FABPRINT_DOCKER_PULL", raising=False)
+        monkeypatch.setattr("estampo.cloud.bridge._PULL_TS_PATH", ts_path)
+        monkeypatch.delenv("ESTAMPO_DOCKER_PULL", raising=False)
         assert _should_pull_image() is True
 
     def test_returns_true_when_corrupt_timestamp(self, tmp_path, monkeypatch):
         """Corrupt timestamp file should trigger a pull."""
         ts_path = tmp_path / "cloud-bridge-pull-ts"
         ts_path.write_text("not-a-number")
-        monkeypatch.setattr("fabprint.cloud.bridge._PULL_TS_PATH", ts_path)
-        monkeypatch.delenv("FABPRINT_DOCKER_PULL", raising=False)
+        monkeypatch.setattr("estampo.cloud.bridge._PULL_TS_PATH", ts_path)
+        monkeypatch.delenv("ESTAMPO_DOCKER_PULL", raising=False)
         assert _should_pull_image() is True
 
     def test_env_always_forces_pull(self, tmp_path, monkeypatch):
-        """FABPRINT_DOCKER_PULL=always should always pull."""
+        """ESTAMPO_DOCKER_PULL=always should always pull."""
         import time
 
         ts_path = tmp_path / "cloud-bridge-pull-ts"
         ts_path.write_text(str(time.time()))  # just pulled
-        monkeypatch.setattr("fabprint.cloud.bridge._PULL_TS_PATH", ts_path)
-        monkeypatch.setenv("FABPRINT_DOCKER_PULL", "always")
+        monkeypatch.setattr("estampo.cloud.bridge._PULL_TS_PATH", ts_path)
+        monkeypatch.setenv("ESTAMPO_DOCKER_PULL", "always")
         assert _should_pull_image() is True
 
     def test_env_never_skips_pull(self, monkeypatch):
-        """FABPRINT_DOCKER_PULL=never should never pull."""
-        monkeypatch.setenv("FABPRINT_DOCKER_PULL", "never")
+        """ESTAMPO_DOCKER_PULL=never should never pull."""
+        monkeypatch.setenv("ESTAMPO_DOCKER_PULL", "never")
         assert _should_pull_image() is False
 
     def test_env_auto_is_default(self, tmp_path, monkeypatch):
@@ -384,8 +384,8 @@ class TestShouldPullImage:
 
         ts_path = tmp_path / "cloud-bridge-pull-ts"
         ts_path.write_text(str(time.time()))  # just pulled
-        monkeypatch.setattr("fabprint.cloud.bridge._PULL_TS_PATH", ts_path)
-        monkeypatch.delenv("FABPRINT_DOCKER_PULL", raising=False)
+        monkeypatch.setattr("estampo.cloud.bridge._PULL_TS_PATH", ts_path)
+        monkeypatch.delenv("ESTAMPO_DOCKER_PULL", raising=False)
         assert _should_pull_image() is False
 
 
@@ -394,7 +394,7 @@ class TestRecordPull:
 
     def test_creates_timestamp_file(self, tmp_path, monkeypatch):
         ts_path = tmp_path / "subdir" / "cloud-bridge-pull-ts"
-        monkeypatch.setattr("fabprint.cloud.bridge._PULL_TS_PATH", ts_path)
+        monkeypatch.setattr("estampo.cloud.bridge._PULL_TS_PATH", ts_path)
         _record_pull()
         assert ts_path.exists()
         val = float(ts_path.read_text().strip())
@@ -405,7 +405,7 @@ class TestRecordPull:
     def test_overwrites_existing(self, tmp_path, monkeypatch):
         ts_path = tmp_path / "cloud-bridge-pull-ts"
         ts_path.write_text("0")
-        monkeypatch.setattr("fabprint.cloud.bridge._PULL_TS_PATH", ts_path)
+        monkeypatch.setattr("estampo.cloud.bridge._PULL_TS_PATH", ts_path)
         _record_pull()
         val = float(ts_path.read_text().strip())
         assert val > 1000  # not zero anymore
@@ -430,15 +430,15 @@ class TestRunBridgeDockerPull:
         results = [mock_docker_info, mock_pull, mock_run_result]
 
         with (
-            patch("fabprint.cloud.bridge._find_bridge", return_value=None),
+            patch("estampo.cloud.bridge._find_bridge", return_value=None),
             patch("platform.system", return_value="Linux"),
             patch(
-                "fabprint.cloud.bridge._should_pull_image",
+                "estampo.cloud.bridge._should_pull_image",
                 return_value=True,
             ),
-            patch("fabprint.cloud.bridge._record_pull"),
+            patch("estampo.cloud.bridge._record_pull"),
             patch(
-                "fabprint.cloud.bridge.subprocess.run",
+                "estampo.cloud.bridge.subprocess.run",
                 side_effect=results,
             ) as mock_run,
         ):
@@ -446,7 +446,7 @@ class TestRunBridgeDockerPull:
 
             # Second call should be the pull
             pull_cmd = mock_run.call_args_list[1][0][0]
-            assert pull_cmd == ["docker", "pull", "fabprint/cloud-bridge"]
+            assert pull_cmd == ["docker", "pull", "estampo/cloud-bridge"]
 
     def test_skips_pull_when_recent(self):
         """When image was recently pulled, skip the pull."""
@@ -460,14 +460,14 @@ class TestRunBridgeDockerPull:
         results = [mock_docker_info, mock_run_result]
 
         with (
-            patch("fabprint.cloud.bridge._find_bridge", return_value=None),
+            patch("estampo.cloud.bridge._find_bridge", return_value=None),
             patch("platform.system", return_value="Linux"),
             patch(
-                "fabprint.cloud.bridge._should_pull_image",
+                "estampo.cloud.bridge._should_pull_image",
                 return_value=False,
             ),
             patch(
-                "fabprint.cloud.bridge.subprocess.run",
+                "estampo.cloud.bridge.subprocess.run",
                 side_effect=results,
             ) as mock_run,
         ):
@@ -496,15 +496,15 @@ class TestRunBridgeDockerPull:
         results = [mock_docker_info, mock_pull, mock_run_result]
 
         with (
-            patch("fabprint.cloud.bridge._find_bridge", return_value=None),
+            patch("estampo.cloud.bridge._find_bridge", return_value=None),
             patch("platform.system", return_value="Linux"),
             patch(
-                "fabprint.cloud.bridge._should_pull_image",
+                "estampo.cloud.bridge._should_pull_image",
                 return_value=True,
             ),
-            patch("fabprint.cloud.bridge._record_pull"),
+            patch("estampo.cloud.bridge._record_pull"),
             patch(
-                "fabprint.cloud.bridge.subprocess.run",
+                "estampo.cloud.bridge.subprocess.run",
                 side_effect=results,
             ),
         ):
@@ -527,17 +527,17 @@ class TestRunBridgeDockerPull:
         results = [mock_docker_info, mock_pull, mock_run_result]
 
         with (
-            patch("fabprint.cloud.bridge._find_bridge", return_value=None),
+            patch("estampo.cloud.bridge._find_bridge", return_value=None),
             patch("platform.system", return_value="Linux"),
             patch(
-                "fabprint.cloud.bridge._should_pull_image",
+                "estampo.cloud.bridge._should_pull_image",
                 return_value=True,
             ),
             patch(
-                "fabprint.cloud.bridge._record_pull",
+                "estampo.cloud.bridge._record_pull",
             ) as mock_record,
             patch(
-                "fabprint.cloud.bridge.subprocess.run",
+                "estampo.cloud.bridge.subprocess.run",
                 side_effect=results,
             ),
         ):
@@ -560,17 +560,17 @@ class TestRunBridgeDockerPull:
         results = [mock_docker_info, mock_pull, mock_run_result]
 
         with (
-            patch("fabprint.cloud.bridge._find_bridge", return_value=None),
+            patch("estampo.cloud.bridge._find_bridge", return_value=None),
             patch("platform.system", return_value="Linux"),
             patch(
-                "fabprint.cloud.bridge._should_pull_image",
+                "estampo.cloud.bridge._should_pull_image",
                 return_value=True,
             ),
             patch(
-                "fabprint.cloud.bridge._record_pull",
+                "estampo.cloud.bridge._record_pull",
             ) as mock_record,
             patch(
-                "fabprint.cloud.bridge.subprocess.run",
+                "estampo.cloud.bridge.subprocess.run",
                 side_effect=results,
             ),
         ):
@@ -592,16 +592,16 @@ class TestRunBridgeDockerPull:
 
         with (
             patch(
-                "fabprint.cloud.bridge._find_bridge",
+                "estampo.cloud.bridge._find_bridge",
                 return_value=str(bridge),
             ),
             patch("platform.system", return_value="Darwin"),
             patch(
-                "fabprint.cloud.bridge._should_pull_image",
+                "estampo.cloud.bridge._should_pull_image",
                 return_value=False,
             ),
             patch(
-                "fabprint.cloud.bridge.subprocess.run",
+                "estampo.cloud.bridge.subprocess.run",
                 side_effect=side,
             ) as mock_run,
         ):
@@ -612,7 +612,7 @@ class TestRunBridgeDockerPull:
             # Last call should be docker run
             run_cmd = mock_run.call_args_list[-1][0][0]
             assert run_cmd[0] == "docker"
-            assert "fabprint/cloud-bridge" in run_cmd
+            assert "estampo/cloud-bridge" in run_cmd
 
     def test_uses_local_bridge_on_linux(self):
         """On Linux with local bridge, should use it directly."""
@@ -625,12 +625,12 @@ class TestRunBridgeDockerPull:
 
         with (
             patch(
-                "fabprint.cloud.bridge._find_bridge",
+                "estampo.cloud.bridge._find_bridge",
                 return_value=bridge_path,
             ),
             patch("platform.system", return_value="Linux"),
             patch(
-                "fabprint.cloud.bridge.subprocess.run",
+                "estampo.cloud.bridge.subprocess.run",
                 return_value=mock_result,
             ) as mock_run,
         ):
@@ -644,12 +644,12 @@ class TestRunBridgeDockerPull:
         """Without bridge or Docker, raises RuntimeError."""
         with (
             patch(
-                "fabprint.cloud.bridge._find_bridge",
+                "estampo.cloud.bridge._find_bridge",
                 return_value=None,
             ),
             patch("platform.system", return_value="Linux"),
             patch(
-                "fabprint.cloud.bridge.subprocess.run",
+                "estampo.cloud.bridge.subprocess.run",
                 side_effect=FileNotFoundError,
             ),
         ):
@@ -673,16 +673,16 @@ class TestRunBridgeDockerPull:
 
         with (
             patch(
-                "fabprint.cloud.bridge._find_bridge",
+                "estampo.cloud.bridge._find_bridge",
                 return_value=None,
             ),
             patch("platform.system", return_value="Linux"),
             patch(
-                "fabprint.cloud.bridge._should_pull_image",
+                "estampo.cloud.bridge._should_pull_image",
                 return_value=False,
             ),
             patch(
-                "fabprint.cloud.bridge.subprocess.run",
+                "estampo.cloud.bridge.subprocess.run",
                 side_effect=side,
             ) as mock_run,
         ):
@@ -709,12 +709,12 @@ class TestRunBridgeDockerPull:
 
         with (
             patch(
-                "fabprint.cloud.bridge._find_bridge",
+                "estampo.cloud.bridge._find_bridge",
                 return_value=bridge_path,
             ),
             patch("platform.system", return_value="Linux"),
             patch(
-                "fabprint.cloud.bridge.subprocess.run",
+                "estampo.cloud.bridge.subprocess.run",
                 return_value=mock_result,
             ) as mock_run,
         ):

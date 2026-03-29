@@ -1,22 +1,22 @@
 # CLI reference
 
-fabprint provides commands for creating configs (`init`, `validate`), setting up printers (`setup`), running the pipeline (`run`), and managing printers (`status`, `profiles`).
+estampo provides commands for creating configs (`init`, `validate`), setting up printers (`setup`), running the pipeline (`run`), and managing printers (`status`, `profiles`).
 
-## `fabprint init`
+## `estampo init`
 
-Create a new `fabprint.toml` config file.
+Create a new `estampo.toml` config file.
 
 ```
-fabprint init [--template] [-o OUTPUT]
+estampo init [--template] [-o OUTPUT]
 ```
 
 | Option        | Description                                         |
 |---------------|-----------------------------------------------------|
 | `--template`  | Dump a commented template to stdout (skip wizard)   |
-| `-o, --output`| Output file path (default: `./fabprint.toml`)       |
+| `-o, --output`| Output file path (default: `./estampo.toml`)       |
 
 Without `--template`, runs an interactive wizard that:
-1. Checks for configured printers (offers to run `fabprint setup` if none found)
+1. Checks for configured printers (offers to run `estampo setup` if none found)
 2. Discovers installed OrcaSlicer profiles (printer, process, filament) with search/filter
 3. Detects printer capabilities from the selected machine profile (plate size, multi-material support)
 4. Queries AMS tray contents in the background and auto-suggests matching filament profiles
@@ -28,21 +28,21 @@ Without `--template`, runs an interactive wizard that:
 ### Examples
 
 ```bash
-fabprint init                              # interactive wizard
-fabprint init --template                   # print commented template
-fabprint init --template > fabprint.toml   # save template to file
-fabprint init -o myproject.toml            # wizard writes to custom path
+estampo init                              # interactive wizard
+estampo init --template                   # print commented template
+estampo init --template > estampo.toml   # save template to file
+estampo init -o myproject.toml            # wizard writes to custom path
 ```
 
-## `fabprint validate`
+## `estampo validate`
 
-Check a `fabprint.toml` for issues and print actionable warnings.
+Check a `estampo.toml` for issues and print actionable warnings.
 
 ```
-fabprint validate [config]
+estampo validate [config]
 ```
 
-If `config` is omitted, looks for `fabprint.toml` in the current directory.
+If `config` is omitted, looks for `estampo.toml` in the current directory.
 
 Checks for:
 - Missing `slicer.version` (reproducibility)
@@ -54,20 +54,20 @@ Checks for:
 ### Examples
 
 ```bash
-fabprint validate                  # check ./fabprint.toml
-fabprint validate myproject.toml   # check a specific file
+estampo validate                  # check ./estampo.toml
+estampo validate myproject.toml   # check a specific file
 ```
 
-## `fabprint setup`
+## `estampo setup`
 
-Interactively set up a printer in `~/.config/fabprint/credentials.toml`.
+Interactively set up a printer in `~/.config/estampo/credentials.toml`.
 
 ```
-fabprint setup
+estampo setup
 ```
 
 Walks through:
-1. **Printer name** — used to reference this printer in `fabprint.toml` (e.g. `name = "workshop"`)
+1. **Printer name** — used to reference this printer in `estampo.toml` (e.g. `name = "workshop"`)
 2. **Printer type** — `bambu-lan` (direct LAN), `bambu-cloud` (cloud bridge), or `moonraker` (Klipper)
 3. **Type-specific fields** — IP/access code/serial for Bambu LAN, serial for Bambu Cloud, URL for Moonraker
 4. **Cloud login** — for `bambu-cloud` type, optionally logs in to Bambu Cloud
@@ -85,7 +85,7 @@ The credentials file is created with `600` permissions (owner read/write only). 
 ### Example session
 
 ```
-$ fabprint setup
+$ estampo setup
 Printer name (e.g. 'workshop'): workshop
 
 Printer types:
@@ -99,26 +99,26 @@ Setting up 'workshop' (bambu-lan)
   access_code: 12345678
   serial: 01P00A451601106
 
-Wrote ~/.config/fabprint/credentials.toml (mode 600)
-Reference this printer in fabprint.toml with:
+Wrote ~/.config/estampo/credentials.toml (mode 600)
+Reference this printer in estampo.toml with:
   [printer]
   name = "workshop"
 ```
 
-## `fabprint run`
+## `estampo run`
 
 Run all or part of the pipeline.
 
 ```
-fabprint run [config] [options]
+estampo run [config] [options]
 ```
 
-If `config` is omitted, fabprint looks for `fabprint.toml` in the current directory.
+If `config` is omitted, estampo looks for `estampo.toml` in the current directory.
 
 | Option              | Description                                          |
 |---------------------|------------------------------------------------------|
-| `[config]`          | Path to config file (default: `./fabprint.toml`)     |
-| `-o, --output-dir`  | Output directory (default: `fabprint_output/` or `fabprint_output/{name}/`) |
+| `[config]`          | Path to config file (default: `./estampo.toml`)     |
+| `-o, --output-dir`  | Output directory (default: `estampo_output/` or `estampo_output/{name}/`) |
 | `--until STAGE`     | Run pipeline up to and including this stage           |
 | `--only STAGE`      | Run only this stage (fails if prerequisites missing)  |
 | `--scale FACTOR`    | Scale all parts (multiplies per-part scale)           |
@@ -148,26 +148,26 @@ The default pipeline runs these stages in order:
 ### Examples
 
 ```bash
-# Full pipeline: arrange, slice, and print (uses ./fabprint.toml)
-fabprint run
+# Full pipeline: arrange, slice, and print (uses ./estampo.toml)
+estampo run
 
 # Stop after plating (no slicer needed)
-fabprint run --until plate
+estampo run --until plate
 
 # Only slice (requires plate.3mf already in output/)
-fabprint run --only slice
+estampo run --only slice
 
 # Slice with a specific Docker image version
-fabprint run --until slice --docker-version 2.3.1
+estampo run --until slice --docker-version 2.3.1
 
 # Dry run — do everything except actually send to printer
-fabprint run --dry-run
+estampo run --dry-run
 
 # Verbose mode — shows per-stage timing
-fabprint run -v
+estampo run -v
 
 # Explicit config path
-fabprint run myproject.toml --until plate
+estampo run myproject.toml --until plate
 ```
 
 ### `--until` vs `--only`
@@ -177,12 +177,12 @@ fabprint run myproject.toml --until plate
 
 You cannot combine `--until` and `--only`.
 
-## `fabprint status`
+## `estampo status`
 
 Query printer status or control a running/failed print.
 
 ```
-fabprint status [--printer NAME] [--watch] [--interval SECONDS] [--stop] [--resume] [--clear]
+estampo status [--printer NAME] [--watch] [--interval SECONDS] [--stop] [--resume] [--clear]
 ```
 
 | Option              | Description                                      |
@@ -199,19 +199,19 @@ Without `--printer`, shows all configured printers. Add `-w` for a live dashboar
 ### Examples
 
 ```bash
-fabprint status                             # show all printers
-fabprint status --printer workshop -w       # live dashboard for one printer
-fabprint status --printer workshop --stop   # stop current print
-fabprint status --printer workshop --resume # resume paused print
-fabprint status --printer workshop --clear  # clear FAILED state
+estampo status                             # show all printers
+estampo status --printer workshop -w       # live dashboard for one printer
+estampo status --printer workshop --stop   # stop current print
+estampo status --printer workshop --resume # resume paused print
+estampo status --printer workshop --clear  # clear FAILED state
 ```
 
-## `fabprint watch`
+## `estampo watch`
 
 Watch input files and re-run the pipeline when they change. Useful for iterating on code-CAD models (OpenSCAD, build123d, CadQuery).
 
 ```
-fabprint watch [config] [--until STAGE] [--local] [-v]
+estampo watch [config] [--until STAGE] [--local] [-v]
 ```
 
 | Option        | Description                                      |
@@ -223,18 +223,18 @@ fabprint watch [config] [--until STAGE] [--local] [-v]
 The command watches the config file and all part files referenced in it. When any file changes, the pipeline re-runs automatically. Press Ctrl-C to stop.
 
 ```bash
-fabprint watch                          # watch all inputs, full pipeline
-fabprint watch --until plate            # only re-plate on changes
-fabprint watch custom.toml --until slice  # watch a specific config
+estampo watch                          # watch all inputs, full pipeline
+estampo watch --until plate            # only re-plate on changes
+estampo watch custom.toml --until slice  # watch a specific config
 ```
 
-## `fabprint profiles`
+## `estampo profiles`
 
 Manage slicer profiles.
 
 ```
-fabprint profiles list [--category machine|process|filament]
-fabprint profiles pin [config]
+estampo profiles list [--category machine|process|filament]
+estampo profiles pin [config]
 ```
 
 - **`list`** — show available profiles from your slicer installation.

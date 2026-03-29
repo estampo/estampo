@@ -1,33 +1,33 @@
 # Code-CAD workflow
 
-fabprint works with any tool that produces STL, STEP, or 3MF files. This guide shows how to integrate it with code-CAD tools like OpenSCAD, build123d, and CadQuery for a fully reproducible, version-controlled 3D printing workflow.
+estampo works with any tool that produces STL, STEP, or 3MF files. This guide shows how to integrate it with code-CAD tools like OpenSCAD, build123d, and CadQuery for a fully reproducible, version-controlled 3D printing workflow.
 
 ## The idea
 
-Instead of manually importing files into a slicer GUI and configuring settings by hand, you define everything in a `fabprint.toml` alongside your CAD source. The entire print job — models, slicer settings, orientation, plate layout — is captured in text files you can commit to git.
+Instead of manually importing files into a slicer GUI and configuring settings by hand, you define everything in a `estampo.toml` alongside your CAD source. The entire print job — models, slicer settings, orientation, plate layout — is captured in text files you can commit to git.
 
 ```
 my-project/
   widget.scad          # CAD source (OpenSCAD, build123d, etc.)
   widget.stl           # generated mesh
-  fabprint.toml        # print config
+  estampo.toml        # print config
   profiles/            # pinned slicer profiles (optional)
-  .gitignore           # ignore fabprint_output/
+  .gitignore           # ignore estampo_output/
 ```
 
 ## OpenSCAD
 
-Generate STL from the command line, then slice with fabprint:
+Generate STL from the command line, then slice with estampo:
 
 ```bash
 # Regenerate mesh from source
 openscad -o widget.stl widget.scad
 
 # Slice and print
-fabprint run
+estampo run
 ```
 
-`fabprint.toml`:
+`estampo.toml`:
 ```toml
 name = "widget"
 
@@ -56,7 +56,7 @@ openscad -o bracket_m5.stl -D 'bolt_dia=5' bracket.scad
 
 ## build123d (Python)
 
-build123d outputs STEP files directly, which fabprint loads via its built-in build123d integration:
+build123d outputs STEP files directly, which estampo loads via its built-in build123d integration:
 
 ```python
 # widget.py
@@ -71,10 +71,10 @@ export_step(widget.part, "widget.step")
 
 ```bash
 python widget.py
-fabprint run
+estampo run
 ```
 
-`fabprint.toml`:
+`estampo.toml`:
 ```toml
 name = "widget"
 
@@ -103,46 +103,46 @@ result = cq.Workplane("XY").box(50, 30, 10)
 cq.exporters.export(result, "widget.step")
 ```
 
-Then use the same `fabprint.toml` approach as build123d above.
+Then use the same `estampo.toml` approach as build123d above.
 
 ## Reproducible builds
 
-Three things make a fabprint build fully reproducible:
+Three things make a estampo build fully reproducible:
 
 1. **Pin the OrcaSlicer version** — `version = "2.3.1"` in `[slicer]` ensures Docker uses the exact same slicer binary everywhere.
 
-2. **Pin slicer profiles** — `fabprint profiles pin` copies the referenced profiles into a `profiles/` directory. Commit this to git so builds don't depend on locally installed profiles.
+2. **Pin slicer profiles** — `estampo profiles pin` copies the referenced profiles into a `profiles/` directory. Commit this to git so builds don't depend on locally installed profiles.
 
 3. **Use Docker for slicing** — Docker is the default when available. It isolates the slicer from the host system, ensuring identical output across macOS, Linux, and CI.
 
 ```bash
-fabprint profiles pin    # copies profiles into ./profiles/
+estampo profiles pin    # copies profiles into ./profiles/
 git add profiles/        # commit pinned profiles
 ```
 
-With all three, anyone can clone your repo and produce identical G-code with `fabprint run`.
+With all three, anyone can clone your repo and produce identical G-code with `estampo run`.
 
 ## Git workflow
 
 Commit:
 - `*.scad`, `*.py` — CAD source files
 - `*.stl`, `*.step` — generated meshes (or regenerate in CI)
-- `fabprint.toml` — print configuration
+- `estampo.toml` — print configuration
 - `profiles/` — pinned slicer profiles
 
 Gitignore:
 ```
-fabprint_output/
+estampo_output/
 ```
 
 ## CI integration
 
-Use the fabprint GitHub Action to slice on every PR:
+Use the estampo GitHub Action to slice on every PR:
 
 ```yaml
-- uses: pzfreo/fabprint@main
+- uses: estampo/estampo@main
   with:
-    config: fabprint.toml
+    config: estampo.toml
     orca-version: "2.3.1"
 ```
 
@@ -153,7 +153,7 @@ This slices the model, posts print time and filament usage as a PR comment, and 
 During iteration, you often want to re-run just part of the pipeline:
 
 ```bash
-fabprint run --until plate     # stop after arrangement (check layout)
-fabprint run --only slice      # re-slice without re-arranging
-fabprint run --dry-run         # full pipeline without sending to printer
+estampo run --until plate     # stop after arrangement (check layout)
+estampo run --only slice      # re-slice without re-arranging
+estampo run --dry-run         # full pipeline without sending to printer
 ```

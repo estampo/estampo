@@ -15,5 +15,6 @@ output/
 scripts/bambu_cloud_bridge
 squashfs-root/
 fabprint_output/
+estampo_output/
 bc_tls*.log
 docs/bc_https_hook.py

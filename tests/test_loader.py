@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 import trimesh
 
-from fabprint.loader import extract_paint_colors, load_3mf_objects, load_mesh
+from estampo.loader import extract_paint_colors, load_3mf_objects, load_mesh
 
 FIXTURES = Path(__file__).parent / "fixtures"
 

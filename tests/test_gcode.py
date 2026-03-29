@@ -2,7 +2,7 @@
 
 import zipfile
 
-from fabprint.gcode import analyze_gcode, parse_gcode_metadata
+from estampo.gcode import analyze_gcode, parse_gcode_metadata
 
 
 def test_parse_print_time(tmp_path):

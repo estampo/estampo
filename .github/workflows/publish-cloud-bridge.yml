@@ -66,8 +66,8 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            fabprint/cloud-bridge:${{ steps.version.outputs.version }}
-            fabprint/cloud-bridge:latest
+            estampo/cloud-bridge:${{ steps.version.outputs.version }}
+            estampo/cloud-bridge:latest
             ghcr.io/${{ github.repository }}/cloud-bridge:${{ steps.version.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -96,7 +96,7 @@ jobs:
       - name: Check if orca-base already exists
         id: base_exists
         run: |
-          if docker pull "fabprint/orca-base:${{ matrix.orca-version }}" 2>/dev/null; then
+          if docker pull "estampo/orca-base:${{ matrix.orca-version }}" 2>/dev/null; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
@@ -111,13 +111,13 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            fabprint/orca-base:${{ matrix.orca-version }}
+            estampo/orca-base:${{ matrix.orca-version }}
             ghcr.io/${{ github.repository }}/orca-base:${{ matrix.orca-version }}
           build-args: ORCA_VERSION=${{ matrix.orca-version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build and push fabprint image
+      - name: Build and push estampo image
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -125,8 +125,8 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            fabprint/fabprint:orca-${{ matrix.orca-version }}-${{ needs.release.outputs.version }}
-            fabprint/fabprint:orca-${{ matrix.orca-version }}
+            estampo/estampo:orca-${{ matrix.orca-version }}-${{ needs.release.outputs.version }}
+            estampo/estampo:orca-${{ matrix.orca-version }}
             ghcr.io/${{ github.repository }}:orca-${{ matrix.orca-version }}-${{ needs.release.outputs.version }}
             ghcr.io/${{ github.repository }}:orca-${{ matrix.orca-version }}
           build-args: ORCA_VERSION=${{ matrix.orca-version }}
@@ -153,13 +153,13 @@ jobs:
 
       - name: Open PR for bundled profile updates
         run: |
-          git diff --quiet src/fabprint/data/ && echo "No profile changes" && exit 0
+          git diff --quiet src/estampo/data/ && echo "No profile changes" && exit 0
           VERSION="${{ needs.release.outputs.version }}"
           BRANCH="update-orca-profiles-${VERSION}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$BRANCH"
-          git add src/fabprint/data/
+          git add src/estampo/data/
           git commit -m "Update bundled OrcaSlicer profiles (2.3.1, 2.3.2)"
           git push origin "$BRANCH"
           gh pr create \

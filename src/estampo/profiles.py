@@ -11,7 +11,7 @@ from pathlib import Path
 from urllib.error import URLError
 from urllib.request import urlopen
 
-from fabprint import FabprintError
+from estampo import EstampoError
 
 log = logging.getLogger(__name__)
 
@@ -94,7 +94,7 @@ _BUNDLED_DIR = Path(__file__).parent / "data"
 def load_bundled_profiles(engine: str, version: str | None = None) -> dict[str, list[str]]:
     """Load profile names bundled with the package.
 
-    Looks for ``src/fabprint/data/profiles.<engine>.<version>.json``.
+    Looks for ``src/estampo/data/profiles.<engine>.<version>.json``.
     Falls back to the highest available version if the requested one is missing.
 
     Returns a dict of ``{category: [name, ...]}`` or an empty dict if none found.
@@ -168,7 +168,7 @@ _DOCKER_PROFILE_ROOT = "/opt/orca-slicer/resources/profiles/BBL"
 
 def _docker_image_for_version(version: str | None) -> str:
     """Build the Docker image name for a given OrcaSlicer version."""
-    from fabprint.slicer import DOCKERHUB_REPO
+    from estampo.slicer import DOCKERHUB_REPO
 
     if version:
         return f"{DOCKERHUB_REPO}:orca-{version}"
@@ -192,15 +192,15 @@ def extract_docker_profiles(
         image = _docker_image_for_version(version)
 
     # Ensure image is available
-    from fabprint.slicer import _ensure_docker_image
+    from estampo.slicer import _ensure_docker_image
 
     if not _ensure_docker_image(image):
-        raise FabprintError(
+        raise EstampoError(
             f"Docker image {image} is not available and could not be pulled. "
             "Install OrcaSlicer locally or check your Docker setup."
         )
 
-    tmp_dir = Path(tempfile.mkdtemp(prefix="fabprint_profiles_"))
+    tmp_dir = Path(tempfile.mkdtemp(prefix="estampo_profiles_"))
     container_id = None
     try:
         # Create a stopped container (does not start it)
@@ -211,7 +211,7 @@ def extract_docker_profiles(
             timeout=30,
         )
         if result.returncode != 0:
-            raise FabprintError(f"docker create failed: {result.stderr.strip()}")
+            raise EstampoError(f"docker create failed: {result.stderr.strip()}")
         container_id = result.stdout.strip()
 
         # Copy profile directories out
@@ -329,7 +329,7 @@ def resolve_profile(
 
     raise FileNotFoundError(
         f"Profile '{name_or_path}' not found in category '{category}' "
-        f"for engine '{engine}'. Run 'fabprint profiles list' to see available profiles."
+        f"for engine '{engine}'. Run 'estampo profiles list' to see available profiles."
     )
 
 
@@ -435,7 +435,7 @@ def pin_profiles(
     if docker_needed:
         if not docker_version:
             names = ", ".join(f"'{n}'" for _, n in docker_needed)
-            raise FabprintError(
+            raise EstampoError(
                 f"Profile(s) {names} not found locally. Set slicer.version in your "
                 "config or install OrcaSlicer to access profiles."
             )
@@ -507,37 +507,37 @@ def add_profile(
             with urlopen(source, timeout=30) as resp:  # noqa: S310
                 raw = resp.read()
         except (URLError, OSError) as e:
-            raise FabprintError(f"Failed to download profile from {source}: {e}") from e
+            raise EstampoError(f"Failed to download profile from {source}: {e}") from e
         try:
             data = json.loads(raw)
         except json.JSONDecodeError as e:
-            raise FabprintError(f"Invalid JSON from {source}: {e}") from e
+            raise EstampoError(f"Invalid JSON from {source}: {e}") from e
         default_name = Path(source.split("/")[-1]).stem
     else:
         path = Path(source)
         if not path.exists():
-            raise FabprintError(f"Profile file not found: {source}")
+            raise EstampoError(f"Profile file not found: {source}")
         with open(path) as f:
             try:
                 data = json.load(f)
             except json.JSONDecodeError as e:
-                raise FabprintError(f"Invalid JSON in {source}: {e}") from e
+                raise EstampoError(f"Invalid JSON in {source}: {e}") from e
         default_name = path.stem
 
     if not isinstance(data, dict):
-        raise FabprintError(f"Profile must be a JSON object, got {type(data).__name__}")
+        raise EstampoError(f"Profile must be a JSON object, got {type(data).__name__}")
 
     # Determine category
     if not category:
         category = detect_category(data)
         if not category:
-            raise FabprintError(
+            raise EstampoError(
                 f"Cannot auto-detect profile category for {source}. "
                 "Use --category to specify machine, process, or filament."
             )
 
     if category not in CATEGORIES:
-        raise FabprintError(
+        raise EstampoError(
             f"Invalid category '{category}'. Must be one of: {', '.join(CATEGORIES)}"
         )
 
@@ -559,7 +559,7 @@ def add_profile(
         if not parent_path.exists():
             log.warning(
                 "Profile '%s' inherits from '%s' which is not in %s. "
-                "Add the parent profile or use 'fabprint profiles pin' to flatten.",
+                "Add the parent profile or use 'estampo profiles pin' to flatten.",
                 profile_name,
                 parent,
                 dest_dir,

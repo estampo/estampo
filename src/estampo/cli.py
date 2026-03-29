@@ -1,4 +1,4 @@
-"""CLI entry point for fabprint."""
+"""CLI entry point for estampo."""
 
 import logging
 import sys
@@ -8,13 +8,13 @@ from typing import Annotated, Any
 import click
 import typer
 
-from fabprint import FabprintError, __version__
-from fabprint.config import load_config
+from estampo import EstampoError, __version__
+from estampo.config import load_config
 
 log = logging.getLogger(__name__)
 
 app = typer.Typer(
-    name="fabprint",
+    name="estampo",
     help="Reproducible 3D print builds.",
     no_args_is_help=True,
 )
@@ -52,7 +52,7 @@ _PRINT_STAGES: dict[str, str] = {
 
 def _version_callback(value: bool) -> None:
     if value:
-        print(f"fabprint {__version__}")
+        print(f"estampo {__version__}")
         raise typer.Exit()
 
 
@@ -64,14 +64,25 @@ def _setup_logging(verbose: bool) -> None:
 
 
 def _resolve_config_path(config: Path | None) -> Path:
-    """Resolve config path, defaulting to ./fabprint.toml."""
+    """Resolve config path, defaulting to ./estampo.toml (or ./fabprint.toml)."""
     if config is not None:
         return config
-    candidate = Path("fabprint.toml")
+    candidate = Path("estampo.toml")
     if not candidate.exists():
-        raise FabprintError(
-            "No config file specified and no fabprint.toml found in the current directory.\n"
-            "Usage: fabprint <command> [config.toml]"
+        legacy = Path("fabprint.toml")
+        if legacy.exists():
+            import warnings
+
+            warnings.warn(
+                "fabprint.toml is deprecated — rename it to estampo.toml",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            return legacy
+    if not candidate.exists():
+        raise EstampoError(
+            "No config file specified and no estampo.toml found in the current directory.\n"
+            "Usage: estampo <command> [config.toml]"
         )
     return candidate
 
@@ -82,7 +93,7 @@ def _resolve_config_path(config: Path | None) -> Path:
 
 
 def _build_driver(verbose: bool = False):
-    """Build a Hamilton driver wired to the fabprint pipeline."""
+    """Build a Hamilton driver wired to the estampo pipeline."""
     import os
 
     # Disable Hamilton telemetry before first import
@@ -93,7 +104,7 @@ def _build_driver(verbose: bool = False):
 
     from hamilton import driver
 
-    from fabprint import adapters, pipeline
+    from estampo import adapters, pipeline
 
     builder = driver.Builder().with_modules(pipeline)
     if verbose:
@@ -201,7 +212,7 @@ def run(
     ] = False,
     verbose: Annotated[bool, typer.Option("-v", "--verbose", help="Enable debug logging")] = False,
 ) -> None:
-    """Run the pipeline defined in fabprint.toml."""
+    """Run the pipeline defined in estampo.toml."""
     _setup_logging(verbose)
 
     if until and only:
@@ -303,7 +314,7 @@ def _run_pipeline(
     no_ams_mapping: bool = False,
 ) -> None:
     """Execute the pipeline (shared by run and watch commands)."""
-    from fabprint.pipeline import resolve_outputs, resolve_overrides
+    from estampo.pipeline import resolve_outputs, resolve_overrides
 
     cfg = load_config(config)
     stages = cfg.pipeline.stages
@@ -311,9 +322,9 @@ def _run_pipeline(
     if output_dir:
         out_dir = output_dir
     elif cfg.name:
-        out_dir = Path("fabprint_output") / cfg.name
+        out_dir = Path("estampo_output") / cfg.name
     else:
-        out_dir = Path("fabprint_output")
+        out_dir = Path("estampo_output")
     out_dir.mkdir(parents=True, exist_ok=True)
     output_3mf = out_dir / "plate.3mf"
 
@@ -339,7 +350,7 @@ def _run_pipeline(
         no_ams_mapping=no_ams_mapping,
     )
 
-    from fabprint import ui
+    from estampo import ui
 
     ui.info(f"Output → [bold]{out_dir}[/bold]")
     dr.execute(outputs, inputs=inputs, overrides=overrides)
@@ -357,17 +368,17 @@ def init(
     ] = False,
     output: Annotated[
         Path | None,
-        typer.Option("-o", "--output", help="Output file path (default: ./fabprint.toml)"),
+        typer.Option("-o", "--output", help="Output file path (default: ./estampo.toml)"),
     ] = None,
     verbose: Annotated[bool, typer.Option("-v", "--verbose", help="Enable debug logging")] = False,
 ) -> None:
-    """Create a new fabprint.toml config file.
+    """Create a new estampo.toml config file.
 
     The interactive wizard requires a Unix terminal (Linux, macOS, or WSL).
     On Windows, use --template to generate a config file manually.
     """
     _setup_logging(verbose)
-    from fabprint.init import dump_template, run_wizard
+    from estampo.init import dump_template, run_wizard
 
     if template:
         print(dump_template(), end="")
@@ -380,10 +391,10 @@ def validate(
     config: Annotated[Path | None, typer.Argument(help="Path to config file")] = None,
     verbose: Annotated[bool, typer.Option("-v", "--verbose", help="Enable debug logging")] = False,
 ) -> None:
-    """Check a fabprint.toml for issues."""
+    """Check an estampo.toml for issues."""
     _setup_logging(verbose)
-    from fabprint import ui
-    from fabprint.init import validate_config
+    from estampo import ui
+    from estampo.init import validate_config
 
     resolved_config = _resolve_config_path(config)
     ui.heading(f"Validating {resolved_config.name}")
@@ -406,7 +417,7 @@ def setup(
 ) -> None:
     """Set up a printer (credentials, cloud login, connection type)."""
     _setup_logging(verbose)
-    from fabprint.credentials import setup_printer
+    from estampo.credentials import setup_printer
 
     setup_printer()
 
@@ -429,7 +440,7 @@ def _resolve_status_printers(
 
     all_printers = list_printers_fn()
     if not all_printers:
-        raise FabprintError("No printers configured.\nRun 'fabprint setup' to add a printer.")
+        raise EstampoError("No printers configured.\nRun 'estampo setup' to add a printer.")
     return [(name, {**creds}) for name, creds in all_printers.items()]
 
 
@@ -438,8 +449,8 @@ def _query_printer_status(name: str, creds: dict) -> dict:
     ptype = creds.get("type")
 
     if ptype == "bambu-cloud":
-        from fabprint.cloud import cloud_status
-        from fabprint.credentials import cloud_token_json
+        from estampo.cloud import cloud_status
+        from estampo.credentials import cloud_token_json
 
         serial = creds.get("serial")
         if not serial:
@@ -448,7 +459,7 @@ def _query_printer_status(name: str, creds: dict) -> dict:
             return cloud_status(serial, token_file)
 
     elif ptype == "bambu-lan":
-        from fabprint.printer import get_lan_status
+        from estampo.printer import get_lan_status
 
         ip = creds.get("ip") or ""
         access_code = creds.get("access_code") or ""
@@ -458,7 +469,7 @@ def _query_printer_status(name: str, creds: dict) -> dict:
         return get_lan_status(ip, access_code, serial)
 
     elif ptype == "moonraker":
-        from fabprint.printer import get_moonraker_status
+        from estampo.printer import get_moonraker_status
 
         url = creds.get("url")
         if not url:
@@ -471,7 +482,7 @@ def _query_printer_status(name: str, creds: dict) -> dict:
 
 def _render_printer(status: dict, name: str, serial: str) -> list[str]:
     """Render a single printer's status as lines of text."""
-    from fabprint.cloud import parse_ams_trays
+    from estampo.cloud import parse_ams_trays
 
     lines: list[str] = []
     state = status.get("gcode_state", "unknown")
@@ -549,8 +560,8 @@ def _status_action(
         ptype = creds.get("type", "unknown")
 
         if ptype == "bambu-cloud":
-            from fabprint.cloud import cloud_cancel, cloud_clear_status, cloud_resume
-            from fabprint.credentials import cloud_token_json
+            from estampo.cloud import cloud_cancel, cloud_clear_status, cloud_resume
+            from estampo.credentials import cloud_token_json
 
             serial = creds.get("serial")
             if not serial:
@@ -565,7 +576,7 @@ def _status_action(
                     cloud_resume(serial, token_file)
                     print(f"{name}: resume sent")
                 if clear:
-                    from fabprint.cloud import cloud_status
+                    from estampo.cloud import cloud_status
 
                     pre = cloud_status(serial, token_file)
                     err = pre.get("print_error", 0)
@@ -638,7 +649,7 @@ def status(
     Use --watch / -w for a live dashboard that refreshes automatically.
     """
     _setup_logging(verbose)
-    from fabprint.credentials import list_printers, load_printer_credentials
+    from estampo.credentials import list_printers, load_printer_credentials
 
     printers = _resolve_status_printers(printer, serial, list_printers, load_printer_credentials)
 
@@ -668,8 +679,8 @@ def status(
     bridge_map: dict[str, Any] = {}  # serial -> PersistentBridge
     token_ctx = None
     if cloud_printers:
-        from fabprint.cloud import PersistentBridge
-        from fabprint.credentials import cloud_token_json
+        from estampo.cloud import PersistentBridge
+        from estampo.credentials import cloud_token_json
 
         token_ctx = cloud_token_json()
         token_file = token_ctx.__enter__()
@@ -705,7 +716,7 @@ def status(
 
             elapsed = time.monotonic() - t0
             now = time.strftime("%H:%M:%S")
-            header = f"fabprint status  {now}  (polled in {elapsed:.1f}s, Ctrl-C to quit)"
+            header = f"estampo status  {now}  (polled in {elapsed:.1f}s, Ctrl-C to quit)"
 
             sys.stdout.write("\033[2J\033[H")
             sys.stdout.write(header + "\n\n" + "\n".join(output_lines))
@@ -737,7 +748,7 @@ def profiles_list(
 ) -> None:
     """List available profiles."""
     _setup_logging(verbose)
-    from fabprint.profiles import CATEGORIES, discover_profiles
+    from estampo.profiles import CATEGORIES, discover_profiles
 
     profiles = discover_profiles(engine)
     categories = [category] if category else list(CATEGORIES)
@@ -760,7 +771,7 @@ def profiles_pin(
     _setup_logging(verbose)
     import tomllib
 
-    from fabprint.profiles import pin_profiles
+    from estampo.profiles import pin_profiles
 
     resolved_config = _resolve_config_path(config)
     cfg = load_config(resolved_config)
@@ -794,7 +805,7 @@ def profiles_pin(
     for p in pinned:
         print(f"  {p}")
 
-    # Update fabprint.toml if needed
+    # Update estampo.toml if needed
     toml_text = resolved_config.read_text()
     raw = tomllib.loads(toml_text)
     existing_dir = raw.get("slicer", {}).get("profiles_dir")
@@ -805,7 +816,7 @@ def profiles_pin(
         # Different value exists — ask
         update = (
             input(
-                f'\n  fabprint.toml has profiles_dir = "{existing_dir}". '
+                f'\n  estampo.toml has profiles_dir = "{existing_dir}". '
                 f'Update to "{profiles_dir}"? [y/n] '
             )
             .strip()
@@ -846,7 +857,7 @@ def profiles_add(
 ) -> None:
     """Import a profile JSON file into the project's profiles/ directory."""
     _setup_logging(verbose)
-    from fabprint.profiles import add_profile
+    from estampo.profiles import add_profile
 
     project_dir = Path.cwd()
     dest = add_profile(source, project_dir, category=category, name=name)
@@ -859,7 +870,7 @@ def profiles_add(
 
 
 def main(argv: list[str] | None = None) -> None:
-    """Entry point for fabprint CLI."""
+    """Entry point for estampo CLI."""
     try:
         app(argv, standalone_mode=False)
     except click.exceptions.NoArgsIsHelpError:
@@ -867,7 +878,7 @@ def main(argv: list[str] | None = None) -> None:
     except SystemExit as e:
         if e.code:
             sys.exit(e.code)
-    except FabprintError as exc:
+    except EstampoError as exc:
         print(f"error: {exc}", file=sys.stderr)
         sys.exit(1)
     except (ValueError, FileNotFoundError, RuntimeError) as exc:

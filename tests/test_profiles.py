@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from fabprint.profiles import (
+from estampo.profiles import (
     SYSTEM_DIRS,
     _resolve_profile_data_from_dir,
     add_profile,
@@ -138,7 +138,7 @@ def test_load_bundled_profiles_exact_version(tmp_path):
     bundled = tmp_path / "profiles.orca.2.3.1.json"
     bundled.write_text(json.dumps(data))
 
-    with patch("fabprint.profiles._BUNDLED_DIR", tmp_path):
+    with patch("estampo.profiles._BUNDLED_DIR", tmp_path):
         result = load_bundled_profiles("orca", "2.3.1")
     assert result["machine"] == ["PrinterA"]
     assert result["process"] == ["Fast"]
@@ -152,7 +152,7 @@ def test_load_bundled_profiles_fallback_to_highest(tmp_path):
     (tmp_path / "profiles.orca.2.2.0.json").write_text(json.dumps(old))
     (tmp_path / "profiles.orca.2.3.1.json").write_text(json.dumps(new))
 
-    with patch("fabprint.profiles._BUNDLED_DIR", tmp_path):
+    with patch("estampo.profiles._BUNDLED_DIR", tmp_path):
         result = load_bundled_profiles("orca", "9.9.9")
     assert result["machine"] == ["New"]
 
@@ -162,14 +162,14 @@ def test_load_bundled_profiles_no_version(tmp_path):
     data = {"machine": ["M1"]}
     (tmp_path / "profiles.orca.1.0.0.json").write_text(json.dumps(data))
 
-    with patch("fabprint.profiles._BUNDLED_DIR", tmp_path):
+    with patch("estampo.profiles._BUNDLED_DIR", tmp_path):
         result = load_bundled_profiles("orca")
     assert result["machine"] == ["M1"]
 
 
 def test_load_bundled_profiles_missing(tmp_path):
     """Return empty dict when no bundled profiles exist."""
-    with patch("fabprint.profiles._BUNDLED_DIR", tmp_path):
+    with patch("estampo.profiles._BUNDLED_DIR", tmp_path):
         result = load_bundled_profiles("orca", "2.3.1")
     assert result == {}
 
@@ -182,7 +182,7 @@ def test_load_bundled_profiles_missing(tmp_path):
 def test_discover_profile_names_system_first():
     """System profiles take priority when available."""
     fake_system = {"machine": {"Printer": {}}, "process": {}, "filament": {}}
-    with patch("fabprint.profiles.discover_profiles", return_value=fake_system):
+    with patch("estampo.profiles.discover_profiles", return_value=fake_system):
         names, source = discover_profile_names("orca")
     assert source == "system"
     assert "Printer" in names["machine"]
@@ -194,7 +194,7 @@ def test_discover_profile_names_pinned_fallback(tmp_path):
     pinned_dir.mkdir(parents=True)
     (pinned_dir / "MyPrinter.json").write_text("{}")
 
-    with patch("fabprint.profiles.discover_profiles", return_value={}):
+    with patch("estampo.profiles.discover_profiles", return_value={}):
         names, source = discover_profile_names("orca", project_dir=tmp_path)
     assert source == "pinned"
     assert "MyPrinter" in names["machine"]
@@ -204,8 +204,8 @@ def test_discover_profile_names_bundled_fallback(tmp_path):
     """Falls back to bundled profiles when no system or pinned."""
     bundled = {"machine": ["Bundled"], "process": [], "filament": []}
     with (
-        patch("fabprint.profiles.discover_profiles", return_value={}),
-        patch("fabprint.profiles.load_bundled_profiles", return_value=bundled),
+        patch("estampo.profiles.discover_profiles", return_value={}),
+        patch("estampo.profiles.load_bundled_profiles", return_value=bundled),
     ):
         names, source = discover_profile_names("orca", version="2.3.1")
     assert source == "bundled"
@@ -215,8 +215,8 @@ def test_discover_profile_names_bundled_fallback(tmp_path):
 def test_discover_profile_names_none(tmp_path):
     """Returns 'none' when no profiles found anywhere."""
     with (
-        patch("fabprint.profiles.discover_profiles", return_value={}),
-        patch("fabprint.profiles.load_bundled_profiles", return_value={}),
+        patch("estampo.profiles.discover_profiles", return_value={}),
+        patch("estampo.profiles.load_bundled_profiles", return_value={}),
     ):
         names, source = discover_profile_names("orca", version="2.3.1")
     assert source == "none"
@@ -333,20 +333,20 @@ def test_add_profile_custom_name(tmp_path):
 
 
 def test_add_profile_invalid_json(tmp_path):
-    """Invalid JSON raises FabprintError."""
+    """Invalid JSON raises EstampoError."""
     src = tmp_path / "bad.json"
     src.write_text("not json")
 
-    from fabprint import FabprintError
+    from estampo import EstampoError
 
-    with pytest.raises(FabprintError, match="Invalid JSON"):
+    with pytest.raises(EstampoError, match="Invalid JSON"):
         add_profile(str(src), tmp_path, category="process")
 
 
 def test_add_profile_not_found(tmp_path):
-    from fabprint import FabprintError
+    from estampo import EstampoError
 
-    with pytest.raises(FabprintError, match="not found"):
+    with pytest.raises(EstampoError, match="not found"):
         add_profile("/nonexistent/file.json", tmp_path, category="process")
 
 
@@ -354,9 +354,9 @@ def test_add_profile_invalid_category(tmp_path):
     src = tmp_path / "p.json"
     src.write_text(json.dumps({"x": 1}))
 
-    from fabprint import FabprintError
+    from estampo import EstampoError
 
-    with pytest.raises(FabprintError, match="Invalid category"):
+    with pytest.raises(EstampoError, match="Invalid category"):
         add_profile(str(src), tmp_path, category="bogus")
 
 
@@ -390,7 +390,7 @@ def test_pin_profiles_docker_fallback(tmp_path):
     project = tmp_path / "project"
     project.mkdir()
 
-    with patch("fabprint.profiles.extract_docker_profiles", return_value=docker_dir):
+    with patch("estampo.profiles.extract_docker_profiles", return_value=docker_dir):
         pinned = pin_profiles(
             engine="orca",
             printer="DockerPrinter",
@@ -407,13 +407,13 @@ def test_pin_profiles_docker_fallback(tmp_path):
 
 
 def test_pin_profiles_no_docker_version_raises(tmp_path):
-    """Without docker_version, missing profiles raise FabprintError."""
+    """Without docker_version, missing profiles raise EstampoError."""
     project = tmp_path / "project"
     project.mkdir()
 
-    from fabprint import FabprintError
+    from estampo import EstampoError
 
-    with pytest.raises(FabprintError, match="not found locally"):
+    with pytest.raises(EstampoError, match="not found locally"):
         pin_profiles(
             engine="orca",
             printer="NonexistentPrinter",

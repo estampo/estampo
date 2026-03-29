@@ -16,8 +16,8 @@ import tempfile
 import time
 from pathlib import Path
 
-from fabprint import require_file
-from fabprint.cloud.ams import (
+from estampo import require_file
+from estampo.cloud.ams import (
     _build_ams_mapping,
     _patch_config_3mf_ams_colors,
     _strip_gcode_from_3mf,
@@ -26,7 +26,7 @@ from fabprint.cloud.ams import (
 log = logging.getLogger(__name__)
 
 BRIDGE_NAME = "bambu_cloud_bridge"
-DOCKER_IMAGE = "fabprint/cloud-bridge"
+DOCKER_IMAGE = "estampo/cloud-bridge"
 
 # Timeouts (seconds)
 BRIDGE_TIMEOUT = 300
@@ -36,19 +36,19 @@ BRIDGE_CANCEL_TIMEOUT = 30
 BRIDGE_SEND_MQTT_TIMEOUT = 30
 
 # Docker pull staleness: only pull if last pull was more than 24h ago.
-# Override with FABPRINT_DOCKER_PULL=always|never|auto (default: auto).
+# Override with ESTAMPO_DOCKER_PULL=always|never|auto (default: auto).
 _PULL_INTERVAL_SECONDS = 86400
-_PULL_TS_PATH = Path.home() / ".cache" / "fabprint" / "cloud-bridge-pull-ts"
+_PULL_TS_PATH = Path.home() / ".cache" / "estampo" / "cloud-bridge-pull-ts"
 
 
 def _should_pull_image() -> bool:
     """Return True if the Docker image should be pulled.
 
-    Checks the FABPRINT_DOCKER_PULL env var (always/never/auto) and,
+    Checks the ESTAMPO_DOCKER_PULL env var (always/never/auto) and,
     in auto mode, a timestamp file to avoid pulling more than once
     per ``_PULL_INTERVAL_SECONDS``.
     """
-    mode = os.environ.get("FABPRINT_DOCKER_PULL", "auto").lower()
+    mode = os.environ.get("ESTAMPO_DOCKER_PULL", "auto").lower()
     if mode == "always":
         return True
     if mode == "never":
@@ -123,7 +123,7 @@ def _run_bridge(
             ) from None
 
         # Pull image if stale (default: once per 24h). Override with
-        # FABPRINT_DOCKER_PULL=always|never|auto.
+        # ESTAMPO_DOCKER_PULL=always|never|auto.
         if _should_pull_image():
             pull = subprocess.run(
                 ["docker", "pull", DOCKER_IMAGE],
@@ -303,7 +303,7 @@ def cloud_print(
     token_file: Path,
     *,
     config_3mf: Path | None = None,
-    project_name: str = "fabprint",
+    project_name: str = "estampo",
     timeout: int = 180,
     verbose: bool = False,
     ams_trays: list[dict] | None = None,

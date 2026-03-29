@@ -1,12 +1,12 @@
-"""Tests for fabprint init, validate, and template commands."""
+"""Tests for estampo init, validate, and template commands."""
 
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
-from fabprint.cli import main
-from fabprint.init import (
+from estampo.cli import main
+from estampo.init import (
     ValidationResult,
     _build_toml,
     _closest_match,
@@ -24,7 +24,7 @@ def _posix(p: Path) -> str:
 
 def _write_valid_config(tmp_path: Path) -> Path:
     """Write a minimal valid config for validation tests."""
-    toml = tmp_path / "fabprint.toml"
+    toml = tmp_path / "estampo.toml"
     toml.write_text(f"""
 [slicer]
 engine = "orca"
@@ -63,17 +63,17 @@ def _mock_ui_inputs(monkeypatch, inputs):
             return default
         return str(val).lower().startswith("y")
 
-    monkeypatch.setattr("fabprint.ui.prompt_str", next_str)
-    monkeypatch.setattr("fabprint.ui.prompt_int", next_int)
-    monkeypatch.setattr("fabprint.ui.prompt_yn", next_yn)
-    monkeypatch.setattr("fabprint.ui.prompt_password", lambda prompt: next_str(prompt))
-    monkeypatch.setattr("fabprint.ui.heading", lambda text: None)
-    monkeypatch.setattr("fabprint.ui.success", lambda text: None)
-    monkeypatch.setattr("fabprint.ui.warn", lambda text: None)
-    monkeypatch.setattr("fabprint.ui.error", lambda text: None)
-    monkeypatch.setattr("fabprint.ui.info", lambda text: None)
-    monkeypatch.setattr("fabprint.ui.choice_table", lambda items, columns: None)
-    monkeypatch.setattr("fabprint.ui.preview_toml", lambda text: None)
+    monkeypatch.setattr("estampo.ui.prompt_str", next_str)
+    monkeypatch.setattr("estampo.ui.prompt_int", next_int)
+    monkeypatch.setattr("estampo.ui.prompt_yn", next_yn)
+    monkeypatch.setattr("estampo.ui.prompt_password", lambda prompt: next_str(prompt))
+    monkeypatch.setattr("estampo.ui.heading", lambda text: None)
+    monkeypatch.setattr("estampo.ui.success", lambda text: None)
+    monkeypatch.setattr("estampo.ui.warn", lambda text: None)
+    monkeypatch.setattr("estampo.ui.error", lambda text: None)
+    monkeypatch.setattr("estampo.ui.info", lambda text: None)
+    monkeypatch.setattr("estampo.ui.choice_table", lambda items, columns: None)
+    monkeypatch.setattr("estampo.ui.preview_toml", lambda text: None)
 
     def mock_pick(options, prompt="Pick", allow_multi=False):
         try:
@@ -87,7 +87,7 @@ def _mock_ui_inputs(monkeypatch, inputs):
         except (ValueError, TypeError):
             return [0]
 
-    monkeypatch.setattr("fabprint.ui.pick", mock_pick)
+    monkeypatch.setattr("estampo.ui.pick", mock_pick)
 
 
 # ---------------------------------------------------------------------------
@@ -131,7 +131,7 @@ class TestValidate:
         assert len(result.passes) > 0
 
     def test_missing_version_warning(self, tmp_path):
-        toml = tmp_path / "fabprint.toml"
+        toml = tmp_path / "estampo.toml"
         toml.write_text(f"""
 [slicer]
 engine = "orca"
@@ -144,7 +144,7 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
 
     def test_absolute_path_warning(self, tmp_path):
         abs_path = FIXTURES / "cube_10mm.stl"
-        toml = tmp_path / "fabprint.toml"
+        toml = tmp_path / "estampo.toml"
         toml.write_text(f"""
 [slicer]
 engine = "orca"
@@ -179,9 +179,9 @@ file = "{_posix(abs_path.resolve())}"
 
     def test_missing_part_file_hard_error(self, tmp_path):
         """Missing part file is a hard error from load_config, not a warning."""
-        from fabprint import FabprintError
+        from estampo import EstampoError
 
-        toml = tmp_path / "fabprint.toml"
+        toml = tmp_path / "estampo.toml"
         toml.write_text("""
 [slicer]
 engine = "orca"
@@ -190,13 +190,13 @@ version = "2.3.1"
 [[parts]]
 file = "nonexistent.stl"
 """)
-        with pytest.raises(FabprintError, match="file not found"):
+        with pytest.raises(EstampoError, match="file not found"):
             validate_config(toml)
 
     def test_unreadable_part_extension(self, tmp_path):
         bad_file = tmp_path / "model.zip"
         bad_file.write_bytes(b"fake")
-        toml = tmp_path / "fabprint.toml"
+        toml = tmp_path / "estampo.toml"
         toml.write_text(f"""
 [slicer]
 engine = "orca"
@@ -210,7 +210,7 @@ file = "{_posix(bad_file)}"
 
     def test_duplicate_part_files(self, tmp_path):
         stl = FIXTURES / "cube_10mm.stl"
-        toml = tmp_path / "fabprint.toml"
+        toml = tmp_path / "estampo.toml"
         toml.write_text(f"""
 [slicer]
 engine = "orca"
@@ -226,7 +226,7 @@ file = "{_posix(stl)}"
         assert any("appears more than once" in w for w in warnings)
 
     def test_small_plate_warning(self, tmp_path):
-        toml = tmp_path / "fabprint.toml"
+        toml = tmp_path / "estampo.toml"
         toml.write_text(f"""
 [slicer]
 engine = "orca"
@@ -242,7 +242,7 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
         assert any("seems very small" in w for w in warnings)
 
     def test_large_plate_warning(self, tmp_path):
-        toml = tmp_path / "fabprint.toml"
+        toml = tmp_path / "estampo.toml"
         toml.write_text(f"""
 [slicer]
 engine = "orca"
@@ -258,7 +258,7 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
         assert any("seems very large" in w for w in warnings)
 
     def test_printer_name_no_credentials(self, tmp_path):
-        toml = tmp_path / "fabprint.toml"
+        toml = tmp_path / "estampo.toml"
         toml.write_text(f"""
 [slicer]
 engine = "orca"
@@ -272,7 +272,7 @@ name = "nonexistent-printer"
 """)
         # Patch credentials path to a non-existent file
         with patch(
-            "fabprint.credentials._credentials_path",
+            "estampo.credentials._credentials_path",
             return_value=tmp_path / "no-creds.toml",
         ):
             warnings = validate_config(toml)
@@ -363,7 +363,7 @@ class TestPick:
         """Single selection returns a one-element list."""
         from unittest.mock import patch
 
-        from fabprint import ui
+        from estampo import ui
 
         with patch("questionary.select") as mock_select:
             mock_select.return_value.ask.return_value = "B"
@@ -374,7 +374,7 @@ class TestPick:
         """Multi-select returns a list of indices."""
         from unittest.mock import patch
 
-        from fabprint import ui
+        from estampo import ui
 
         with patch("questionary.checkbox") as mock_cb:
             mock_cb.return_value.ask.return_value = ["A", "C"]
@@ -385,7 +385,7 @@ class TestPick:
         """Cancelling the menu (None) raises KeyboardInterrupt."""
         from unittest.mock import patch
 
-        from fabprint import ui
+        from estampo import ui
 
         with patch("questionary.select") as mock_select:
             mock_select.return_value.ask.return_value = None
@@ -521,7 +521,7 @@ class TestBuildToml:
 class TestWizard:
     def test_wizard_with_mocked_input(self, tmp_path, monkeypatch):
         """Wizard should produce valid TOML when given mocked inputs."""
-        from fabprint.init import run_wizard
+        from estampo.init import run_wizard
 
         monkeypatch.chdir(tmp_path)
 
@@ -549,24 +549,24 @@ class TestWizard:
 
         # Mock discover_profiles to return empty (no slicer installed in CI)
         monkeypatch.setattr(
-            "fabprint.profiles.discover_profiles",
+            "estampo.profiles.discover_profiles",
             lambda engine: {"machine": {}, "process": {}, "filament": {}},
         )
         # Mock configured printers to empty so we don't depend on real credentials
-        monkeypatch.setattr("fabprint.init._list_configured_printers", lambda: {})
+        monkeypatch.setattr("estampo.init._list_configured_printers", lambda: {})
         # Mock slicer version discovery so we don't hit DockerHub
-        monkeypatch.setattr("fabprint.init._fetch_available_versions", lambda: [])
-        monkeypatch.setattr("fabprint.init._detect_orca_version", lambda: None)
+        monkeypatch.setattr("estampo.init._fetch_available_versions", lambda: [])
+        monkeypatch.setattr("estampo.init._detect_orca_version", lambda: None)
 
         result = run_wizard()
         assert "[slicer]" in result
         assert "test-part.stl" in result
         assert 'name = "my-project"' in result
-        assert (tmp_path / "fabprint.toml").exists()
+        assert (tmp_path / "estampo.toml").exists()
 
     def test_wizard_no_write(self, tmp_path, monkeypatch):
         """Wizard should not write if user declines."""
-        from fabprint.init import run_wizard
+        from estampo.init import run_wizard
 
         monkeypatch.chdir(tmp_path)
 
@@ -587,14 +587,14 @@ class TestWizard:
             ],
         )
         monkeypatch.setattr(
-            "fabprint.profiles.discover_profiles",
+            "estampo.profiles.discover_profiles",
             lambda engine: {"machine": {}, "process": {}, "filament": {}},
         )
         # Mock configured printers to empty so we don't depend on real credentials
-        monkeypatch.setattr("fabprint.init._list_configured_printers", lambda: {})
+        monkeypatch.setattr("estampo.init._list_configured_printers", lambda: {})
         # Mock slicer version discovery so we don't hit DockerHub
-        monkeypatch.setattr("fabprint.init._fetch_available_versions", lambda: [])
-        monkeypatch.setattr("fabprint.init._detect_orca_version", lambda: None)
+        monkeypatch.setattr("estampo.init._fetch_available_versions", lambda: [])
+        monkeypatch.setattr("estampo.init._detect_orca_version", lambda: None)
 
         run_wizard()
-        assert not (tmp_path / "fabprint.toml").exists()
+        assert not (tmp_path / "estampo.toml").exists()

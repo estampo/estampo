@@ -1,4 +1,4 @@
-"""Load and validate fabprint.toml configuration."""
+"""Load and validate estampo.toml configuration."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from fabprint import FabprintError
+from estampo import EstampoError
 
 VALID_ORIENTS = {"flat", "upright", "side", "upside-down"}
 
@@ -44,7 +44,7 @@ class PartConfig:
 
 @dataclass
 class PrinterConfig:
-    name: str  # references a printer in ~/.config/fabprint/credentials.toml
+    name: str  # references a printer in ~/.config/estampo/credentials.toml
 
 
 DEFAULT_STAGES = ["load", "arrange", "plate", "slice"]
@@ -56,7 +56,7 @@ class PipelineConfig:
 
 
 @dataclass
-class FabprintConfig:
+class EstampoConfig:
     plate: PlateConfig
     slicer: SlicerConfig
     parts: list[PartConfig]
@@ -87,7 +87,7 @@ def _resolve_filaments(
     has_int_filaments = any(isinstance(f, int) for f in all_raw_filaments)
 
     if has_string_filaments and has_int_filaments and not slicer.filaments and not slicer.slots:
-        raise FabprintError(
+        raise EstampoError(
             "Cannot mix filament names and indices without [slicer].filaments or [slicer.slots]"
         )
 
@@ -95,11 +95,11 @@ def _resolve_filaments(
         # All integers, no slots map — backward compatible, no resolution needed
         for i, raw_fil in enumerate(raw_filaments):
             if not isinstance(raw_fil, int):  # pragma: no cover
-                raise FabprintError(f"parts[{i}]: expected int filament, got {type(raw_fil)}")
+                raise EstampoError(f"parts[{i}]: expected int filament, got {type(raw_fil)}")
             parts[i].filament = raw_fil
             for obj_name, obj_fil in raw_obj_filaments[i].items():
                 if not isinstance(obj_fil, int):  # pragma: no cover
-                    raise FabprintError(
+                    raise EstampoError(
                         f"parts[{i}].filaments.{obj_name}: expected int, got {type(obj_fil)}"
                     )
                 parts[i].object_filaments[obj_name] = obj_fil
@@ -139,7 +139,7 @@ def _resolve_filaments(
         for i, raw_fil in enumerate(raw_filaments):
             if isinstance(raw_fil, str):
                 if raw_fil not in fil_index:
-                    raise FabprintError(
+                    raise EstampoError(
                         f"parts[{i}]: filament '{raw_fil}' not in "
                         f"[slicer].filaments {slicer.filaments}"
                     )
@@ -147,7 +147,7 @@ def _resolve_filaments(
             else:
                 # Integer slot ref — validate against slots map if present
                 if slicer.slots and raw_fil not in slicer.slots:
-                    raise FabprintError(
+                    raise EstampoError(
                         f"parts[{i}]: filament slot {raw_fil} not defined in [slicer.slots]"
                     )
                 parts[i].filament = raw_fil
@@ -156,25 +156,25 @@ def _resolve_filaments(
             for obj_name, obj_fil in raw_obj_filaments[i].items():
                 if isinstance(obj_fil, str):
                     if obj_fil not in fil_index:
-                        raise FabprintError(
+                        raise EstampoError(
                             f"parts[{i}].filaments.{obj_name}: '{obj_fil}' not in "
                             f"[slicer].filaments {slicer.filaments}"
                         )
                     parts[i].object_filaments[obj_name] = fil_index[obj_fil]
                 else:
                     if slicer.slots and obj_fil not in slicer.slots:
-                        raise FabprintError(
+                        raise EstampoError(
                             f"parts[{i}].filaments.{obj_name}: slot {obj_fil} "
                             f"not defined in [slicer.slots]"
                         )
                     parts[i].object_filaments[obj_name] = obj_fil
 
 
-def load_config(path: Path) -> FabprintConfig:
-    """Load and validate a fabprint.toml file."""
+def load_config(path: Path) -> EstampoConfig:
+    """Load and validate an estampo.toml file."""
     path = path.resolve()
     if not path.exists():
-        raise FabprintError(f"Config file not found: {path}")
+        raise EstampoError(f"Config file not found: {path}")
 
     with open(path, "rb") as f:
         raw = tomllib.load(f)
@@ -185,7 +185,7 @@ def load_config(path: Path) -> FabprintConfig:
     plate_raw = raw.get("plate", {})
     size = tuple(plate_raw.get("size", [256.0, 256.0]))
     if len(size) != 2 or any(s <= 0 for s in size):
-        raise FabprintError(f"plate.size must be two positive numbers, got {size}")
+        raise EstampoError(f"plate.size must be two positive numbers, got {size}")
     plate = PlateConfig(size=size, padding=float(plate_raw.get("padding", 5.0)))
 
     # Slicer config
@@ -195,13 +195,11 @@ def load_config(path: Path) -> FabprintConfig:
         try:
             slot_num = int(key)
         except (TypeError, ValueError):
-            raise FabprintError(f"slicer.slots: key '{key}' must be an integer slot number")
+            raise EstampoError(f"slicer.slots: key '{key}' must be an integer slot number")
         if slot_num < 1:
-            raise FabprintError(f"slicer.slots: slot must be >= 1, got {slot_num}")
+            raise EstampoError(f"slicer.slots: slot must be >= 1, got {slot_num}")
         if not isinstance(profile, str) or not profile.strip():
-            raise FabprintError(
-                f"slicer.slots[{slot_num}]: profile name must be a non-empty string"
-            )
+            raise EstampoError(f"slicer.slots[{slot_num}]: profile name must be a non-empty string")
         slots_parsed[slot_num] = profile
     slicer = SlicerConfig(
         engine=slicer_raw.get("engine", "orca"),
@@ -214,38 +212,36 @@ def load_config(path: Path) -> FabprintConfig:
         profiles_dir=slicer_raw.get("profiles_dir", "profiles"),
     )
     if slicer.engine != "orca":
-        raise FabprintError(f"slicer.engine must be 'orca', got '{slicer.engine}'")
+        raise EstampoError(f"slicer.engine must be 'orca', got '{slicer.engine}'")
 
     # Parts — first pass: parse everything except filament resolution
     parts_raw = raw.get("parts", [])
     if not parts_raw:
-        raise FabprintError("At least one [[parts]] entry is required")
+        raise EstampoError("At least one [[parts]] entry is required")
 
     parts = []
     raw_filaments: list[int | str] = []  # preserve raw filament values for resolution
     raw_obj_filaments: list[dict[str, int | str]] = []  # per-part object filament overrides
     for i, p in enumerate(parts_raw):
         if "file" not in p:
-            raise FabprintError(f"parts[{i}]: 'file' is required")
+            raise EstampoError(f"parts[{i}]: 'file' is required")
         orient = p.get("orient", "flat")
         if orient not in VALID_ORIENTS:
-            raise FabprintError(
-                f"parts[{i}]: orient must be one of {VALID_ORIENTS}, got '{orient}'"
-            )
+            raise EstampoError(f"parts[{i}]: orient must be one of {VALID_ORIENTS}, got '{orient}'")
         file_path = base_dir / p["file"]
         if not file_path.exists():
-            raise FabprintError(f"parts[{i}]: file not found: {file_path}")
+            raise EstampoError(f"parts[{i}]: file not found: {file_path}")
         copies = int(p.get("copies", 1))
         if copies < 1:
-            raise FabprintError(f"parts[{i}]: copies must be >= 1, got {copies}")
+            raise EstampoError(f"parts[{i}]: copies must be >= 1, got {copies}")
         raw_fil = p.get("filament", 1)
         if isinstance(raw_fil, str):
             if not raw_fil.strip():
-                raise FabprintError(f"parts[{i}]: filament name must not be empty")
+                raise EstampoError(f"parts[{i}]: filament name must not be empty")
         else:
             raw_fil = int(raw_fil)
             if raw_fil < 1:
-                raise FabprintError(f"parts[{i}]: filament must be >= 1, got {raw_fil}")
+                raise EstampoError(f"parts[{i}]: filament must be >= 1, got {raw_fil}")
         raw_filaments.append(raw_fil)
 
         # Per-object filament overrides for multi-object 3MF files
@@ -253,13 +249,13 @@ def load_config(path: Path) -> FabprintConfig:
         for obj_name, obj_fil in p.get("filaments", {}).items():
             if isinstance(obj_fil, str):
                 if not obj_fil.strip():
-                    raise FabprintError(
+                    raise EstampoError(
                         f"parts[{i}].filaments.{obj_name}: filament name must not be empty"
                     )
             else:
                 obj_fil = int(obj_fil)
                 if obj_fil < 1:
-                    raise FabprintError(
+                    raise EstampoError(
                         f"parts[{i}].filaments.{obj_name}: filament must be >= 1, got {obj_fil}"
                     )
             obj_fils_raw[obj_name] = obj_fil
@@ -268,20 +264,20 @@ def load_config(path: Path) -> FabprintConfig:
         rotate = p.get("rotate")
         if rotate is not None:
             if not isinstance(rotate, list) or len(rotate) != 3:
-                raise FabprintError(f"parts[{i}]: rotate must be [rx, ry, rz], got {rotate}")
+                raise EstampoError(f"parts[{i}]: rotate must be [rx, ry, rz], got {rotate}")
             rotate = [float(r) for r in rotate]
         scale = float(p.get("scale", 1.0))
         if scale <= 0:
-            raise FabprintError(f"parts[{i}]: scale must be > 0, got {scale}")
+            raise EstampoError(f"parts[{i}]: scale must be > 0, got {scale}")
         obj_name = p.get("object")
         if obj_name is not None:
             if not isinstance(obj_name, str) or not obj_name.strip():
-                raise FabprintError(f"parts[{i}]: object must be a non-empty string")
+                raise EstampoError(f"parts[{i}]: object must be a non-empty string")
             if obj_fils_raw:
-                raise FabprintError(f"parts[{i}]: cannot use both 'object' and [parts.filaments]")
+                raise EstampoError(f"parts[{i}]: cannot use both 'object' and [parts.filaments]")
         sequence = int(p.get("sequence", 1))
         if sequence < 1:
-            raise FabprintError(f"parts[{i}]: sequence must be >= 1, got {sequence}")
+            raise EstampoError(f"parts[{i}]: sequence must be >= 1, got {sequence}")
         parts.append(
             PartConfig(
                 file=file_path,
@@ -298,19 +294,17 @@ def load_config(path: Path) -> FabprintConfig:
     _resolve_filaments(parts, slicer, raw_filaments, raw_obj_filaments)
 
     # Pipeline config (optional)
-    from fabprint.pipeline import STAGE_OUTPUTS
+    from estampo.pipeline import STAGE_OUTPUTS
 
     pipeline_raw = raw.get("pipeline", {})
     pipeline_stages = pipeline_raw.get("stages", list(DEFAULT_STAGES))
     if not isinstance(pipeline_stages, list):
-        raise FabprintError("pipeline.stages must be a list of stage names")
+        raise EstampoError("pipeline.stages must be a list of stage names")
     for s in pipeline_stages:
         if not isinstance(s, str) or not s.strip():
-            raise FabprintError(
-                f"pipeline.stages: each stage must be a non-empty string, got {s!r}"
-            )
+            raise EstampoError(f"pipeline.stages: each stage must be a non-empty string, got {s!r}")
         if s not in STAGE_OUTPUTS:
-            raise FabprintError(
+            raise EstampoError(
                 f"pipeline.stages: unknown stage '{s}'. Valid stages: {sorted(STAGE_OUTPUTS)}"
             )
     pipeline = PipelineConfig(stages=pipeline_stages)
@@ -322,23 +316,23 @@ def load_config(path: Path) -> FabprintConfig:
         # Reject secrets in project TOML — they belong in credentials.toml
         for secret_field in ("ip", "access_code", "serial", "mode"):
             if secret_field in printer_raw:
-                raise FabprintError(
+                raise EstampoError(
                     f"printer.{secret_field} should not be in project config. "
-                    f"Use 'fabprint setup' to configure printers in credentials.toml."
+                    f"Use 'estampo setup' to configure printers in credentials.toml."
                 )
         name = printer_raw.get("name")
         if not name:
-            raise FabprintError("printer.name is required — it references credentials.toml")
+            raise EstampoError("printer.name is required — it references credentials.toml")
         printer = PrinterConfig(name=name)
 
     # Top-level project name (optional)
     project_name: str | None = raw.get("name")
     if project_name is not None:
         if not isinstance(project_name, str) or not project_name.strip():
-            raise FabprintError("name must be a non-empty string")
+            raise EstampoError("name must be a non-empty string")
         project_name = project_name.strip()
 
-    return FabprintConfig(
+    return EstampoConfig(
         plate=plate,
         slicer=slicer,
         parts=parts,

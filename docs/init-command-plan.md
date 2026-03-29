@@ -1,25 +1,25 @@
-# `fabprint init` Command — Implementation Plan
+# `estampo init` Command — Implementation Plan
 
 ## Background
 
-Users need to create `fabprint.toml` config files to use fabprint. Currently they have to
+Users need to create `estampo.toml` config files to use estampo. Currently they have to
 write TOML by hand or copy from examples. This is error-prone and intimidating for new users.
-We're building a `fabprint init` command with an interactive wizard, plus a `fabprint validate`
+We're building a `estampo init` command with an interactive wizard, plus a `estampo validate`
 command for checking existing configs.
 
 ## Decision Log
 
 - **Option 1 (interactive wizard)**: User's top pick. Lowest barrier for new users.
-- **Option 2 (template dump)**: Easy to add as `fabprint init --template`. Fallback for users
+- **Option 2 (template dump)**: Easy to add as `estampo init --template`. Fallback for users
   who prefer editing a file directly.
 - **Option 3 (CLI flags)**: Rejected — too many flags, painful UX.
-- **Option 4 (validate)**: User wants this too. Separate `fabprint validate` subcommand.
+- **Option 4 (validate)**: User wants this too. Separate `estampo validate` subcommand.
 - **Slicer engine**: OrcaSlicer only — Bambu Studio support removed from scope.
 - **Secrets**: Already handled in PR #82. Printer credentials live in
-  `~/.config/fabprint/credentials.toml`, not in project TOML. The wizard should reference
+  `~/.config/estampo/credentials.toml`, not in project TOML. The wizard should reference
   printers by name, not ask for secrets.
 
-## `fabprint init` — Interactive Wizard
+## `estampo init` — Interactive Wizard
 
 ### Flow
 
@@ -54,10 +54,10 @@ command for checking existing configs.
 8. **Optionally configure printer connection**.
    Ask if they want to set up printing. If yes:
    - Pick mode: bambu-lan, bambu-connect, cloud-bridge
-   - Ask for printer name (references `~/.config/fabprint/credentials.toml`)
+   - Ask for printer name (references `~/.config/estampo/credentials.toml`)
    - If credentials file doesn't exist or doesn't have the name, tell them how to create it
 
-9. **Write `fabprint.toml`** to current directory.
+9. **Write `estampo.toml`** to current directory.
 
 ### Key Implementation Details
 
@@ -66,38 +66,38 @@ command for checking existing configs.
 - For multi-select (filaments, files): comma-separated numbers or "all"
 - Validate choices as they go (e.g. file exists, profile exists)
 - Show a preview of the TOML before writing, ask for confirmation
-- If `fabprint.toml` already exists, warn and ask before overwriting
+- If `estampo.toml` already exists, warn and ask before overwriting
 
 ### Relevant Code
 
-- `src/fabprint/profiles.py` — `discover_profiles(engine)` returns available profiles
-- `src/fabprint/profiles.py` — `CATEGORIES = ("machine", "process", "filament")`
-- `src/fabprint/config.py` — dataclasses define all valid config fields:
+- `src/estampo/profiles.py` — `discover_profiles(engine)` returns available profiles
+- `src/estampo/profiles.py` — `CATEGORIES = ("machine", "process", "filament")`
+- `src/estampo/config.py` — dataclasses define all valid config fields:
   - `PlateConfig`: size, padding
   - `SlicerConfig`: engine, version, printer, process, filaments, slots, overrides
   - `PartConfig`: file, copies, orient, rotate, filament, scale, object_filaments, object, sequence
   - `PrinterConfig`: mode, name (credentials are in separate file now)
-- `src/fabprint/cli.py` — add `init` subcommand here, alongside existing plate/slice/print/profiles
-- `src/fabprint/slicer.py` — `find_slicer("orca")` finds local install,
+- `src/estampo/cli.py` — add `init` subcommand here, alongside existing plate/slice/print/profiles
+- `src/estampo/slicer.py` — `find_slicer("orca")` finds local install,
   `_docker_image()` / Docker image list can detect installed versions
 
 ### OrcaSlicer Version Detection
 
 To auto-detect the slicer version for pinning:
 - Local install: run `OrcaSlicer --version` or parse the binary
-- Docker: parse `docker image ls` for `fabprint/fabprint:orca-*` tags
+- Docker: parse `docker image ls` for `estampo/estampo:orca-*` tags
   (test_cli.py already has `_docker_orca_version()` that does this)
 
-## `fabprint init --template`
+## `estampo init --template`
 
-Skip the wizard entirely. Dump a well-commented `fabprint.toml` to stdout (or to file
+Skip the wizard entirely. Dump a well-commented `estampo.toml` to stdout (or to file
 with `-o`). Contains all sections with sensible defaults and comments explaining each field.
 
 This is a simple string template — no profile discovery needed. Users edit it manually.
 
-## `fabprint validate`
+## `estampo validate`
 
-Separate subcommand: `fabprint validate [config]`
+Separate subcommand: `estampo validate [config]`
 
 1. Load the TOML via `load_config()` — this already validates structure, types, file existence
 2. On top of that, add checks with actionable suggestions:
@@ -110,13 +110,13 @@ Separate subcommand: `fabprint validate [config]`
 
 ## Implementation Order
 
-1. **`fabprint init --template`** — simplest, gets something useful shipped fast
-2. **`fabprint validate`** — builds on existing `load_config()` error handling
-3. **`fabprint init` wizard** — most code, depends on having the profile discovery working well
+1. **`estampo init --template`** — simplest, gets something useful shipped fast
+2. **`estampo validate`** — builds on existing `load_config()` error handling
+3. **`estampo init` wizard** — most code, depends on having the profile discovery working well
 
 ## Open Questions
 
-- Should `fabprint init` create the credentials file too if the user wants to set up printing?
+- Should `estampo init` create the credentials file too if the user wants to set up printing?
   Or just tell them the path and format?
 - Should the wizard support `slicer.overrides` or keep that as an advanced/manual edit?
 - Plate size: hardcode 256x256 default or try to infer from the printer profile JSON?
