@@ -5,6 +5,7 @@ All notable changes to this project are documented here.
 ## Unreleased
 
 - Fix release-readiness skipping builds on tag pushes (workflow_call inherits caller's push event)
+- Fix profiles job in release workflow: install project before running extract_profiles.py
 
 ## 0.2.1 — 2026-03-29
 

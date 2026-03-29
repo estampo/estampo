@@ -154,9 +154,14 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install project
+        run: |
+          pip install uv
+          uv sync
+
       - name: Extract profiles for all OrcaSlicer versions
         run: |
-          python scripts/extract_profiles.py 2.3.1
+          uv run python scripts/extract_profiles.py 2.3.1
 
       - name: Open PR for bundled profile updates
         run: |
