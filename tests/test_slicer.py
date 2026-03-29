@@ -328,13 +328,14 @@ def test_slice_plate_docker_version(tmp_path):
     assert "estampo/estampo:orca-2.3.1" in cmd
 
 
-def test_slice_plate_docker_image_missing(tmp_path):
-    """Raises FileNotFoundError when Docker image doesn't exist."""
+def test_slice_plate_docker_image_missing_no_local(tmp_path):
+    """Raises FileNotFoundError when Docker image and local slicer both unavailable."""
     input_3mf = tmp_path / "plate.3mf"
     input_3mf.write_text("fake")
 
     with (
         patch("estampo.slicer._ensure_docker_image", return_value=False),
+        patch("estampo.slicer.find_slicer", side_effect=FileNotFoundError("not found")),
     ):
         with pytest.raises(FileNotFoundError, match="Docker image.*not found"):
             slice_plate(
@@ -342,6 +343,33 @@ def test_slice_plate_docker_image_missing(tmp_path):
                 engine="orca",
                 docker_version="9.9.9",
             )
+
+
+def test_slice_plate_docker_fallback_to_local(tmp_path):
+    """Falls back to local slicer when Docker image unavailable but local slicer exists."""
+    input_3mf = tmp_path / "plate.3mf"
+    input_3mf.write_text("fake")
+    output_dir = tmp_path / "output"
+
+    mock_result = MagicMock(returncode=0, stdout="", stderr="")
+    slicer_path = Path("/usr/bin/orca-slicer")
+
+    with (
+        patch("estampo.slicer._ensure_docker_image", return_value=False),
+        patch("estampo.slicer.find_slicer", return_value=slicer_path),
+        patch("estampo.slicer.resolve_profile_data", side_effect=_mock_resolve),
+        patch("estampo.slicer.subprocess.run", return_value=mock_result) as mock_run,
+    ):
+        slice_plate(
+            input_3mf,
+            engine="orca",
+            output_dir=output_dir,
+            printer="My Printer",
+            docker_version="2.3.1",
+        )
+
+    cmd = mock_run.call_args[0][0]
+    assert cmd[0] == str(slicer_path)
 
 
 # --- parse_gcode_stats ---

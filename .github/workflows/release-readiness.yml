@@ -179,7 +179,7 @@ jobs:
             -v "${{ github.workspace }}:/project" \
             -w /project/examples \
             estampo/estampo:orca-${{ env.ORCA_VERSION }}-test \
-            run estampo.toml --local -v
+            run estampo.toml -v
 
       - name: Verify output
         run: |

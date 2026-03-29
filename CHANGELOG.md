@@ -9,6 +9,7 @@ All notable changes to this project are documented here.
 - Add release-readiness workflow: e2e Docker build, smoke test, profile extraction, and real slice test
 - Fix Docker CLI command: `slice` -> `run` in workflows, Dockerfile comment
 - Fix profile extraction: use direct path instead of symlink in Docker container
+- Slicer now falls back to local OrcaSlicer when Docker image is unavailable (even with pinned version)
 
 ## 0.2.1 — 2026-03-29
 

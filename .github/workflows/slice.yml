@@ -37,7 +37,7 @@ jobs:
           docker run --rm \
             -v "${{ github.workspace }}:/project" \
             estampo:orca-${{ inputs.orca_version }} \
-            run "${{ inputs.config }}" --local -v
+            run "${{ inputs.config }}" -v
 
       - name: Upload gcode
         uses: actions/upload-artifact@v7
