@@ -7,8 +7,9 @@ padding = 5.0
 
 [slicer]
 engine = "orca"
+version = "2.3.1"
 printer = "Bambu Lab P1S 0.4 nozzle"
-process = "0.20mm Standard @BBL X1C"
+process = "0.20mm Standard @BBL P1S"
 [[parts]]
 file = "../tests/fixtures/cube_10mm.stl"
 copies = 4
