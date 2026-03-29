@@ -94,6 +94,7 @@ jobs:
 
   smoke-test:
     needs: build-estampo-image
+    if: always() && !failure() && !cancelled()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v7
@@ -115,6 +116,7 @@ jobs:
 
   profile-extraction:
     needs: build-estampo-image
+    if: always() && !failure() && !cancelled()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -159,6 +161,7 @@ jobs:
 
   slice-test:
     needs: build-estampo-image
+    if: always() && !failure() && !cancelled()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
