@@ -20,7 +20,7 @@ from pathlib import Path
 
 from estampo.slicer import docker_image
 
-PROFILE_ROOT = "/home/estampo/.config/OrcaSlicer/system/BBL"
+PROFILE_ROOT = "/opt/orca-slicer/resources/profiles/BBL"
 CATEGORIES = ("machine", "process", "filament")
 OUT_DIR = Path(__file__).parent.parent / "src" / "estampo" / "data"
 

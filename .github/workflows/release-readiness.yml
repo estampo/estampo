@@ -107,7 +107,7 @@ jobs:
       - name: Test estampo CLI
         run: |
           docker run --rm estampo/estampo:orca-${{ env.ORCA_VERSION }}-test --help
-          docker run --rm estampo/estampo:orca-${{ env.ORCA_VERSION }}-test slice --help
+          docker run --rm estampo/estampo:orca-${{ env.ORCA_VERSION }}-test run --help
 
       - name: Test OrcaSlicer accessible
         run: |
@@ -179,7 +179,7 @@ jobs:
             -v "${{ github.workspace }}:/project" \
             -w /project/examples \
             estampo/estampo:orca-${{ env.ORCA_VERSION }}-test \
-            slice estampo.toml -v
+            run estampo.toml -v
 
       - name: Verify output
         run: |
