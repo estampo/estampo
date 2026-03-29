@@ -1,4 +1,4 @@
-"""Load and manage printer credentials from ~/.config/fabprint/credentials.toml."""
+"""Load and manage printer credentials from ~/.config/estampo/credentials.toml."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import TypedDict
 
-from fabprint import FabprintError
+from estampo import EstampoError
 
 log = logging.getLogger(__name__)
 
@@ -55,14 +55,49 @@ PRINTER_TYPES = {
 }
 
 
+def _migrate_config_dir() -> None:
+    """Copy ~/.config/fabprint → ~/.config/estampo if old exists but new doesn't."""
+    import shutil
+
+    if sys.platform == "win32":
+        old_dir = Path.home() / "AppData/Roaming/fabprint"
+        new_dir = Path.home() / "AppData/Roaming/estampo"
+    else:
+        old_dir = Path.home() / ".config/fabprint"
+        new_dir = Path.home() / ".config/estampo"
+
+    if old_dir.exists() and not new_dir.exists() and not old_dir.is_symlink():
+        try:
+            shutil.copytree(old_dir, new_dir)
+        except OSError as exc:
+            log.warning("Config migration failed: %s", exc)
+            return
+        log.info("Migrated config: %s → %s", old_dir, new_dir)
+        print(
+            f"Migrated config from {old_dir} to {new_dir}.\n"
+            f"You can delete {old_dir} once you're satisfied everything works."
+        )
+
+
 def _credentials_path() -> Path:
     """Return the path to the credentials file."""
-    env = os.environ.get("FABPRINT_CREDENTIALS")
+    env = os.environ.get("ESTAMPO_CREDENTIALS")
+    if not env:
+        env = os.environ.get("FABPRINT_CREDENTIALS")
+        if env:
+            import warnings
+
+            warnings.warn(
+                "FABPRINT_CREDENTIALS is deprecated — use ESTAMPO_CREDENTIALS instead",
+                DeprecationWarning,
+                stacklevel=2,
+            )
     if env:
         return Path(env)
+    _migrate_config_dir()
     if sys.platform == "win32":
-        return Path.home() / "AppData/Roaming/fabprint/credentials.toml"
-    return Path.home() / ".config/fabprint/credentials.toml"
+        return Path.home() / "AppData/Roaming/estampo/credentials.toml"
+    return Path.home() / ".config/estampo/credentials.toml"
 
 
 def _load_raw() -> dict:
@@ -115,15 +150,15 @@ def load_printer_credentials(name: str | None) -> PrinterCredentials:
     if name is not None:
         path = _credentials_path()
         if not path.exists():
-            raise FabprintError(
-                f"Credentials file not found: {path}\nRun 'fabprint setup' to create it."
+            raise EstampoError(
+                f"Credentials file not found: {path}\nRun 'estampo setup' to create it."
             )
         with open(path, "rb") as f:
             raw = tomllib.load(f)
         printers = raw.get("printers", {})
         if name not in printers:
             available = list(printers.keys())
-            raise FabprintError(f"Printer '{name}' not found in {path}. Available: {available}")
+            raise EstampoError(f"Printer '{name}' not found in {path}. Available: {available}")
         file_creds = printers[name]
 
     return PrinterCredentials(
@@ -181,9 +216,9 @@ def cloud_token_json():
     """
     cloud = load_cloud_credentials()
     if not cloud:
-        raise FabprintError(
+        raise EstampoError(
             "No cloud credentials found.\n"
-            "Run 'fabprint setup' and choose 'bambu-cloud' type to log in."
+            "Run 'estampo setup' and choose 'bambu-cloud' type to log in."
         )
 
     # Bridge expects camelCase keys
@@ -195,7 +230,7 @@ def cloud_token_json():
     }
 
     # Use ~/.cache so Docker Desktop on macOS can mount the file (/var/folders is not shared)
-    cache_dir = Path.home() / ".cache" / "fabprint"
+    cache_dir = Path.home() / ".cache" / "estampo"
     cache_dir.mkdir(parents=True, exist_ok=True)
     tmp = tempfile.NamedTemporaryFile(
         mode="w", suffix=".json", prefix="bambu_token_", dir=cache_dir, delete=False
@@ -214,7 +249,7 @@ def cloud_token_json():
 
 def setup_printer() -> None:
     """Interactive wizard to add or update a printer in credentials.toml."""
-    from fabprint import ui
+    from estampo import ui
 
     path = _credentials_path()
     existing = _load_raw()
@@ -297,7 +332,7 @@ def setup_printer() -> None:
     from rich.syntax import Syntax
 
     ui.console.print(
-        "  Reference this printer in fabprint.toml with:",
+        "  Reference this printer in estampo.toml with:",
     )
     ui.console.print(Syntax(toml_ref, "toml", theme="monokai", line_numbers=False))
 
@@ -307,12 +342,12 @@ def _pick_cloud_printer(cloud: dict | None) -> str | None:
 
     Returns the serial number of the chosen printer, or None.
     """
-    from fabprint import ui
+    from estampo import ui
 
     if not cloud or not cloud.get("token"):
         return None
     try:
-        from fabprint.auth import _get_devices
+        from estampo.auth import _get_devices
 
         devices = _get_devices(cloud["token"])
     except Exception:
@@ -349,8 +384,8 @@ def _cloud_login_flow(existing: dict) -> None:
     """Run the Bambu Cloud login flow and save credentials."""
     import os
 
-    from fabprint import ui
-    from fabprint.auth import _get_user_profile, _login, _show_devices
+    from estampo import ui
+    from estampo.auth import _get_user_profile, _login, _show_devices
 
     # Check for existing valid token
     cloud = existing.get("cloud")

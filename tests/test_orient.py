@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 import trimesh
 
-from fabprint.orient import orient_mesh
+from estampo.orient import orient_mesh
 
 FIXTURES = Path(__file__).parent / "fixtures"
 

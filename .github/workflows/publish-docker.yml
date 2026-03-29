@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       bridge: ${{ steps.check.outputs.bridge }}
-      fabprint: ${{ steps.check.outputs.fabprint }}
+      estampo: ${{ steps.check.outputs.estampo }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -27,8 +27,8 @@ jobs:
           CHANGED=$(git diff HEAD~1 HEAD --name-only)
           echo "$CHANGED" | grep -qE 'Dockerfile\.cloud-bridge|scripts/bambu_cloud_bridge\.cpp' \
             && echo "bridge=true" >> "$GITHUB_OUTPUT" || echo "bridge=false" >> "$GITHUB_OUTPUT"
-          echo "$CHANGED" | grep -qE '^Dockerfile$|^src/fabprint/|^pyproject\.toml$|^uv\.lock$' \
-            && echo "fabprint=true" >> "$GITHUB_OUTPUT" || echo "fabprint=false" >> "$GITHUB_OUTPUT"
+          echo "$CHANGED" | grep -qE '^Dockerfile$|^src/estampo/|^pyproject\.toml$|^uv\.lock$' \
+            && echo "estampo=true" >> "$GITHUB_OUTPUT" || echo "estampo=false" >> "$GITHUB_OUTPUT"
 
   cloud-bridge:
     needs: detect-changes
@@ -54,7 +54,7 @@ jobs:
           file: Dockerfile.cloud-bridge
           platforms: linux/amd64
           push: true
-          tags: fabprint/cloud-bridge:latest
+          tags: estampo/cloud-bridge:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -89,14 +89,14 @@ jobs:
           push: true
           no-cache: true
           tags: |
-            fabprint/orca-base:${{ matrix.orca-version }}
+            estampo/orca-base:${{ matrix.orca-version }}
             ghcr.io/${{ github.repository }}/orca-base:${{ matrix.orca-version }}
           build-args: ORCA_VERSION=${{ matrix.orca-version }}
 
-  # Rebuild the fabprint Python layer on push to main or manual dispatch.
-  fabprint-images:
+  # Rebuild the estampo Python layer on push to main or manual dispatch.
+  estampo-images:
     needs: detect-changes
-    if: needs.detect-changes.outputs.fabprint == 'true' || github.event_name == 'workflow_dispatch'
+    if: needs.detect-changes.outputs.estampo == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -116,7 +116,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/setup-buildx-action@v3
 
-      - name: Build and push fabprint image
+      - name: Build and push estampo image
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -124,7 +124,7 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            fabprint/fabprint:orca-${{ matrix.orca-version }}
+            estampo/estampo:orca-${{ matrix.orca-version }}
             ghcr.io/${{ github.repository }}:orca-${{ matrix.orca-version }}
           build-args: ORCA_VERSION=${{ matrix.orca-version }}
           cache-from: type=gha

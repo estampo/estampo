@@ -6,8 +6,8 @@ from pathlib import Path
 
 import requests
 
-DOCKERHUB_REPO = "fabprint/fabprint"
-OUTPUT = Path(__file__).resolve().parent.parent / "src" / "fabprint" / "docker_versions.json"
+DOCKERHUB_REPO = "estampo/estampo"
+OUTPUT = Path(__file__).resolve().parent.parent / "src" / "estampo" / "docker_versions.json"
 
 
 def main():

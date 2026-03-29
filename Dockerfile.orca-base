@@ -1,11 +1,11 @@
 # Base image: OrcaSlicer + runtime deps
 #
 # Rebuild only when OrcaSlicer version changes. The main Dockerfile
-# (fabprint/fabprint) layers on top of this for fast code-only rebuilds.
+# (estampo/estampo) layers on top of this for fast code-only rebuilds.
 #
 # Usage:
 #   docker build -f Dockerfile.orca-base --build-arg ORCA_VERSION=2.3.1 \
-#     -t fabprint/orca-base:2.3.1 .
+#     -t estampo/orca-base:2.3.1 .
 
 # ---------------------------------------------------------------------------
 # Stage 1: Extract OrcaSlicer from AppImage (x86_64 only)
@@ -31,8 +31,8 @@ RUN curl -fSL -o orca.AppImage \
 FROM --platform=linux/amd64 ubuntu:24.04
 
 ARG ORCA_VERSION=2.3.1
-LABEL org.opencontainers.image.description="OrcaSlicer ${ORCA_VERSION} base image for fabprint"
-LABEL fabprint.orca-version="${ORCA_VERSION}"
+LABEL org.opencontainers.image.description="OrcaSlicer ${ORCA_VERSION} base image for estampo"
+LABEL estampo.orca-version="${ORCA_VERSION}"
 
 # OrcaSlicer runtime deps (needed even for CLI — links GTK/GL at startup)
 RUN --mount=type=cache,id=apt-runtime,target=/var/cache/apt \
@@ -49,10 +49,10 @@ RUN --mount=type=cache,id=apt-runtime,target=/var/cache/apt \
 COPY --from=orca /opt/orca-slicer /opt/orca-slicer
 RUN ln -s /opt/orca-slicer/bin/orca-slicer /usr/bin/orca-slicer
 
-# Wire up system profiles so fabprint can discover them
-# fabprint looks at ~/.config/OrcaSlicer/system/BBL on Linux
-ENV HOME=/home/fabprint
-RUN useradd -m -d /home/fabprint fabprint \
-    && mkdir -p /home/fabprint/.config/OrcaSlicer/system \
+# Wire up system profiles so estampo can discover them
+# estampo looks at ~/.config/OrcaSlicer/system/BBL on Linux
+ENV HOME=/home/estampo
+RUN useradd -m -d /home/estampo estampo \
+    && mkdir -p /home/estampo/.config/OrcaSlicer/system \
     && ln -s /opt/orca-slicer/resources/profiles/BBL \
-             /home/fabprint/.config/OrcaSlicer/system/BBL
+             /home/estampo/.config/OrcaSlicer/system/BBL

@@ -15,7 +15,7 @@ jobs:
       - run: uv sync --extra dev
       - run: uv run ruff check src tests
       - run: uv run ruff format --check src tests
-      - run: uv run mypy src/fabprint
+      - run: uv run mypy src/estampo
 
   test:
     runs-on: ${{ matrix.os }}
@@ -40,7 +40,7 @@ jobs:
         with:
           python-version: "3.13"
       - run: uv sync --extra dev
-      - run: uv run pytest --cov=fabprint --cov-report=xml -v
+      - run: uv run pytest --cov=estampo --cov-report=xml -v
       - uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

@@ -1,4 +1,4 @@
-"""Tests for fabprint.auth — login flows, profile, device discovery."""
+"""Tests for estampo.auth — login flows, profile, device discovery."""
 
 from __future__ import annotations
 
@@ -7,8 +7,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 
-from fabprint import FabprintError
-from fabprint.auth import (
+from estampo import EstampoError
+from estampo.auth import (
     API_BASE,
     SLICER_HEADERS,
     _get_devices,
@@ -44,9 +44,9 @@ def _mock_response(
 def _silence_ui(monkeypatch):
     """Silence all UI output helpers."""
     for fn in ("heading", "success", "warn", "error", "info"):
-        monkeypatch.setattr(f"fabprint.ui.{fn}", lambda text: None)
-    monkeypatch.setattr("fabprint.ui.choice_table", lambda items, columns, **kw: None)
-    monkeypatch.setattr("fabprint.ui.console", MagicMock())
+        monkeypatch.setattr(f"estampo.ui.{fn}", lambda text: None)
+    monkeypatch.setattr("estampo.ui.choice_table", lambda items, columns, **kw: None)
+    monkeypatch.setattr("estampo.ui.console", MagicMock())
 
 
 # ---------------------------------------------------------------------------
@@ -58,7 +58,7 @@ class TestRequestVerificationCode:
     def test_sends_email_code(self, monkeypatch):
         _silence_ui(monkeypatch)
         resp = _mock_response(200)
-        with patch("fabprint.auth.requests.post", return_value=resp) as mock_post:
+        with patch("estampo.auth.requests.post", return_value=resp) as mock_post:
             _request_verification_code("user@example.com")
             mock_post.assert_called_once_with(
                 f"{API_BASE}/v1/user-service/user/sendemail/code",
@@ -70,7 +70,7 @@ class TestRequestVerificationCode:
     def test_raises_on_http_error(self, monkeypatch):
         _silence_ui(monkeypatch)
         resp = _mock_response(500, raise_for_status_error=True)
-        with patch("fabprint.auth.requests.post", return_value=resp):
+        with patch("estampo.auth.requests.post", return_value=resp):
             with pytest.raises(requests.HTTPError):
                 _request_verification_code("user@example.com")
 
@@ -91,7 +91,7 @@ class TestLoginPasswordFlow:
                 "loginType": "password",
             },
         )
-        with patch("fabprint.auth.requests.post", return_value=resp):
+        with patch("estampo.auth.requests.post", return_value=resp):
             token, refresh = _login("user@example.com", "secret")
             assert token == "tok123"
             assert refresh == "ref456"
@@ -99,7 +99,7 @@ class TestLoginPasswordFlow:
     def test_password_login_http_error(self, monkeypatch):
         _silence_ui(monkeypatch)
         resp = _mock_response(401, raise_for_status_error=True)
-        with patch("fabprint.auth.requests.post", return_value=resp):
+        with patch("estampo.auth.requests.post", return_value=resp):
             with pytest.raises(requests.HTTPError):
                 _login("user@example.com", "wrong")
 
@@ -109,8 +109,8 @@ class TestLoginPasswordFlow:
             200,
             json_data={"loginType": "unknown", "message": "something odd"},
         )
-        with patch("fabprint.auth.requests.post", return_value=resp):
-            with pytest.raises(FabprintError, match="Login failed"):
+        with patch("estampo.auth.requests.post", return_value=resp):
+            with pytest.raises(EstampoError, match="Login failed"):
                 _login("user@example.com", "pw")
 
     def test_missing_refresh_token_defaults_empty(self, monkeypatch):
@@ -119,7 +119,7 @@ class TestLoginPasswordFlow:
             200,
             json_data={"accessToken": "tok", "loginType": "password"},
         )
-        with patch("fabprint.auth.requests.post", return_value=resp):
+        with patch("estampo.auth.requests.post", return_value=resp):
             token, refresh = _login("user@example.com", "pw")
             assert token == "tok"
             assert refresh == ""
@@ -133,7 +133,7 @@ class TestLoginPasswordFlow:
 class TestLoginVerificationCodeFlow:
     def test_verify_code_flow(self, monkeypatch):
         _silence_ui(monkeypatch)
-        monkeypatch.setattr("fabprint.ui.prompt_password", lambda prompt: "123456")
+        monkeypatch.setattr("estampo.ui.prompt_password", lambda prompt: "123456")
 
         # First call returns verifyCode, second sends code email, third logs in with code
         first_resp = _mock_response(200, json_data={"loginType": "verifyCode"})
@@ -143,7 +143,7 @@ class TestLoginVerificationCodeFlow:
             json_data={"accessToken": "code_tok", "refreshToken": "code_ref"},
         )
 
-        with patch("fabprint.auth.requests.post") as mock_post:
+        with patch("estampo.auth.requests.post") as mock_post:
             mock_post.side_effect = [first_resp, code_send_resp, third_resp]
             token, refresh = _login("user@example.com", "pw")
 
@@ -162,15 +162,15 @@ class TestLoginVerificationCodeFlow:
     def test_verify_code_flow_no_token_raises(self, monkeypatch):
         """Verification code flow returns but still no token."""
         _silence_ui(monkeypatch)
-        monkeypatch.setattr("fabprint.ui.prompt_password", lambda prompt: "000000")
+        monkeypatch.setattr("estampo.ui.prompt_password", lambda prompt: "000000")
 
         first_resp = _mock_response(200, json_data={"loginType": "verifyCode"})
         code_send_resp = _mock_response(200)
         third_resp = _mock_response(200, json_data={"message": "bad code"})
 
-        with patch("fabprint.auth.requests.post") as mock_post:
+        with patch("estampo.auth.requests.post") as mock_post:
             mock_post.side_effect = [first_resp, code_send_resp, third_resp]
-            with pytest.raises(FabprintError, match="Login failed"):
+            with pytest.raises(EstampoError, match="Login failed"):
                 _login("user@example.com", "pw")
 
 
@@ -182,7 +182,7 @@ class TestLoginVerificationCodeFlow:
 class TestLoginTfaFlow:
     def test_tfa_flow(self, monkeypatch):
         _silence_ui(monkeypatch)
-        monkeypatch.setattr("fabprint.ui.prompt_password", lambda prompt: "654321")
+        monkeypatch.setattr("estampo.ui.prompt_password", lambda prompt: "654321")
 
         first_resp = _mock_response(200, json_data={"tfaKey": "tfa_key_abc"})
         tfa_resp = _mock_response(
@@ -190,7 +190,7 @@ class TestLoginTfaFlow:
             json_data={"accessToken": "tfa_tok", "refreshToken": "tfa_ref"},
         )
 
-        with patch("fabprint.auth.requests.post") as mock_post:
+        with patch("estampo.auth.requests.post") as mock_post:
             mock_post.side_effect = [first_resp, tfa_resp]
             token, refresh = _login("user@example.com", "pw")
 
@@ -206,25 +206,25 @@ class TestLoginTfaFlow:
     def test_tfa_flow_no_token_raises(self, monkeypatch):
         """TFA response has no accessToken."""
         _silence_ui(monkeypatch)
-        monkeypatch.setattr("fabprint.ui.prompt_password", lambda prompt: "000000")
+        monkeypatch.setattr("estampo.ui.prompt_password", lambda prompt: "000000")
 
         first_resp = _mock_response(200, json_data={"tfaKey": "k"})
         tfa_resp = _mock_response(200, json_data={"error": "invalid code"})
 
-        with patch("fabprint.auth.requests.post") as mock_post:
+        with patch("estampo.auth.requests.post") as mock_post:
             mock_post.side_effect = [first_resp, tfa_resp]
-            with pytest.raises(FabprintError, match="Login failed"):
+            with pytest.raises(EstampoError, match="Login failed"):
                 _login("user@example.com", "pw")
 
     def test_tfa_http_error(self, monkeypatch):
         """HTTP error from TFA endpoint propagates."""
         _silence_ui(monkeypatch)
-        monkeypatch.setattr("fabprint.ui.prompt_password", lambda prompt: "123")
+        monkeypatch.setattr("estampo.ui.prompt_password", lambda prompt: "123")
 
         first_resp = _mock_response(200, json_data={"tfaKey": "k"})
         tfa_resp = _mock_response(403, raise_for_status_error=True)
 
-        with patch("fabprint.auth.requests.post") as mock_post:
+        with patch("estampo.auth.requests.post") as mock_post:
             mock_post.side_effect = [first_resp, tfa_resp]
             with pytest.raises(requests.HTTPError):
                 _login("user@example.com", "pw")
@@ -241,7 +241,7 @@ class TestGetUserProfile:
             200,
             json_data={"uid": 12345, "name": "Alice", "avatar": "https://img/a.png"},
         )
-        with patch("fabprint.auth.requests.get", return_value=resp) as mock_get:
+        with patch("estampo.auth.requests.get", return_value=resp) as mock_get:
             profile = _get_user_profile("my_token")
 
         assert profile == {
@@ -255,13 +255,13 @@ class TestGetUserProfile:
 
     def test_missing_fields_default(self):
         resp = _mock_response(200, json_data={})
-        with patch("fabprint.auth.requests.get", return_value=resp):
+        with patch("estampo.auth.requests.get", return_value=resp):
             profile = _get_user_profile("tok")
         assert profile == {"uid": "", "name": "", "avatar": ""}
 
     def test_http_error_propagates(self):
         resp = _mock_response(401, raise_for_status_error=True)
-        with patch("fabprint.auth.requests.get", return_value=resp):
+        with patch("estampo.auth.requests.get", return_value=resp):
             with pytest.raises(requests.HTTPError):
                 _get_user_profile("bad_token")
 
@@ -278,7 +278,7 @@ class TestGetDevices:
             {"dev_id": "SN002", "name": "Printer2", "online": False},
         ]
         resp = _mock_response(200, json_data={"devices": devices})
-        with patch("fabprint.auth.requests.get", return_value=resp) as mock_get:
+        with patch("estampo.auth.requests.get", return_value=resp) as mock_get:
             result = _get_devices("tok")
 
         assert result == devices
@@ -287,17 +287,17 @@ class TestGetDevices:
 
     def test_empty_devices(self):
         resp = _mock_response(200, json_data={"devices": []})
-        with patch("fabprint.auth.requests.get", return_value=resp):
+        with patch("estampo.auth.requests.get", return_value=resp):
             assert _get_devices("tok") == []
 
     def test_missing_devices_key(self):
         resp = _mock_response(200, json_data={})
-        with patch("fabprint.auth.requests.get", return_value=resp):
+        with patch("estampo.auth.requests.get", return_value=resp):
             assert _get_devices("tok") == []
 
     def test_http_error_propagates(self):
         resp = _mock_response(403, raise_for_status_error=True)
-        with patch("fabprint.auth.requests.get", return_value=resp):
+        with patch("estampo.auth.requests.get", return_value=resp):
             with pytest.raises(requests.HTTPError):
                 _get_devices("tok")
 
@@ -324,17 +324,17 @@ class TestShowDevices:
                 "online": False,
             },
         ]
-        with patch("fabprint.auth._get_devices", return_value=devices):
+        with patch("estampo.auth._get_devices", return_value=devices):
             # Should not raise
             _show_devices("tok")
 
     def test_no_devices(self, monkeypatch):
         _silence_ui(monkeypatch)
-        with patch("fabprint.auth._get_devices", return_value=[]):
+        with patch("estampo.auth._get_devices", return_value=[]):
             _show_devices("tok")
 
     def test_device_missing_optional_fields(self, monkeypatch):
         _silence_ui(monkeypatch)
         devices = [{"dev_id": "SN1"}]  # minimal device dict
-        with patch("fabprint.auth._get_devices", return_value=devices):
+        with patch("estampo.auth._get_devices", return_value=devices):
             _show_devices("tok")

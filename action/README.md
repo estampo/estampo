@@ -1,4 +1,4 @@
-# Fabprint GitHub Action
+# Estampo GitHub Action
 
 Slice 3D models with OrcaSlicer on every push or PR — get build metrics (print time, filament usage) posted as a PR comment automatically.
 
@@ -19,19 +19,19 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v6
-      - uses: pzfreo/fabprint/action@main
+      - uses: pzfreo/estampo/action@main
         with:
-          config: fabprint.toml
+          config: estampo.toml
 ```
 
 ## Inputs
 
 | Input | Default | Description |
 |-------|---------|-------------|
-| `config` | `fabprint.toml` | Path to your fabprint config file |
+| `config` | `estampo.toml` | Path to your estampo config file |
 | `orca-version` | `2.3.1` | OrcaSlicer version |
 | `until` | `slice` | Pipeline stage to stop at (`load`, `arrange`, `plate`, `slice`) |
-| `output-dir` | `fabprint_output` | Output directory for sliced files (relative to repo root) |
+| `output-dir` | `estampo_output` | Output directory for sliced files (relative to repo root) |
 | `comment` | `true` | Post/update a PR comment with build metrics |
 
 ## Outputs
@@ -44,14 +44,14 @@ jobs:
 
 ## What it does
 
-1. Pulls a pre-built Docker image with OrcaSlicer and fabprint
-2. Runs `fabprint run` against your config (stops before printing)
+1. Pulls a pre-built Docker image with OrcaSlicer and estampo
+2. Runs `estampo run` against your config (stops before printing)
 3. Uploads sliced `.gcode` and `.3mf` files as workflow artifacts
 4. Posts a PR comment with print time and filament usage
 
 ## Requirements
 
-- A `fabprint.toml` in your repo (see [config docs](../docs/config.md))
+- An `estampo.toml` in your repo (see [config docs](../docs/config.md))
 - STL/3MF/STEP model files referenced in your config
 - The GHCR package must be public, or you must authenticate with `docker login ghcr.io` before this action runs
 - If using the `comment` feature, your job needs `permissions: pull-requests: write`
@@ -59,4 +59,4 @@ jobs:
 
 ## Supported OrcaSlicer versions
 
-Only versions with a published `ghcr.io/pzfreo/fabprint:orca-<version>` image are supported. Currently: `2.3.1` (default).
+Only versions with a published `ghcr.io/pzfreo/estampo:orca-<version>` image are supported. Currently: `2.3.1` (default).

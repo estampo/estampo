@@ -9,8 +9,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 from packaging.version import Version
 
-from fabprint import FabprintError, __version__
-from fabprint.cli import (
+from estampo import EstampoError, __version__
+from estampo.cli import (
     _query_printer_status,
     _render_printer,
     _resolve_config_path,
@@ -18,7 +18,7 @@ from fabprint.cli import (
     _version_callback,
     main,
 )
-from fabprint.profiles import SYSTEM_DIRS
+from estampo.profiles import SYSTEM_DIRS
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -29,10 +29,10 @@ _has_orca = _orca_system is not None and _orca_system.is_dir()
 def _docker_orca_version() -> str | None:
     """Return the OrcaSlicer Docker image version to test with.
 
-    Uses FABPRINT_TEST_ORCA_VERSION env var if set, otherwise auto-detects
-    the first available fabprint:orca-* image.
+    Uses ESTAMPO_TEST_ORCA_VERSION env var if set, otherwise auto-detects
+    the first available estampo:orca-* image.
     """
-    env_ver = os.environ.get("FABPRINT_TEST_ORCA_VERSION")
+    env_ver = os.environ.get("ESTAMPO_TEST_ORCA_VERSION")
     if env_ver:
         return env_ver
     try:
@@ -44,8 +44,8 @@ def _docker_orca_version() -> str | None:
         )
         versions = []
         for line in r.stdout.splitlines():
-            if line.startswith("fabprint:orca-"):
-                versions.append(line.split("fabprint:orca-", 1)[1])
+            if line.startswith("estampo:orca-"):
+                versions.append(line.split("estampo:orca-", 1)[1])
         # Prefer stable releases over pre-releases, sorted by version number
         stable = [v for v in versions if not Version(v).is_prerelease]
         if stable:
@@ -59,7 +59,7 @@ def _docker_orca_version() -> str | None:
 
 _docker_version = _docker_orca_version()
 skip_no_docker = pytest.mark.skipif(
-    _docker_version is None, reason="Docker not running or no fabprint:orca-* image"
+    _docker_version is None, reason="Docker not running or no estampo:orca-* image"
 )
 
 
@@ -69,7 +69,7 @@ def _posix(p: Path) -> str:
 
 
 def _write_config(tmp_path: Path, engine: str = "orca") -> Path:
-    toml = tmp_path / "fabprint.toml"
+    toml = tmp_path / "estampo.toml"
     toml.write_text(f"""
 [plate]
 size = [256, 256]
@@ -102,7 +102,7 @@ def test_run_default_output(tmp_path, monkeypatch):
     config = _write_config(tmp_path)
     monkeypatch.chdir(tmp_path)
     main(["run", str(config), "--until", "plate"])
-    assert (tmp_path / "fabprint_output" / "plate.3mf").exists()
+    assert (tmp_path / "estampo_output" / "plate.3mf").exists()
 
 
 def test_run_verbose(tmp_path):
@@ -119,22 +119,22 @@ def test_no_subcommand():
 
 
 def test_run_auto_discover_config(tmp_path, monkeypatch):
-    """Running without config arg should find ./fabprint.toml."""
+    """Running without config arg should find ./estampo.toml."""
     _write_config(tmp_path)
     monkeypatch.chdir(tmp_path)
     main(["run", "--until", "plate"])
-    assert (tmp_path / "fabprint_output" / "plate.3mf").exists()
+    assert (tmp_path / "estampo_output" / "plate.3mf").exists()
 
 
 def test_run_missing_config_no_traceback(tmp_path, monkeypatch, capsys):
     """Missing config should print a clean error, not a traceback."""
-    monkeypatch.chdir(tmp_path)  # no fabprint.toml here
+    monkeypatch.chdir(tmp_path)  # no estampo.toml here
     with pytest.raises(SystemExit) as exc_info:
         main(["run"])
     assert exc_info.value.code == 1
     captured = capsys.readouterr()
     assert "error:" in captured.err
-    assert "fabprint.toml" in captured.err
+    assert "estampo.toml" in captured.err
 
 
 def test_run_until_and_only_conflict(tmp_path, capsys):
@@ -166,7 +166,7 @@ def test_run_only_slice_fails_without_plate(tmp_path, capsys):
 
 def test_run_custom_stages(tmp_path):
     """Config with custom pipeline stages should be respected."""
-    toml = tmp_path / "fabprint.toml"
+    toml = tmp_path / "estampo.toml"
     toml.write_text(f"""
 [plate]
 size = [256, 256]
@@ -188,8 +188,8 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
 
 
 def test_run_name_output_dir(tmp_path, monkeypatch):
-    """Project name should create a subdirectory under fabprint_output/."""
-    toml = tmp_path / "fabprint.toml"
+    """Project name should create a subdirectory under estampo_output/."""
+    toml = tmp_path / "estampo.toml"
     toml.write_text(f"""
 name = "benchy"
 
@@ -204,12 +204,12 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
 """)
     monkeypatch.chdir(tmp_path)
     main(["run", str(toml), "--until", "plate"])
-    assert (tmp_path / "fabprint_output" / "benchy" / "plate.3mf").exists()
+    assert (tmp_path / "estampo_output" / "benchy" / "plate.3mf").exists()
 
 
 def test_run_name_explicit_output_dir(tmp_path):
     """Explicit -o should override name-based default."""
-    toml = tmp_path / "fabprint.toml"
+    toml = tmp_path / "estampo.toml"
     toml.write_text(f"""
 name = "benchy"
 
@@ -229,7 +229,7 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
 
 def test_run_invalid_stage_in_config(tmp_path):
     """Unknown stage in config should raise at parse time."""
-    toml = tmp_path / "fabprint.toml"
+    toml = tmp_path / "estampo.toml"
     toml.write_text(f"""
 [plate]
 size = [256, 256]
@@ -257,7 +257,7 @@ def test_profiles_list(capsys):
 
 @pytest.mark.skipif(not _has_orca, reason="OrcaSlicer not installed")
 def test_profiles_pin(tmp_path):
-    config = tmp_path / "fabprint.toml"
+    config = tmp_path / "estampo.toml"
     config.write_text(f"""
 [slicer]
 engine = "orca"
@@ -279,7 +279,7 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
 
 def _docker_work_dir(suffix: str = "") -> Path:
     """Return a work directory suitable for Docker volume mounts."""
-    work_dir = Path.home() / ".cache" / f"fabprint-test{suffix}"
+    work_dir = Path.home() / ".cache" / f"estampo-test{suffix}"
     work_dir.mkdir(parents=True, exist_ok=True)
     return work_dir
 
@@ -289,11 +289,11 @@ def _write_slice_config(
     filaments: list[str] | None = None,
     version: str | None = None,
 ) -> Path:
-    """Write a fabprint.toml for slicing tests."""
+    """Write an estampo.toml for slicing tests."""
     filaments = filaments or ["Generic PLA @base"]
     filament_toml = ", ".join(f'"{f}"' for f in filaments)
     version_line = f'version = "{version}"' if version else ""
-    toml = tmp_path / "fabprint.toml"
+    toml = tmp_path / "estampo.toml"
     toml.write_text(f"""
 [plate]
 size = [256, 256]
@@ -432,18 +432,27 @@ def test_resolve_config_path_explicit(tmp_path):
 
 
 def test_resolve_config_path_fallback(tmp_path, monkeypatch):
-    """Falls back to ./fabprint.toml when it exists."""
+    """Falls back to ./estampo.toml when it exists."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "estampo.toml").write_text("[slicer]\n")
+    result = _resolve_config_path(None)
+    assert result == Path("estampo.toml")
+
+
+def test_resolve_config_path_missing(tmp_path, monkeypatch):
+    """Raises EstampoError when no config and no estampo.toml."""
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(EstampoError, match="No config file specified"):
+        _resolve_config_path(None)
+
+
+def test_resolve_config_path_legacy_fabprint_toml(tmp_path, monkeypatch, capsys):
+    """Falls back to fabprint.toml with deprecation warning when estampo.toml is absent."""
     monkeypatch.chdir(tmp_path)
     (tmp_path / "fabprint.toml").write_text("[slicer]\n")
     result = _resolve_config_path(None)
     assert result == Path("fabprint.toml")
-
-
-def test_resolve_config_path_missing(tmp_path, monkeypatch):
-    """Raises FabprintError when no config and no fabprint.toml."""
-    monkeypatch.chdir(tmp_path)
-    with pytest.raises(FabprintError, match="No config file specified"):
-        _resolve_config_path(None)
+    assert "fabprint.toml is deprecated" in capsys.readouterr().err
 
 
 # --- _resolve_status_printers ---
@@ -471,19 +480,19 @@ def test_resolve_status_printers_all():
 
 def test_resolve_status_printers_none_configured():
     list_fn = MagicMock(return_value={})
-    with pytest.raises(FabprintError, match="No printers configured"):
+    with pytest.raises(EstampoError, match="No printers configured"):
         _resolve_status_printers(None, None, list_fn, MagicMock())
 
 
 # --- _query_printer_status ---
 
 
-@patch("fabprint.cli.cloud_status", create=True)
+@patch("estampo.cli.cloud_status", create=True)
 def test_query_printer_status_bambu_cloud(mock_cs):
     """bambu-cloud dispatches to cloud_status with token."""
     with (
-        patch("fabprint.cloud.cloud_status", return_value={"gcode_state": "IDLE"}) as m_cs,
-        patch("fabprint.credentials.cloud_token_json") as m_tok,
+        patch("estampo.cloud.cloud_status", return_value={"gcode_state": "IDLE"}) as m_cs,
+        patch("estampo.credentials.cloud_token_json") as m_tok,
     ):
         # Set up the context manager mock
         m_tok.return_value.__enter__ = MagicMock(return_value=Path("/tmp/token.json"))
@@ -498,7 +507,7 @@ def test_query_printer_status_bambu_cloud_no_serial():
         _query_printer_status("test", {"type": "bambu-cloud"})
 
 
-@patch("fabprint.printer.get_lan_status", return_value={"gcode_state": "RUNNING"})
+@patch("estampo.printer.get_lan_status", return_value={"gcode_state": "RUNNING"})
 def test_query_printer_status_bambu_lan(mock_lan):
     creds = {"type": "bambu-lan", "ip": "10.0.0.1", "access_code": "abc", "serial": "SN1"}
     result = _query_printer_status("test", creds)
@@ -511,14 +520,14 @@ def test_query_printer_status_bambu_lan_missing_fields():
         _query_printer_status("test", {"type": "bambu-lan", "ip": "10.0.0.1"})
 
 
-@patch("fabprint.printer.get_moonraker_status", return_value={"gcode_state": "IDLE"})
+@patch("estampo.printer.get_moonraker_status", return_value={"gcode_state": "IDLE"})
 def test_query_printer_status_moonraker(mock_mr):
     result = _query_printer_status("test", {"type": "moonraker", "url": "http://k1:7125"})
     assert result == {"gcode_state": "IDLE"}
     mock_mr.assert_called_once_with("http://k1:7125", None)
 
 
-@patch("fabprint.printer.get_moonraker_status", return_value={"gcode_state": "IDLE"})
+@patch("estampo.printer.get_moonraker_status", return_value={"gcode_state": "IDLE"})
 def test_query_printer_status_moonraker_with_key(mock_mr):
     creds = {"type": "moonraker", "url": "http://k1:7125", "api_key": "secret"}
     _query_printer_status("test", creds)
@@ -538,7 +547,7 @@ def test_query_printer_status_unknown_type():
 # --- _render_printer ---
 
 
-@patch("fabprint.cloud.parse_ams_trays", return_value=[])
+@patch("estampo.cloud.parse_ams_trays", return_value=[])
 def test_render_printer_idle(mock_ams):
     status = {"gcode_state": "IDLE", "nozzle_temper": 25.0, "bed_temper": 22.0}
     lines = _render_printer(status, "p1", "SN1")
@@ -550,7 +559,7 @@ def test_render_printer_idle(mock_ams):
     assert "Progress" not in text
 
 
-@patch("fabprint.cloud.parse_ams_trays", return_value=[])
+@patch("estampo.cloud.parse_ams_trays", return_value=[])
 def test_render_printer_printing_with_progress(mock_ams):
     status = {
         "gcode_state": "RUNNING",
@@ -579,7 +588,7 @@ def test_render_printer_printing_with_progress(mock_ams):
     assert "ETA" in text
 
 
-@patch("fabprint.cloud.parse_ams_trays", return_value=[])
+@patch("estampo.cloud.parse_ams_trays", return_value=[])
 def test_render_printer_no_target_temps(mock_ams):
     """When target temps are 0, no arrow should appear."""
     status = {
@@ -594,7 +603,7 @@ def test_render_printer_no_target_temps(mock_ams):
     assert "\u2192" not in text
 
 
-@patch("fabprint.cloud.parse_ams_trays")
+@patch("estampo.cloud.parse_ams_trays")
 def test_render_printer_with_ams(mock_ams):
     mock_ams.return_value = [
         {"phys_slot": 0, "type": "PLA", "color": "FF0000"},
@@ -618,7 +627,7 @@ def test_render_printer_with_ams(mock_ams):
     assert "<-- printing" in text
 
 
-@patch("fabprint.cloud.parse_ams_trays", return_value=[])
+@patch("estampo.cloud.parse_ams_trays", return_value=[])
 def test_render_printer_stage_lookup(mock_ams):
     """Non-printing stage should show human-readable label."""
     status = {
@@ -638,13 +647,13 @@ def test_render_printer_stage_lookup(mock_ams):
 # --- validate command ---
 
 
-@patch("fabprint.init.validate_config")
-@patch("fabprint.cli.load_config")
+@patch("estampo.init.validate_config")
+@patch("estampo.cli.load_config")
 def test_validate_no_warnings(mock_load, mock_validate, tmp_path, capsys):
     """validate with no warnings should print 'All checks passed'."""
-    from fabprint.init import ValidationResult
+    from estampo.init import ValidationResult
 
-    config = tmp_path / "fabprint.toml"
+    config = tmp_path / "estampo.toml"
     config.write_text("[slicer]\n")
     mock_validate.return_value = ValidationResult(
         passes=["Slicer version pinned: 2.3.1"],
@@ -655,13 +664,13 @@ def test_validate_no_warnings(mock_load, mock_validate, tmp_path, capsys):
     assert "All checks passed" in out
 
 
-@patch("fabprint.init.validate_config")
-@patch("fabprint.cli.load_config")
+@patch("estampo.init.validate_config")
+@patch("estampo.cli.load_config")
 def test_validate_with_warnings(mock_load, mock_validate, tmp_path, capsys):
     """validate with warnings should show warning count."""
-    from fabprint.init import ValidationResult
+    from estampo.init import ValidationResult
 
-    config = tmp_path / "fabprint.toml"
+    config = tmp_path / "estampo.toml"
     config.write_text("[slicer]\n")
     mock_validate.return_value = ValidationResult(
         passes=["OK thing"],
@@ -676,9 +685,9 @@ def test_validate_with_warnings(mock_load, mock_validate, tmp_path, capsys):
 # --- main() error handling ---
 
 
-def test_main_fabprint_error(capsys):
-    """FabprintError should print clean error and exit 1."""
-    with patch("fabprint.cli.app", side_effect=FabprintError("boom")):
+def test_main_estampo_error(capsys):
+    """EstampoError should print clean error and exit 1."""
+    with patch("estampo.cli.app", side_effect=EstampoError("boom")):
         with pytest.raises(SystemExit) as exc_info:
             main(["run"])
         assert exc_info.value.code == 1
@@ -687,7 +696,7 @@ def test_main_fabprint_error(capsys):
 
 def test_main_value_error(capsys):
     """ValueError should print clean error and exit 1."""
-    with patch("fabprint.cli.app", side_effect=ValueError("bad value")):
+    with patch("estampo.cli.app", side_effect=ValueError("bad value")):
         with pytest.raises(SystemExit) as exc_info:
             main(["run"])
         assert exc_info.value.code == 1
@@ -696,7 +705,7 @@ def test_main_value_error(capsys):
 
 def test_main_file_not_found_error(capsys):
     """FileNotFoundError should print clean error and exit 1."""
-    with patch("fabprint.cli.app", side_effect=FileNotFoundError("no such file")):
+    with patch("estampo.cli.app", side_effect=FileNotFoundError("no such file")):
         with pytest.raises(SystemExit) as exc_info:
             main(["run"])
         assert exc_info.value.code == 1
@@ -705,7 +714,7 @@ def test_main_file_not_found_error(capsys):
 
 def test_main_system_exit_with_code():
     """SystemExit with non-zero code should propagate."""
-    with patch("fabprint.cli.app", side_effect=SystemExit(42)):
+    with patch("estampo.cli.app", side_effect=SystemExit(42)):
         with pytest.raises(SystemExit) as exc_info:
             main(["run"])
         assert exc_info.value.code == 42
@@ -713,13 +722,13 @@ def test_main_system_exit_with_code():
 
 def test_main_system_exit_zero():
     """SystemExit(0) should not re-raise."""
-    with patch("fabprint.cli.app", side_effect=SystemExit(0)):
+    with patch("estampo.cli.app", side_effect=SystemExit(0)):
         main(["run"])  # should not raise
 
 
 def test_main_keyboard_interrupt():
     """KeyboardInterrupt should exit 130."""
-    with patch("fabprint.cli.app", side_effect=KeyboardInterrupt()):
+    with patch("estampo.cli.app", side_effect=KeyboardInterrupt()):
         with pytest.raises(SystemExit) as exc_info:
             main(["run"])
         assert exc_info.value.code == 130
@@ -728,7 +737,7 @@ def test_main_keyboard_interrupt():
 # --- profiles list ---
 
 
-@patch("fabprint.profiles.discover_profiles")
+@patch("estampo.profiles.discover_profiles")
 def test_profiles_list_command(mock_discover, capsys):
     """profiles list should show category and profile names."""
     mock_discover.return_value = {
@@ -758,11 +767,11 @@ def _mock_pin_cfg(tmp_path, profiles_dir="profiles"):
     return mock_cfg
 
 
-@patch("fabprint.profiles.pin_profiles", return_value=[Path("/a/b.json"), Path("/c/d.json")])
-@patch("fabprint.cli.load_config")
+@patch("estampo.profiles.pin_profiles", return_value=[Path("/a/b.json"), Path("/c/d.json")])
+@patch("estampo.cli.load_config")
 def test_profiles_pin_command(mock_load, mock_pin, tmp_path, capsys):
     """profiles pin should call pin_profiles and report count."""
-    config = tmp_path / "fabprint.toml"
+    config = tmp_path / "estampo.toml"
     config.write_text("[slicer]\n")
     mock_load.return_value = _mock_pin_cfg(tmp_path)
 
@@ -772,11 +781,11 @@ def test_profiles_pin_command(mock_load, mock_pin, tmp_path, capsys):
     mock_pin.assert_called_once()
 
 
-@patch("fabprint.profiles.pin_profiles", return_value=[Path("/a/b.json")])
-@patch("fabprint.cli.load_config")
+@patch("estampo.profiles.pin_profiles", return_value=[Path("/a/b.json")])
+@patch("estampo.cli.load_config")
 def test_profiles_pin_existing_dir_overwrite(mock_load, mock_pin, tmp_path, capsys):
     """profiles pin should allow overwriting an existing profiles directory."""
-    config = tmp_path / "fabprint.toml"
+    config = tmp_path / "estampo.toml"
     config.write_text("[slicer]\n")
     # Create existing profiles dir with content
     (tmp_path / "profiles" / "machine").mkdir(parents=True)
@@ -789,11 +798,11 @@ def test_profiles_pin_existing_dir_overwrite(mock_load, mock_pin, tmp_path, caps
     assert "Pinned 1 profile(s)" in out
 
 
-@patch("fabprint.profiles.pin_profiles", return_value=[Path("/a/b.json")])
-@patch("fabprint.cli.load_config")
+@patch("estampo.profiles.pin_profiles", return_value=[Path("/a/b.json")])
+@patch("estampo.cli.load_config")
 def test_profiles_pin_existing_dir_cancel(mock_load, mock_pin, tmp_path, capsys):
     """profiles pin should allow cancelling when dir exists."""
-    config = tmp_path / "fabprint.toml"
+    config = tmp_path / "estampo.toml"
     config.write_text("[slicer]\n")
     (tmp_path / "profiles" / "machine").mkdir(parents=True)
     (tmp_path / "profiles" / "machine" / "old.json").write_text("{}")
@@ -805,11 +814,11 @@ def test_profiles_pin_existing_dir_cancel(mock_load, mock_pin, tmp_path, capsys)
     mock_pin.assert_not_called()
 
 
-@patch("fabprint.profiles.pin_profiles", return_value=[Path("/a/b.json")])
-@patch("fabprint.cli.load_config")
+@patch("estampo.profiles.pin_profiles", return_value=[Path("/a/b.json")])
+@patch("estampo.cli.load_config")
 def test_profiles_pin_existing_dir_different(mock_load, mock_pin, tmp_path, capsys):
     """profiles pin should allow choosing a different directory."""
-    config = tmp_path / "fabprint.toml"
+    config = tmp_path / "estampo.toml"
     config.write_text('[slicer]\nengine = "orca"\n')
     (tmp_path / "profiles" / "machine").mkdir(parents=True)
     (tmp_path / "profiles" / "machine" / "old.json").write_text("{}")
@@ -824,11 +833,11 @@ def test_profiles_pin_existing_dir_different(mock_load, mock_pin, tmp_path, caps
     assert 'profiles_dir = "my-profiles"' in updated
 
 
-@patch("fabprint.profiles.pin_profiles", return_value=[Path("/a/b.json")])
-@patch("fabprint.cli.load_config")
+@patch("estampo.profiles.pin_profiles", return_value=[Path("/a/b.json")])
+@patch("estampo.cli.load_config")
 def test_profiles_pin_updates_toml_when_nondefault(mock_load, mock_pin, tmp_path, capsys):
     """profiles pin should add profiles_dir to TOML when using non-default dir."""
-    config = tmp_path / "fabprint.toml"
+    config = tmp_path / "estampo.toml"
     config.write_text('[slicer]\nengine = "orca"\n')
     mock_load.return_value = _mock_pin_cfg(tmp_path, profiles_dir="custom")
 
@@ -837,11 +846,11 @@ def test_profiles_pin_updates_toml_when_nondefault(mock_load, mock_pin, tmp_path
     assert 'profiles_dir = "custom"' in updated
 
 
-@patch("fabprint.profiles.pin_profiles", return_value=[Path("/a/b.json")])
-@patch("fabprint.cli.load_config")
+@patch("estampo.profiles.pin_profiles", return_value=[Path("/a/b.json")])
+@patch("estampo.cli.load_config")
 def test_profiles_pin_default_dir_no_toml_change(mock_load, mock_pin, tmp_path, capsys):
     """profiles pin should not modify TOML when using default profiles dir."""
-    config = tmp_path / "fabprint.toml"
+    config = tmp_path / "estampo.toml"
     original = '[slicer]\nengine = "orca"\n'
     config.write_text(original)
     mock_load.return_value = _mock_pin_cfg(tmp_path)
@@ -852,11 +861,11 @@ def test_profiles_pin_default_dir_no_toml_change(mock_load, mock_pin, tmp_path, 
     assert "no config change needed" in out
 
 
-@patch("fabprint.profiles.pin_profiles", return_value=[Path("/a/b.json")])
-@patch("fabprint.cli.load_config")
+@patch("estampo.profiles.pin_profiles", return_value=[Path("/a/b.json")])
+@patch("estampo.cli.load_config")
 def test_profiles_pin_asks_before_changing_existing_dir(mock_load, mock_pin, tmp_path, capsys):
     """profiles pin should ask before changing an existing profiles_dir value."""
-    config = tmp_path / "fabprint.toml"
+    config = tmp_path / "estampo.toml"
     config.write_text('[slicer]\nengine = "orca"\nprofiles_dir = "old-profiles"\n')
     mock_load.return_value = _mock_pin_cfg(tmp_path, profiles_dir="new-profiles")
 
@@ -866,11 +875,11 @@ def test_profiles_pin_asks_before_changing_existing_dir(mock_load, mock_pin, tmp
     assert 'profiles_dir = "new-profiles"' in updated
 
 
-@patch("fabprint.profiles.pin_profiles", return_value=[Path("/a/b.json")])
-@patch("fabprint.cli.load_config")
+@patch("estampo.profiles.pin_profiles", return_value=[Path("/a/b.json")])
+@patch("estampo.cli.load_config")
 def test_profiles_pin_empty_dir_name_cancels(mock_load, mock_pin, tmp_path, capsys):
     """profiles pin should cancel when user enters empty directory name."""
-    config = tmp_path / "fabprint.toml"
+    config = tmp_path / "estampo.toml"
     config.write_text("[slicer]\n")
     (tmp_path / "profiles" / "machine").mkdir(parents=True)
     (tmp_path / "profiles" / "machine" / "old.json").write_text("{}")
@@ -883,11 +892,11 @@ def test_profiles_pin_empty_dir_name_cancels(mock_load, mock_pin, tmp_path, caps
     mock_pin.assert_not_called()
 
 
-@patch("fabprint.profiles.pin_profiles", return_value=[Path("/a/b.json")])
-@patch("fabprint.cli.load_config")
+@patch("estampo.profiles.pin_profiles", return_value=[Path("/a/b.json")])
+@patch("estampo.cli.load_config")
 def test_profiles_pin_toml_already_correct(mock_load, mock_pin, tmp_path, capsys):
     """profiles pin should skip TOML update when profiles_dir already matches."""
-    config = tmp_path / "fabprint.toml"
+    config = tmp_path / "estampo.toml"
     original = '[slicer]\nengine = "orca"\nprofiles_dir = "custom"\n'
     config.write_text(original)
     mock_load.return_value = _mock_pin_cfg(tmp_path, profiles_dir="custom")
@@ -900,7 +909,7 @@ def test_profiles_pin_toml_already_correct(mock_load, mock_pin, tmp_path, capsys
 # --- profiles add ---
 
 
-@patch("fabprint.profiles.add_profile", return_value=Path("/profiles/machine/test.json"))
+@patch("estampo.profiles.add_profile", return_value=Path("/profiles/machine/test.json"))
 def test_profiles_add_command(mock_add, capsys):
     """profiles add should call add_profile and report the path."""
     main(["profiles", "add", "/tmp/test.json"])
@@ -916,7 +925,7 @@ def test_init_template(capsys):
     """init --template should dump template to stdout."""
     main(["init", "--template"])
     out = capsys.readouterr().out
-    assert "fabprint.toml" in out
+    assert "estampo.toml" in out
     assert "[[parts]]" in out
 
 

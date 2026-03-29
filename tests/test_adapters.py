@@ -7,7 +7,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
-from fabprint.adapters import ProgressAdapter, TimingAdapter
+from estampo.adapters import ProgressAdapter, TimingAdapter
 
 # Common kwargs template for hook calls
 _BASE_KWARGS = {
@@ -39,7 +39,7 @@ class TestTimingAdapter:
     def test_after_success_logs_info(self, caplog):
         adapter = TimingAdapter()
         adapter.run_before_node_execution(node_name="foo", **_kw())
-        with caplog.at_level(logging.INFO, logger="fabprint.adapters"):
+        with caplog.at_level(logging.INFO, logger="estampo.adapters"):
             adapter.run_after_node_execution(
                 node_name="foo", result=None, error=None, success=True, **_kw()
             )
@@ -50,7 +50,7 @@ class TestTimingAdapter:
         adapter = TimingAdapter()
         adapter.run_before_node_execution(node_name="bar", **_kw())
         err = RuntimeError("boom")
-        with caplog.at_level(logging.WARNING, logger="fabprint.adapters"):
+        with caplog.at_level(logging.WARNING, logger="estampo.adapters"):
             adapter.run_after_node_execution(
                 node_name="bar", result=None, error=err, success=False, **_kw()
             )
@@ -60,7 +60,7 @@ class TestTimingAdapter:
     def test_after_missing_start_does_not_crash(self, caplog):
         """If run_after is called without a prior run_before, it should not error."""
         adapter = TimingAdapter()
-        with caplog.at_level(logging.INFO, logger="fabprint.adapters"):
+        with caplog.at_level(logging.INFO, logger="estampo.adapters"):
             adapter.run_after_node_execution(
                 node_name="unknown", result=42, error=None, success=True, **_kw()
             )
@@ -126,7 +126,7 @@ class TestProgressAdapterSpinner:
     def test_start_spinner_creates_status(self):
         adapter = ProgressAdapter()
         adapter._console = MagicMock()
-        with patch("fabprint.adapters.ProgressAdapter._start_spinner"):
+        with patch("estampo.adapters.ProgressAdapter._start_spinner"):
             # Test the real method via a direct call
             pass
 

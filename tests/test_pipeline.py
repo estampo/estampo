@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 import trimesh
 
-from fabprint.config import load_config
-from fabprint.pipeline import LoadedParts, ResolvedFilaments, format_summary, load_parts
+from estampo.config import load_config
+from estampo.pipeline import LoadedParts, ResolvedFilaments, format_summary, load_parts
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -16,7 +16,7 @@ def _posix(p: Path) -> str:
 
 
 def _write_config(tmp_path: Path) -> Path:
-    toml = tmp_path / "fabprint.toml"
+    toml = tmp_path / "estampo.toml"
     toml.write_text(f"""
 [plate]
 size = [256, 256]
@@ -83,7 +83,7 @@ def test_dag_builds():
     """Hamilton driver should build without errors."""
     from hamilton import driver
 
-    from fabprint import pipeline
+    from estampo import pipeline
 
     dr = driver.Builder().with_modules(pipeline).build()
     variables = dr.list_available_variables()
@@ -102,7 +102,7 @@ def test_dag_plate_execution(tmp_path):
     """Execute the DAG up to plate_3mf_path."""
     from hamilton import driver
 
-    from fabprint import pipeline
+    from estampo import pipeline
 
     dr = driver.Builder().with_modules(pipeline).build()
     config_path = _write_config(tmp_path)
@@ -128,7 +128,7 @@ def test_dag_with_timing_adapter(tmp_path):
     """TimingAdapter should not break execution."""
     from hamilton import driver
 
-    from fabprint import adapters, pipeline
+    from estampo import adapters, pipeline
 
     dr = driver.Builder().with_modules(pipeline).with_adapters(adapters.TimingAdapter()).build()
     config_path = _write_config(tmp_path)
@@ -147,7 +147,7 @@ def test_dag_with_timing_adapter(tmp_path):
 
 def test_cli_run_until_plate(tmp_path):
     """CLI run --until plate should work with the Hamilton pipeline."""
-    from fabprint.cli import main
+    from estampo.cli import main
 
     config_path = _write_config(tmp_path)
     output_dir = tmp_path / "output"
@@ -158,7 +158,7 @@ def test_cli_run_until_plate(tmp_path):
 
 def test_resolve_outputs_full():
     """resolve_outputs with no flags returns all stage outputs."""
-    from fabprint.pipeline import resolve_outputs
+    from estampo.pipeline import resolve_outputs
 
     stages = ["load", "arrange", "plate", "slice", "print"]
     outputs = resolve_outputs(stages)
@@ -170,7 +170,7 @@ def test_resolve_outputs_full():
 
 def test_resolve_outputs_until():
     """resolve_outputs with until stops at the right stage."""
-    from fabprint.pipeline import resolve_outputs
+    from estampo.pipeline import resolve_outputs
 
     stages = ["load", "arrange", "plate", "slice", "print"]
     outputs = resolve_outputs(stages, until="plate")
@@ -181,7 +181,7 @@ def test_resolve_outputs_until():
 
 def test_resolve_outputs_only():
     """resolve_outputs with only returns just that stage's outputs."""
-    from fabprint.pipeline import resolve_outputs
+    from estampo.pipeline import resolve_outputs
 
     stages = ["load", "arrange", "plate", "slice", "print"]
     outputs = resolve_outputs(stages, only="slice")
@@ -190,7 +190,7 @@ def test_resolve_outputs_only():
 
 def test_resolve_outputs_unknown_stage():
     """resolve_outputs with unknown only stage raises."""
-    from fabprint.pipeline import resolve_outputs
+    from estampo.pipeline import resolve_outputs
 
     with pytest.raises(ValueError, match="Unknown stage"):
         resolve_outputs(["load"], only="foobar")
@@ -198,7 +198,7 @@ def test_resolve_outputs_unknown_stage():
 
 def test_resolve_outputs_until_not_in_stages():
     """resolve_outputs with until stage not in pipeline raises."""
-    from fabprint.pipeline import resolve_outputs
+    from estampo.pipeline import resolve_outputs
 
     with pytest.raises(ValueError, match="not in pipeline stages"):
         resolve_outputs(["load", "arrange"], until="print")
@@ -206,7 +206,7 @@ def test_resolve_outputs_until_not_in_stages():
 
 def test_resolve_outputs_only_gcode_info():
     """resolve_outputs --only gcode-info returns gcode_stats."""
-    from fabprint.pipeline import resolve_outputs
+    from estampo.pipeline import resolve_outputs
 
     stages = ["load", "arrange", "plate", "slice", "gcode-info"]
     outputs = resolve_outputs(stages, only="gcode-info")
@@ -218,7 +218,7 @@ def test_resolve_outputs_only_gcode_info():
 
 def test_resolve_overrides_no_requirements():
     """Stages with no prerequisites return empty overrides."""
-    from fabprint.pipeline import resolve_overrides
+    from estampo.pipeline import resolve_overrides
 
     overrides = resolve_overrides("plate", Path("/tmp/unused"))
     assert overrides == {}
@@ -226,7 +226,7 @@ def test_resolve_overrides_no_requirements():
 
 def test_resolve_overrides_slice_finds_plate(tmp_path):
     """--only slice resolves plate_3mf_path from disk."""
-    from fabprint.pipeline import resolve_overrides
+    from estampo.pipeline import resolve_overrides
 
     plate = tmp_path / "plate.3mf"
     plate.write_bytes(b"fake 3mf")
@@ -236,7 +236,7 @@ def test_resolve_overrides_slice_finds_plate(tmp_path):
 
 def test_resolve_overrides_slice_missing_plate(tmp_path):
     """--only slice raises when plate.3mf doesn't exist."""
-    from fabprint.pipeline import resolve_overrides
+    from estampo.pipeline import resolve_overrides
 
     with pytest.raises(FileNotFoundError, match="plate 3MF file"):
         resolve_overrides("slice", tmp_path)
@@ -244,7 +244,7 @@ def test_resolve_overrides_slice_missing_plate(tmp_path):
 
 def test_resolve_overrides_gcode_info_finds_dir(tmp_path):
     """--only gcode-info resolves sliced_output_dir from disk."""
-    from fabprint.pipeline import resolve_overrides
+    from estampo.pipeline import resolve_overrides
 
     overrides = resolve_overrides("gcode-info", tmp_path)
     assert overrides["sliced_output_dir"] == tmp_path
@@ -252,7 +252,7 @@ def test_resolve_overrides_gcode_info_finds_dir(tmp_path):
 
 def test_resolve_overrides_print_finds_gcode(tmp_path):
     """--only print resolves gcode_path from disk."""
-    from fabprint.pipeline import resolve_overrides
+    from estampo.pipeline import resolve_overrides
 
     gcode = tmp_path / "plate.gcode"
     gcode.write_text("G28\n")
@@ -262,7 +262,7 @@ def test_resolve_overrides_print_finds_gcode(tmp_path):
 
 def test_resolve_overrides_print_missing_gcode(tmp_path):
     """--only print raises when no gcode files exist."""
-    from fabprint.pipeline import resolve_overrides
+    from estampo.pipeline import resolve_overrides
 
     with pytest.raises(FileNotFoundError, match="sliced gcode file"):
         resolve_overrides("print", tmp_path)
@@ -273,7 +273,7 @@ def test_resolve_overrides_print_missing_gcode(tmp_path):
 
 def test_gcode_path_finds_file(tmp_path):
     """gcode_path returns the gcode file from the output dir."""
-    from fabprint.pipeline import gcode_path
+    from estampo.pipeline import gcode_path
 
     gcode = tmp_path / "model.gcode"
     gcode.write_text("G28\n")
@@ -282,7 +282,7 @@ def test_gcode_path_finds_file(tmp_path):
 
 def test_gcode_path_no_files(tmp_path):
     """gcode_path raises when no gcode files exist."""
-    from fabprint.pipeline import gcode_path
+    from estampo.pipeline import gcode_path
 
     with pytest.raises(RuntimeError, match="No gcode files"):
         gcode_path(tmp_path)
@@ -293,7 +293,7 @@ def test_gcode_path_no_files(tmp_path):
 
 def test_resolved_filaments_with_override(tmp_path):
     """Filament type override should produce single-filament config."""
-    from fabprint.pipeline import resolved_filaments
+    from estampo.pipeline import resolved_filaments
 
     cfg = load_config(_write_config(tmp_path))
     parts = load_parts(cfg)
@@ -306,7 +306,7 @@ def test_resolved_filaments_with_override(tmp_path):
 
 def test_resolved_filaments_from_config(tmp_path):
     """Without override, filaments come from config."""
-    from fabprint.pipeline import resolved_filaments
+    from estampo.pipeline import resolved_filaments
 
     cfg = load_config(_write_config(tmp_path))
     parts = load_parts(cfg)
@@ -330,19 +330,19 @@ class TestResolveOutputsAllPaths:
     """Test resolve_outputs for only, until, and default/None paths."""
 
     def test_only_returns_single_stage_outputs(self):
-        from fabprint.pipeline import resolve_outputs
+        from estampo.pipeline import resolve_outputs
 
         outputs = resolve_outputs(["load", "arrange", "plate"], only="load")
         assert outputs == ["loaded_parts", "part_summary"]
 
     def test_only_print_returns_print_result(self):
-        from fabprint.pipeline import resolve_outputs
+        from estampo.pipeline import resolve_outputs
 
         outputs = resolve_outputs(["load"], only="print")
         assert outputs == ["print_result"]
 
     def test_until_load(self):
-        from fabprint.pipeline import resolve_outputs
+        from estampo.pipeline import resolve_outputs
 
         stages = ["load", "arrange", "plate", "slice", "print"]
         outputs = resolve_outputs(stages, until="load")
@@ -351,7 +351,7 @@ class TestResolveOutputsAllPaths:
         assert "placements" not in outputs
 
     def test_default_none_returns_all(self):
-        from fabprint.pipeline import resolve_outputs
+        from estampo.pipeline import resolve_outputs
 
         stages = ["load", "arrange", "plate"]
         outputs = resolve_outputs(stages, until=None, only=None)
@@ -366,7 +366,7 @@ class TestResolveOverridesArtifacts:
 
     def test_slice_excludes_preview_plate(self, tmp_path):
         """Preview plate files should be excluded when resolving slice."""
-        from fabprint.pipeline import resolve_overrides
+        from estampo.pipeline import resolve_overrides
 
         (tmp_path / "plate_preview.3mf").write_bytes(b"preview")
         (tmp_path / "plate.3mf").write_bytes(b"real")
@@ -375,7 +375,7 @@ class TestResolveOverridesArtifacts:
 
     def test_gcode_info_missing_dir(self, tmp_path):
         """--only gcode-info raises when output dir doesn't exist."""
-        from fabprint.pipeline import resolve_overrides
+        from estampo.pipeline import resolve_overrides
 
         missing = tmp_path / "nonexistent_dir"
         with pytest.raises(FileNotFoundError, match="slicer output directory"):
@@ -383,14 +383,14 @@ class TestResolveOverridesArtifacts:
 
     def test_gcode_info_existing_dir(self, tmp_path):
         """--only gcode-info resolves existing dir."""
-        from fabprint.pipeline import resolve_overrides
+        from estampo.pipeline import resolve_overrides
 
         overrides = resolve_overrides("gcode-info", tmp_path)
         assert overrides["sliced_output_dir"] == tmp_path
 
     def test_print_finds_first_gcode(self, tmp_path):
         """--only print picks a gcode file from the directory."""
-        from fabprint.pipeline import resolve_overrides
+        from estampo.pipeline import resolve_overrides
 
         (tmp_path / "a.gcode").write_text("G28\n")
         (tmp_path / "b.gcode").write_text("G28\n")
@@ -399,7 +399,7 @@ class TestResolveOverridesArtifacts:
 
     def test_unknown_stage_returns_empty(self):
         """Stages with no requirements return empty overrides."""
-        from fabprint.pipeline import resolve_overrides
+        from estampo.pipeline import resolve_overrides
 
         overrides = resolve_overrides("load", Path("/tmp/unused"))
         assert overrides == {}
@@ -440,7 +440,7 @@ class TestLoadPartsFileGroups:
         with zipfile.ZipFile(path_3mf, "w", zipfile.ZIP_DEFLATED) as zf:
             zf.writestr("3D/3dmodel.model", xml_str)
 
-        toml = tmp_path / "fabprint.toml"
+        toml = tmp_path / "estampo.toml"
         toml.write_text(f"""
 [plate]
 size = [256, 256]
@@ -489,7 +489,7 @@ filaments = {{ body = 1, inlay = 2 }}
             for name, data in other_files.items():
                 zf.writestr(name, data)
 
-        toml = tmp_path / "fabprint.toml"
+        toml = tmp_path / "estampo.toml"
         toml.write_text(f"""
 [plate]
 size = [256, 256]
@@ -537,7 +537,7 @@ orient = "flat"
         with zipfile.ZipFile(path_3mf, "w", zipfile.ZIP_DEFLATED) as zf:
             zf.writestr("3D/3dmodel.model", xml_str)
 
-        toml = tmp_path / "fabprint.toml"
+        toml = tmp_path / "estampo.toml"
         toml.write_text(f"""
 [plate]
 size = [256, 256]
@@ -590,7 +590,7 @@ filament = 2
         with zipfile.ZipFile(path_3mf, "w", zipfile.ZIP_DEFLATED) as zf:
             zf.writestr("3D/3dmodel.model", xml_str)
 
-        toml = tmp_path / "fabprint.toml"
+        toml = tmp_path / "estampo.toml"
         toml.write_text(f"""
 [plate]
 size = [256, 256]
@@ -638,7 +638,7 @@ filament = 1
         with zipfile.ZipFile(path_3mf, "w", zipfile.ZIP_DEFLATED) as zf:
             zf.writestr("3D/3dmodel.model", xml_str)
 
-        toml = tmp_path / "fabprint.toml"
+        toml = tmp_path / "estampo.toml"
         toml.write_text(f"""
 [plate]
 size = [256, 256]
@@ -711,7 +711,7 @@ class TestResolvedFilamentsPaintColors:
     """Test resolved_filaments with paint colors."""
 
     def test_paint_colors_returns_none_filaments(self, tmp_path):
-        from fabprint.pipeline import resolved_filaments
+        from estampo.pipeline import resolved_filaments
 
         cfg = load_config(_write_config(tmp_path))
         parts = LoadedParts(
@@ -730,9 +730,9 @@ class TestPrintResultNode:
     """Test print_result node error handling."""
 
     def test_no_printer_config_raises(self, tmp_path):
-        from fabprint.pipeline import print_result
+        from estampo.pipeline import print_result
 
-        toml = tmp_path / "fabprint.toml"
+        toml = tmp_path / "estampo.toml"
         stl = tmp_path / "dummy.stl"
         # Create a minimal STL so config loader doesn't fail
         mesh = trimesh.creation.box(extents=[10, 10, 10])

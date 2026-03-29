@@ -1,13 +1,13 @@
 """Cloud printing for Bambu Lab printers via Docker bridge."""
 
-from fabprint.cloud.ams import (
+from estampo.cloud.ams import (
     _build_ams_mapping,
     _build_ams_mapping_from_state,
     _patch_config_3mf_ams_colors,
     _strip_gcode_from_3mf,
     parse_ams_trays,
 )
-from fabprint.cloud.bridge import (
+from estampo.cloud.bridge import (
     PersistentBridge,
     _find_bridge,
     _record_pull,

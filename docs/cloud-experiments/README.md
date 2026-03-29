@@ -1,7 +1,7 @@
 # Cloud Printing Experiments
 
 This directory documents the research and experimental implementations
-explored while building Bambu Lab cloud printing support for fabprint.
+explored while building Bambu Lab cloud printing support for estampo.
 
 ## Background
 
@@ -39,8 +39,8 @@ Wraps Bambu Lab's `libbambu_networking.so` shared library via a C++
 bridge binary. The library handles authentication, MQTT, and crucially
 the RSA signing with its internal key pair.
 
-**Status:** Working. This is the active implementation used by fabprint.
-The bridge runs in Docker (`fabprint/cloud-bridge` image) and
+**Status:** Working. This is the active implementation used by estampo.
+The bridge runs in Docker (`estampo/cloud-bridge` image) and
 communicates via JSON stdin/stdout.
 
 See `scripts/bambu_cloud_bridge.cpp` for the bridge source.
@@ -51,4 +51,4 @@ See `scripts/bambu_cloud_bridge.cpp` for the bridge source.
 - `cloud-print-research.md` — detailed reverse-engineering notes,
   API captures, signing analysis, and Frida/mitmproxy findings
 - `http-cloud-print.py` — complete pure-Python HTTP implementation
-  (extracted from `src/fabprint/cloud/http.py` before removal)
+  (extracted from `src/estampo/cloud/http.py` before removal)

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Extract OrcaSlicer profile names from a fabprint Docker image.
+"""Extract OrcaSlicer profile names from an estampo Docker image.
 
 Runs the image, lists profile JSON files, and writes
-src/fabprint/data/profiles.orca.<version>.json.
+src/estampo/data/profiles.orca.<version>.json.
 
 Usage:
     python scripts/extract_profiles.py 2.3.1
-    python scripts/extract_profiles.py 2.3.1 --image fabprint/fabprint:orca-2.3.1
+    python scripts/extract_profiles.py 2.3.1 --image estampo/estampo:orca-2.3.1
     python scripts/extract_profiles.py 2.3.1 2.2.0   # multiple versions (uses default image names)
 """
 
@@ -18,9 +18,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-PROFILE_ROOT = "/home/fabprint/.config/OrcaSlicer/system/BBL"
+PROFILE_ROOT = "/home/estampo/.config/OrcaSlicer/system/BBL"
 CATEGORIES = ("machine", "process", "filament")
-OUT_DIR = Path(__file__).parent.parent / "src" / "fabprint" / "data"
+OUT_DIR = Path(__file__).parent.parent / "src" / "estampo" / "data"
 
 
 def extract(version: str, image: str) -> dict:
@@ -72,7 +72,7 @@ def main() -> None:
     parser.add_argument("versions", nargs="+", help="OrcaSlicer version(s) to extract")
     parser.add_argument(
         "--image",
-        help="Docker image to use (default: fabprint/fabprint:<version>). "
+        help="Docker image to use (default: estampo/estampo:<version>). "
         "Only valid when a single version is given.",
     )
     args = parser.parse_args()
@@ -83,7 +83,7 @@ def main() -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
     for version in args.versions:
-        image = args.image or f"fabprint/fabprint:{version}"
+        image = args.image or f"estampo/estampo:{version}"
         data = extract(version, image)
         out = OUT_DIR / f"profiles.orca.{version}.json"
         out.write_text(json.dumps(data, indent=2) + "\n")

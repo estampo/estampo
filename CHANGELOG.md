@@ -1,6 +1,20 @@
 # Changelog
 
-All notable changes to fabprint are documented here.
+All notable changes to this project are documented here.
+
+## 0.2.0 — 2026-03-29
+
+**Project renamed from `fabprint` to `estampo`.**
+
+- Rename Python package: `fabprint` → `estampo` (all modules, imports, CLI command)
+- Rename config file: `fabprint.toml` → `estampo.toml` (old name still works with deprecation warning)
+- Rename config directory: `~/.config/fabprint/` → `~/.config/estampo/` (auto-migrated on first run)
+- Rename env vars: `FABPRINT_*` → `ESTAMPO_*`
+- Rename Docker images: `fabprint/*` → `estampo/*`
+- Rename GitHub Action: `pzfreo/fabprint/action` → `estampo/estampo/action`
+- `FabprintError` → `EstampoError` (old name kept as alias)
+- New project URL: https://estampo.dev
+- New repo: https://github.com/estampo/estampo
 
 ## 0.1.141 — 2026-03-24
 

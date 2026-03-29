@@ -10,7 +10,7 @@ from pathlib import Path
 import trimesh
 from defusedxml import ElementTree as ET
 
-from fabprint.constants import NS_3MF
+from estampo.constants import NS_3MF
 
 log = logging.getLogger(__name__)
 

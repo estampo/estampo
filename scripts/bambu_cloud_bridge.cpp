@@ -322,7 +322,7 @@ static bool init_agent(const std::string& token_json_raw, bool quiet = false) {
         hdrs["X-BBL-Client-Version"] = "02.05.01.52";
         hdrs["X-BBL-OS-Type"]        = "linux";
         hdrs["X-BBL-OS-Version"]     = "6.8.0";
-        hdrs["X-BBL-Device-ID"]      = "fabprint-headless-001";
+        hdrs["X-BBL-Device-ID"]      = "estampo-headless-001";
         hdrs["X-BBL-Language"]       = "en";
         fp_set_extra_hdr(g_agent, hdrs);
     }
@@ -1036,7 +1036,7 @@ static void print_usage(const char* prog) {
         "\n"
         "Print options:\n"
         "  --config-3mf <path>  Config-only 3MF file (optional)\n"
-        "  --project <name>     Project name (default: fabprint)\n"
+        "  --project <name>     Project name (default: estampo)\n"
         "  --timeout <seconds>  Wait timeout (default: 180)\n"
         "\n"
         "Global options:\n"
@@ -1177,7 +1177,7 @@ int main(int argc, char* argv[]) {
         std::string device_id = argv[3];
         std::string token_file = argv[4];
         std::string config_3mf = "";
-        std::string project_name = "fabprint";
+        std::string project_name = "estampo";
         std::string ams_mapping_str = "[0,1,2,3]";
         std::string ams_mapping2_str = "";
         std::string ams_mapping_info_str = "";

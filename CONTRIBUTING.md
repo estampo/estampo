@@ -1,4 +1,4 @@
-# Contributing to fabprint
+# Contributing to estampo
 
 Thanks for your interest in contributing! Here's how to get started.
 
@@ -7,8 +7,8 @@ Thanks for your interest in contributing! Here's how to get started.
 See [docs/developing.md](docs/developing.md) for full setup instructions. Quick start:
 
 ```bash
-git clone https://github.com/pzfreo/fabprint.git
-cd fabprint
+git clone https://github.com/estampo/estampo.git
+cd estampo
 uv sync --extra dev
 ```
 
@@ -17,7 +17,7 @@ uv sync --extra dev
 1. **Lint**: `uv run ruff check src tests`
 2. **Format**: `uv run ruff format src tests`
 3. **Test**: `uv run pytest`
-4. **Type check**: `uv run mypy src/fabprint`
+4. **Type check**: `uv run mypy src/estampo`
 
 All four must pass — CI enforces them.
 

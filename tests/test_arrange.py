@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 import trimesh
 
-from fabprint.arrange import arrange
+from estampo.arrange import arrange
 
 FIXTURES = Path(__file__).parent / "fixtures"
 

@@ -7,10 +7,10 @@ import logging
 import zipfile
 from pathlib import Path
 
-from fabprint import FabprintError
-from fabprint.config import PrinterConfig
-from fabprint.credentials import cloud_token_json, load_printer_credentials
-from fabprint.gcode import parse_gcode_metadata
+from estampo import EstampoError
+from estampo.config import PrinterConfig
+from estampo.credentials import cloud_token_json, load_printer_credentials
+from estampo.gcode import parse_gcode_metadata
 
 log = logging.getLogger(__name__)
 
@@ -130,7 +130,7 @@ def _send_lan(
         from bambulabs_api import Printer
     except ImportError:
         raise ImportError(
-            "bambulabs-api is required for LAN printing. Install with: pip install fabprint[lan]"
+            "bambulabs-api is required for LAN printing. Install with: pip install estampo[lan]"
         ) from None
 
     log.debug("Sending %s to printer at %s", gcode_path.name, ip)
@@ -165,7 +165,7 @@ def get_printer_status(serial: str) -> dict:
     Returns a dict with keys like gcode_state, mc_percent, layer_num, etc.
     Raises RuntimeError if the bridge fails.
     """
-    from fabprint.cloud import cloud_status
+    from estampo.cloud import cloud_status
 
     with cloud_token_json() as token_file:
         return cloud_status(serial, token_file)
@@ -180,7 +180,7 @@ def get_lan_status(ip: str, access_code: str, serial: str) -> dict:
         from bambulabs_api import Printer
     except ImportError:
         raise ImportError(
-            "bambulabs-api is required for LAN status. Install with: pip install fabprint[lan]"
+            "bambulabs-api is required for LAN status. Install with: pip install estampo[lan]"
         ) from None
 
     import time
@@ -260,13 +260,13 @@ def _send_cloud_bridge(
     skip_ams_mapping: bool = False,
 ) -> None:
     """Send gcode to printer via the bambu_cloud_bridge binary."""
-    from fabprint.cloud import cloud_print
+    from estampo.cloud import cloud_print
 
     # Check printer availability before sending, and capture AMS state for mapping
     ams_trays = None
     if not dry_run:
         try:
-            from fabprint.cloud import parse_ams_trays
+            from estampo.cloud import parse_ams_trays
 
             status = get_printer_status(serial)
             gcode_state = status.get("gcode_state", "")
@@ -389,9 +389,9 @@ def send_print(
     ptype = creds.get("type")
 
     if not ptype:
-        raise FabprintError(
+        raise EstampoError(
             f"Printer '{config.name}' has no 'type' in credentials.toml. "
-            "Run 'fabprint setup' to configure it."
+            "Run 'estampo setup' to configure it."
         )
 
     if ptype == "bambu-lan":
@@ -400,9 +400,9 @@ def send_print(
         serial = creds.get("serial") or ""
         for field_name, field_val in [("ip", ip), ("access_code", access_code), ("serial", serial)]:
             if not field_val:
-                raise FabprintError(
+                raise EstampoError(
                     f"bambu-lan printer '{config.name}' requires {field_name}. "
-                    "Run 'fabprint setup' to configure it."
+                    "Run 'estampo setup' to configure it."
                 )
         _send_lan(
             gcode_path,
@@ -415,9 +415,9 @@ def send_print(
 
     elif ptype == "bambu-cloud":
         if not creds["serial"]:
-            raise FabprintError(
+            raise EstampoError(
                 f"bambu-cloud printer '{config.name}' requires serial. "
-                "Run 'fabprint setup' to configure it."
+                "Run 'estampo setup' to configure it."
             )
         _send_cloud_bridge(
             gcode_path,
@@ -429,9 +429,9 @@ def send_print(
 
     elif ptype == "moonraker":
         if not creds["url"]:
-            raise FabprintError(
+            raise EstampoError(
                 f"moonraker printer '{config.name}' requires url. "
-                "Run 'fabprint setup' to configure it."
+                "Run 'estampo setup' to configure it."
             )
         _send_moonraker(
             gcode_path,
@@ -442,7 +442,7 @@ def send_print(
         )
 
     else:
-        raise FabprintError(
+        raise EstampoError(
             f"Unknown printer type '{ptype}' for printer '{config.name}'. "
             f"Valid types: bambu-lan, bambu-cloud, moonraker"
         )

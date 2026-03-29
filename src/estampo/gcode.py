@@ -7,7 +7,7 @@ import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from fabprint import require_file
+from estampo import require_file
 
 # Number of lines to scan from the start/end of gcode for metadata
 GCODE_HEADER_LINES = 300

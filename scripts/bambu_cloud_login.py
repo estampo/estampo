@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Login to Bambu Cloud and cache the access token.
 
-DEPRECATED: Use `fabprint login` or `fabprint setup` (bambu-cloud type) instead.
-Credentials are now stored in ~/.config/fabprint/credentials.toml.
+DEPRECATED: Use `estampo login` or `estampo setup` (bambu-cloud type) instead.
+Credentials are now stored in ~/.config/estampo/credentials.toml.
 
-This legacy script is kept for standalone testing without fabprint installed.
+This legacy script is kept for standalone testing without estampo installed.
 It writes to ~/.bambu_cloud_token (old location) for use by test_cloud_print.py.
 
 Handles:

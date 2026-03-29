@@ -6,7 +6,7 @@ stages = ["load", "arrange", "plate", "slice", "print"]
 
 [printer]
 mode = "cloud-bridge"
-name = "workshop"  # references [printers.workshop] in ~/.config/fabprint/credentials.toml
+name = "workshop"  # references [printers.workshop] in ~/.config/estampo/credentials.toml
 
 [plate]
 size = [256, 256]

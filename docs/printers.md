@@ -1,6 +1,6 @@
 # Printer support
 
-fabprint supports three printer connection types. All are configured via `fabprint setup` and stored in `~/.config/fabprint/credentials.toml`.
+estampo supports three printer connection types. All are configured via `estampo setup` and stored in `~/.config/estampo/credentials.toml`.
 
 ## bambu-lan (experimental)
 
@@ -30,7 +30,7 @@ Cloud connection to Bambu Lab printers via the Bambu Connect bridge binary (`bam
 | Status             | Supported (via cloud bridge) |
 | Watch              | Supported |
 
-**Credentials:** `serial` (plus cloud login via `fabprint setup`)
+**Credentials:** `serial` (plus cloud login via `estampo setup`)
 
 **Dependencies:** `bambu_cloud_bridge` binary, cloud auth token
 
@@ -61,9 +61,9 @@ REST API connection to Klipper/Moonraker printers. Works with any printer runnin
 
 ### State mapping
 
-Klipper states are mapped to the normalised fabprint states:
+Klipper states are mapped to the normalised estampo states:
 
-| Klipper state | fabprint state |
+| Klipper state | estampo state |
 |---------------|----------------|
 | standby       | IDLE           |
 | printing      | RUNNING        |
@@ -91,12 +91,12 @@ docker run -d --name virtual-klipper \
 # Check readiness:
 curl -s http://localhost:7125/printer/info | python3 -m json.tool
 
-# Configure fabprint
-fabprint setup  # choose moonraker, url = http://localhost:7125
+# Configure estampo
+estampo setup  # choose moonraker, url = http://localhost:7125
 
 # Test
-fabprint status --printer <name>
-fabprint status --printer <name> --watch
+estampo status --printer <name>
+estampo status --printer <name> --watch
 ```
 
 **Verified operations (2026-03-18):**
@@ -104,8 +104,8 @@ fabprint status --printer <name> --watch
 - `get_moonraker_status()` — state, temperatures, progress, layer info
 - `_send_moonraker()` upload-only — file appears in Moonraker file list
 - `_send_moonraker()` upload + start — print runs to completion
-- `fabprint status` — renders state, task name, temperatures
-- `fabprint status --watch` — live dashboard with polling
+- `estampo status` — renders state, task name, temperatures
+- `estampo status --watch` — live dashboard with polling
 
 **Note:** The simulavr virtual printer executes gcode nearly instantly, so `RUNNING` state is brief. On real hardware, progress and layer tracking will update over time.
 

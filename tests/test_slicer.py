@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from fabprint.slicer import (
+from estampo.slicer import (
     SLICER_PATHS,
     _apply_overrides,
     _docker_image,
@@ -32,16 +32,16 @@ def test_find_unknown():
 
 def test_find_slicer_path_fallback():
     """Falls back to shutil.which when default path doesn't exist."""
-    with patch.dict("fabprint.slicer.SLICER_PATHS", {"orca": Path("/nonexistent/orca")}):
-        with patch("fabprint.slicer.shutil.which", return_value="/usr/local/bin/orca-slicer"):
+    with patch.dict("estampo.slicer.SLICER_PATHS", {"orca": Path("/nonexistent/orca")}):
+        with patch("estampo.slicer.shutil.which", return_value="/usr/local/bin/orca-slicer"):
             result = find_slicer("orca")
             assert result == Path("/usr/local/bin/orca-slicer")
 
 
 def test_find_slicer_not_found():
     """Raises FileNotFoundError when slicer not at default path or on PATH."""
-    with patch.dict("fabprint.slicer.SLICER_PATHS", {"orca": Path("/nonexistent/orca")}):
-        with patch("fabprint.slicer.shutil.which", return_value=None):
+    with patch.dict("estampo.slicer.SLICER_PATHS", {"orca": Path("/nonexistent/orca")}):
+        with patch("estampo.slicer.shutil.which", return_value=None):
             with pytest.raises(FileNotFoundError, match="not found"):
                 find_slicer("orca")
 
@@ -74,12 +74,12 @@ def test_apply_overrides():
 
 
 def test_docker_image_default():
-    assert _docker_image() == "fabprint/fabprint:latest"
+    assert _docker_image() == "estampo/estampo:latest"
 
 
 def test_docker_image_versioned():
-    assert _docker_image("2.3.1") == "fabprint/fabprint:orca-2.3.1"
-    assert _docker_image("2.3.2") == "fabprint/fabprint:orca-2.3.2"
+    assert _docker_image("2.3.1") == "estampo/estampo:orca-2.3.1"
+    assert _docker_image("2.3.2") == "estampo/estampo:orca-2.3.2"
 
 
 # --- _has_docker_image ---
@@ -87,10 +87,10 @@ def test_docker_image_versioned():
 
 def test_has_docker_image_true():
     mock_result = MagicMock(returncode=0)
-    with patch("fabprint.slicer.subprocess.run", return_value=mock_result) as mock_run:
-        assert _has_docker_image("fabprint:orca-2.3.1") is True
+    with patch("estampo.slicer.subprocess.run", return_value=mock_result) as mock_run:
+        assert _has_docker_image("estampo:orca-2.3.1") is True
         mock_run.assert_called_once_with(
-            ["docker", "image", "inspect", "fabprint:orca-2.3.1"],
+            ["docker", "image", "inspect", "estampo:orca-2.3.1"],
             capture_output=True,
             timeout=10,
         )
@@ -98,13 +98,13 @@ def test_has_docker_image_true():
 
 def test_has_docker_image_false_no_image():
     mock_result = MagicMock(returncode=1)
-    with patch("fabprint.slicer.subprocess.run", return_value=mock_result):
-        assert _has_docker_image("fabprint:orca-2.3.1") is False
+    with patch("estampo.slicer.subprocess.run", return_value=mock_result):
+        assert _has_docker_image("estampo:orca-2.3.1") is False
 
 
 def test_has_docker_image_false_no_docker():
-    with patch("fabprint.slicer.subprocess.run", side_effect=FileNotFoundError):
-        assert _has_docker_image("fabprint:orca-2.3.1") is False
+    with patch("estampo.slicer.subprocess.run", side_effect=FileNotFoundError):
+        assert _has_docker_image("estampo:orca-2.3.1") is False
 
 
 # --- _slice_via_docker ---
@@ -125,21 +125,21 @@ def test_slice_via_docker_command(tmp_path):
     filament_arg = None
 
     mock_result = MagicMock(returncode=0, stdout="", stderr="")
-    with patch("fabprint.slicer.subprocess.run", return_value=mock_result) as mock_run:
+    with patch("estampo.slicer.subprocess.run", return_value=mock_result) as mock_run:
         _slice_via_docker(
             input_3mf,
             output_dir,
             profile_dir,
             settings_arg,
             filament_arg,
-            "fabprint:orca-2.3.1",
+            "estampo:orca-2.3.1",
         )
 
     cmd = mock_run.call_args[0][0]
     assert "docker" == cmd[0]
     assert "--platform" in cmd
     assert "linux/amd64" in cmd
-    assert "fabprint:orca-2.3.1" in cmd
+    assert "estampo:orca-2.3.1" in cmd
     assert "--entrypoint" in cmd
     assert "orca-slicer" in cmd
     # Verify profile paths rewritten to container paths under /work/output/
@@ -159,7 +159,7 @@ def test_slice_via_docker_failure(tmp_path):
     profile_dir.mkdir()
 
     mock_result = MagicMock(returncode=1, stdout="", stderr="some error")
-    with patch("fabprint.slicer.subprocess.run", return_value=mock_result):
+    with patch("estampo.slicer.subprocess.run", return_value=mock_result):
         with pytest.raises(RuntimeError, match="Docker slicer failed"):
             _slice_via_docker(
                 input_3mf,
@@ -167,7 +167,7 @@ def test_slice_via_docker_failure(tmp_path):
                 profile_dir,
                 None,
                 None,
-                "fabprint:latest",
+                "estampo:latest",
             )
 
 
@@ -191,9 +191,9 @@ def test_slice_plate_local_command(tmp_path):
     slicer_path = Path("/usr/bin/orca-slicer")
 
     with (
-        patch("fabprint.slicer.find_slicer", return_value=slicer_path),
-        patch("fabprint.slicer.resolve_profile_data", side_effect=_mock_resolve),
-        patch("fabprint.slicer.subprocess.run", return_value=mock_result) as mock_run,
+        patch("estampo.slicer.find_slicer", return_value=slicer_path),
+        patch("estampo.slicer.resolve_profile_data", side_effect=_mock_resolve),
+        patch("estampo.slicer.subprocess.run", return_value=mock_result) as mock_run,
     ):
         slice_plate(
             input_3mf,
@@ -224,10 +224,10 @@ def test_slice_plate_local_fallback(tmp_path):
     slicer_path = Path("/usr/bin/orca-slicer")
 
     with (
-        patch("fabprint.slicer._ensure_docker_image", return_value=False),
-        patch("fabprint.slicer.find_slicer", return_value=slicer_path),
-        patch("fabprint.slicer.resolve_profile_data", side_effect=_mock_resolve),
-        patch("fabprint.slicer.subprocess.run", return_value=mock_result) as mock_run,
+        patch("estampo.slicer._ensure_docker_image", return_value=False),
+        patch("estampo.slicer.find_slicer", return_value=slicer_path),
+        patch("estampo.slicer.resolve_profile_data", side_effect=_mock_resolve),
+        patch("estampo.slicer.subprocess.run", return_value=mock_result) as mock_run,
     ):
         slice_plate(
             input_3mf,
@@ -249,9 +249,9 @@ def test_slice_plate_docker_default(tmp_path):
     mock_result = MagicMock(returncode=0, stdout="", stderr="")
 
     with (
-        patch("fabprint.slicer._ensure_docker_image", return_value=True),
-        patch("fabprint.slicer.resolve_profile_data", side_effect=_mock_resolve),
-        patch("fabprint.slicer.subprocess.run", return_value=mock_result) as mock_run,
+        patch("estampo.slicer._ensure_docker_image", return_value=True),
+        patch("estampo.slicer.resolve_profile_data", side_effect=_mock_resolve),
+        patch("estampo.slicer.subprocess.run", return_value=mock_result) as mock_run,
     ):
         slice_plate(
             input_3mf,
@@ -262,7 +262,7 @@ def test_slice_plate_docker_default(tmp_path):
 
     cmd = mock_run.call_args[0][0]
     assert cmd[0] == "docker"
-    assert "fabprint/fabprint:latest" in cmd
+    assert "estampo/estampo:latest" in cmd
 
 
 def test_slice_plate_docker_version(tmp_path):
@@ -274,9 +274,9 @@ def test_slice_plate_docker_version(tmp_path):
     mock_result = MagicMock(returncode=0, stdout="", stderr="")
 
     with (
-        patch("fabprint.slicer._ensure_docker_image", return_value=True),
-        patch("fabprint.slicer.resolve_profile_data", side_effect=_mock_resolve),
-        patch("fabprint.slicer.subprocess.run", return_value=mock_result) as mock_run,
+        patch("estampo.slicer._ensure_docker_image", return_value=True),
+        patch("estampo.slicer.resolve_profile_data", side_effect=_mock_resolve),
+        patch("estampo.slicer.subprocess.run", return_value=mock_result) as mock_run,
     ):
         slice_plate(
             input_3mf,
@@ -288,7 +288,7 @@ def test_slice_plate_docker_version(tmp_path):
 
     cmd = mock_run.call_args[0][0]
     assert cmd[0] == "docker"
-    assert "fabprint/fabprint:orca-2.3.1" in cmd
+    assert "estampo/estampo:orca-2.3.1" in cmd
 
 
 def test_slice_plate_docker_image_missing(tmp_path):
@@ -297,7 +297,7 @@ def test_slice_plate_docker_image_missing(tmp_path):
     input_3mf.write_text("fake")
 
     with (
-        patch("fabprint.slicer._ensure_docker_image", return_value=False),
+        patch("estampo.slicer._ensure_docker_image", return_value=False),
     ):
         with pytest.raises(FileNotFoundError, match="Docker image.*not found"):
             slice_plate(

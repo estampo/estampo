@@ -14,8 +14,8 @@ import time
 import uuid
 from pathlib import Path
 
-from fabprint import require_file
-from fabprint.cloud.ams import _build_ams_mapping, _strip_gcode_from_3mf
+from estampo import require_file
+from estampo.cloud.ams import _build_ams_mapping, _strip_gcode_from_3mf
 
 log = logging.getLogger(__name__)
 
@@ -139,7 +139,7 @@ def cloud_print_http(
     device_id: str,
     token_file: Path,
     *,
-    project_name: str = "fabprint",
+    project_name: str = "estampo",
     plate_index: int = 1,
     bed_type: str = "textured_plate",
     use_ams: bool = True,
@@ -151,7 +151,7 @@ def cloud_print_http(
     """Start a cloud print job via pure Python HTTP (no C++ bridge needed).
 
     Uses BambuConnect client headers to call Bambu Lab's REST API directly.
-    Requires 'requests': pip install fabprint[cloud]
+    Requires 'requests': pip install estampo[cloud]
 
     Args:
         threemf_path: Path to the sliced .gcode.3mf file
@@ -177,7 +177,7 @@ def cloud_print_http(
         import requests
     except ImportError:
         raise RuntimeError(
-            "Pure Python cloud print requires 'requests'. Install with: pip install fabprint[cloud]"
+            "Pure Python cloud print requires 'requests'. Install with: pip install estampo[cloud]"
         )
 
     require_file(threemf_path, "3MF file")

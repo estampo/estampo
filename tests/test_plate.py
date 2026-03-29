@@ -6,8 +6,8 @@ from pathlib import Path
 
 import trimesh
 
-from fabprint.arrange import arrange
-from fabprint.plate import _encode_paint_color, build_plate, export_plate
+from estampo.arrange import arrange
+from estampo.plate import _encode_paint_color, build_plate, export_plate
 
 NS_3MF = "http://schemas.microsoft.com/3dmanufacturing/core/2015/02"
 
@@ -226,7 +226,7 @@ def test_build_plate_sequence_filter():
     seq1_mesh.metadata["group_objects"] = seq1_objects
     seq1_mesh.metadata["original_bounds_min"] = placements[0].mesh.metadata["original_bounds_min"]
 
-    from fabprint.arrange import Placement
+    from estampo.arrange import Placement
 
     seq1_placement = Placement(mesh=seq1_mesh, name="widget", x=placements[0].x, y=placements[0].y)
     scene1 = build_plate([seq1_placement], plate_size=(256, 256))

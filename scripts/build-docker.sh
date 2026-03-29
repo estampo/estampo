@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build and optionally push fabprint Docker images.
+# Build and optionally push estampo Docker images.
 #
 # Usage:
 #   ./scripts/build-docker.sh orca-base 2.3.1       # build orca-base image
@@ -21,7 +21,7 @@ case "$TARGET" in
     orca-base)
         VERSION="${2:?Usage: $0 orca-base <orca-version> [--push]}"
         PUSH="${3:-}"
-        IMAGE="fabprint/orca-base:${VERSION}"
+        IMAGE="estampo/orca-base:${VERSION}"
 
         echo "Building ${IMAGE} ..."
         docker build \
@@ -31,13 +31,13 @@ case "$TARGET" in
             -t "${IMAGE}" \
             .
 
-        echo "Tagging as fabprint/orca-base:latest ..."
-        docker tag "${IMAGE}" fabprint/orca-base:latest
+        echo "Tagging as estampo/orca-base:latest ..."
+        docker tag "${IMAGE}" estampo/orca-base:latest
         echo "Build complete: ${IMAGE}"
 
         if [ "${PUSH}" = "--push" ]; then
             docker push "${IMAGE}"
-            docker push fabprint/orca-base:latest
+            docker push estampo/orca-base:latest
             echo "Pushed."
         fi
         ;;
@@ -45,7 +45,7 @@ case "$TARGET" in
     slicer)
         VERSION="${2:?Usage: $0 slicer <orca-version> [--push]}"
         PUSH="${3:-}"
-        IMAGE="fabprint/fabprint:orca-${VERSION}"
+        IMAGE="estampo/estampo:orca-${VERSION}"
 
         echo "Building ${IMAGE} ..."
         docker build \
@@ -54,20 +54,20 @@ case "$TARGET" in
             -t "${IMAGE}" \
             .
 
-        echo "Tagging as fabprint/fabprint:latest ..."
-        docker tag "${IMAGE}" fabprint/fabprint:latest
+        echo "Tagging as estampo/estampo:latest ..."
+        docker tag "${IMAGE}" estampo/estampo:latest
         echo "Build complete: ${IMAGE}"
 
         if [ "${PUSH}" = "--push" ]; then
             docker push "${IMAGE}"
-            docker push fabprint/fabprint:latest
+            docker push estampo/estampo:latest
             echo "Pushed."
         fi
         ;;
 
     cloud-bridge)
         PUSH="${2:-}"
-        IMAGE="fabprint/cloud-bridge:latest"
+        IMAGE="estampo/cloud-bridge:latest"
         BNL_TOKEN="${BNL_TOKEN:-$(gh auth token 2>/dev/null || true)}"
 
         echo "Building ${IMAGE} ..."
@@ -90,7 +90,7 @@ case "$TARGET" in
         # Legacy: treat first arg as OrcaSlicer version
         VERSION="$TARGET"
         PUSH="${2:-}"
-        IMAGE="fabprint/fabprint:orca-${VERSION}"
+        IMAGE="estampo/estampo:orca-${VERSION}"
 
         echo "Building ${IMAGE} ..."
         docker build \
@@ -99,13 +99,13 @@ case "$TARGET" in
             -t "${IMAGE}" \
             .
 
-        echo "Tagging as fabprint/fabprint:latest ..."
-        docker tag "${IMAGE}" fabprint/fabprint:latest
+        echo "Tagging as estampo/estampo:latest ..."
+        docker tag "${IMAGE}" estampo/estampo:latest
         echo "Build complete: ${IMAGE}"
 
         if [ "${PUSH}" = "--push" ]; then
             docker push "${IMAGE}"
-            docker push fabprint/fabprint:latest
+            docker push estampo/estampo:latest
             echo "Pushed."
         fi
         ;;

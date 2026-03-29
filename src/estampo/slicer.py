@@ -12,14 +12,14 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-from fabprint import FabprintError, require_file
-from fabprint.gcode import parse_gcode_metadata
-from fabprint.profiles import resolve_profile_data
-from fabprint.thumbnails import generate_plate_thumbnail
+from estampo import EstampoError, require_file
+from estampo.gcode import parse_gcode_metadata
+from estampo.profiles import resolve_profile_data
+from estampo.thumbnails import generate_plate_thumbnail
 
 log = logging.getLogger(__name__)
 
-DOCKERHUB_REPO = "fabprint/fabprint"
+DOCKERHUB_REPO = "estampo/estampo"
 
 
 def _slicer_paths() -> dict[str, Path]:
@@ -177,7 +177,7 @@ def _slice_via_docker(
     filament_arg: str | None,
     image: str,
 ) -> Path:
-    """Run the slicer inside the fabprint Docker container.
+    """Run the slicer inside the estampo Docker container.
 
     Profile files live under output_dir/.profiles/ so they're accessible
     via the same volume mount as the output directory. No separate mount
@@ -265,7 +265,7 @@ def _resolve_profiles(
         )
         # Validate: machine_model profiles define the printer but can't be sliced
         if data.get("type") == "machine_model":
-            raise FabprintError(
+            raise EstampoError(
                 f"slicer.printer '{printer}' is a printer model definition, "
                 f"not a slicer profile. Use the nozzle-specific variant instead, "
                 f"e.g. '{printer} 0.4 nozzle'"
@@ -462,7 +462,7 @@ def slice_plate(
 
     Slicer selection:
       local=True           - force local slicer, fail if not installed
-      docker_version="X"   - force Docker with fabprint:orca-X image
+      docker_version="X"   - force Docker with estampo:orca-X image
       neither (default)    - try Docker first, fall back to local
 
     If required_version is set (from config), the slicer version is checked
@@ -511,7 +511,7 @@ def slice_plate(
             except FileNotFoundError:
                 raise FileNotFoundError(
                     "No slicer available. Install OrcaSlicer locally or "
-                    "pull a Docker image: docker pull fabprint/fabprint:orca-2.3.1"
+                    "pull a Docker image: docker pull estampo/estampo:orca-2.3.1"
                 )
 
     # Detect and verify slicer version
@@ -542,14 +542,14 @@ def slice_plate(
         tmp_dir = output_dir / ".profiles"
         tmp_dir.mkdir(exist_ok=True)
     else:
-        tmp_dir = Path(tempfile.mkdtemp(prefix="fabprint_"))
+        tmp_dir = Path(tempfile.mkdtemp(prefix="estampo_"))
 
     # When slicing via Docker, extract profiles from the Docker image so we
     # use version-matched profiles instead of the local system install (which
     # may be a different OrcaSlicer version with incompatible gcode templates).
     docker_profile_dir = None
     if use_docker and docker_version:
-        from fabprint.profiles import extract_docker_profiles
+        from estampo.profiles import extract_docker_profiles
 
         docker_profile_dir = extract_docker_profiles(version=docker_version)
         log.info("Extracted Docker image profiles to %s", docker_profile_dir)

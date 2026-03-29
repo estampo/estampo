@@ -1,4 +1,4 @@
-"""fabprint init and validate commands."""
+"""estampo init and validate commands."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from fabprint.config import DEFAULT_STAGES
+from estampo.config import DEFAULT_STAGES
 
 log = logging.getLogger(__name__)
 
@@ -16,8 +16,8 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 _TEMPLATE = """\
-# fabprint.toml — reproducible 3D print pipeline config
-# Docs: https://github.com/pzfreo/fabprint/blob/main/docs/config.md
+# estampo.toml — reproducible 3D print pipeline config
+# Docs: https://github.com/estampo/estampo/blob/main/docs/config.md
 
 [pipeline]
 # Stages to run: load, arrange, plate, slice, print
@@ -62,7 +62,7 @@ orient = "flat"                # flat, upright, side, or upside-down
 # Printer connection (optional — requires credentials.toml):
 # [printer]
 # name = "my-printer"           # references [printers.my-printer] in credentials.toml
-#                                # Run 'fabprint setup' to configure printers
+#                                # Run 'estampo setup' to configure printers
 """
 
 
@@ -95,7 +95,7 @@ def _check_profile_type(name: str, engine: str, category: str) -> str | None:
     """
     import json
 
-    from fabprint.profiles import SYSTEM_DIRS
+    from estampo.profiles import SYSTEM_DIRS
 
     base = SYSTEM_DIRS.get(engine)
     if not base:
@@ -111,14 +111,14 @@ def _check_profile_type(name: str, engine: str, category: str) -> str | None:
 
 
 def validate_config(path: Path) -> ValidationResult:
-    """Validate a fabprint.toml and return passes and warnings.
+    """Validate an estampo.toml and return passes and warnings.
 
-    Raises FabprintError for hard errors (via load_config).
+    Raises EstampoError for hard errors (via load_config).
     Returns a ValidationResult with passes and warnings.
     """
-    from fabprint.config import load_config
-    from fabprint.pipeline import STAGE_OUTPUTS
-    from fabprint.profiles import discover_profile_names
+    from estampo.config import load_config
+    from estampo.pipeline import STAGE_OUTPUTS
+    from estampo.profiles import discover_profile_names
 
     cfg = load_config(path)
     passes: list[str] = []
@@ -191,19 +191,19 @@ def validate_config(path: Path) -> ValidationResult:
         warnings.append(
             f"slicer profile names could not be validated — {cfg.slicer.engine} is not "
             "installed locally, no pinned profiles found, and no bundled profile list available. "
-            "Run 'fabprint profiles pin' or "
+            "Run 'estampo profiles pin' or "
             f"'python scripts/extract_profiles.py {cfg.slicer.version or '<version>'}' to add one."
         )
 
     # Check printer credentials reference
     if cfg.printer:
-        from fabprint.credentials import _credentials_path
+        from estampo.credentials import _credentials_path
 
         cred_path = _credentials_path()
         if not cred_path.exists():
             warnings.append(
                 f"printer.name = '{cfg.printer.name}' but credentials file not found: {cred_path}. "
-                "Run 'fabprint setup' to configure."
+                "Run 'estampo setup' to configure."
             )
         else:
             import tomllib
@@ -338,7 +338,7 @@ def _read_machine_info(profile_name: str, engine: str) -> _MachineInfo:
     """Extract build plate size and AMS/multi-material capability from a machine profile."""
     info = _MachineInfo()
     try:
-        from fabprint.profiles import resolve_profile_data
+        from estampo.profiles import resolve_profile_data
 
         data = resolve_profile_data(profile_name, engine, "machine")
 
@@ -365,7 +365,7 @@ def _read_machine_info(profile_name: str, engine: str) -> _MachineInfo:
 def _list_configured_printers() -> dict[str, dict]:
     """Return configured printers from credentials.toml, or empty dict."""
     try:
-        from fabprint.credentials import list_printers
+        from estampo.credentials import list_printers
 
         return list_printers() or {}
     except Exception:
@@ -387,8 +387,8 @@ def _query_ams_trays(configured: dict[str, dict]) -> list[dict]:
         if not serial:
             continue
         try:
-            from fabprint.cloud import cloud_status, parse_ams_trays
-            from fabprint.credentials import cloud_token_json
+            from estampo.cloud import cloud_status, parse_ams_trays
+            from estampo.credentials import cloud_token_json
 
             with cloud_token_json() as token_file:
                 status = cloud_status(serial, token_file)
@@ -422,13 +422,25 @@ def _match_filament_profile(tray_type: str, profile_names: list[str]) -> str | N
 def _detect_orca_version() -> str | None:
     """Try to detect the installed OrcaSlicer version.
 
-    Set FABPRINT_SKIP_SLICER_DETECT=1 to skip (useful in headless environments
+    Set ESTAMPO_SKIP_SLICER_DETECT=1 to skip (useful in headless environments
     where launching OrcaSlicer --help may hang).
     """
-    if os.environ.get("FABPRINT_SKIP_SLICER_DETECT"):
+    skip_detect = os.environ.get("ESTAMPO_SKIP_SLICER_DETECT")
+    if not skip_detect:
+        skip_detect = os.environ.get("FABPRINT_SKIP_SLICER_DETECT")
+        if skip_detect:
+            import warnings
+
+            warnings.warn(
+                "FABPRINT_SKIP_SLICER_DETECT is deprecated"
+                " — use ESTAMPO_SKIP_SLICER_DETECT instead",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+    if skip_detect:
         return None
     try:
-        from fabprint.slicer import SLICER_PATHS, _detect_slicer_version
+        from estampo.slicer import SLICER_PATHS, _detect_slicer_version
 
         slicer = SLICER_PATHS.get("orca")
         if slicer and slicer.exists():
@@ -456,7 +468,7 @@ def _fetch_available_versions() -> list[str]:
 
 def _prompt_slicer_version() -> str | None:
     """Prompt for OrcaSlicer version, offering available Docker image versions."""
-    from fabprint import ui
+    from estampo import ui
 
     detected = _detect_orca_version()
     available = _fetch_available_versions()
@@ -490,28 +502,28 @@ def _prompt_slicer_version() -> str | None:
 
 def _prompt_choice(prompt: str, options: list[str], allow_multi: bool = False) -> list[int]:
     """Interactive picker — delegates to ``ui.pick``."""
-    from fabprint import ui
+    from estampo import ui
 
     return ui.pick(options, prompt=prompt, allow_multi=allow_multi)
 
 
 def _prompt_str(prompt: str, default: str | None = None) -> str:
     """Prompt for a string value with optional default."""
-    from fabprint import ui
+    from estampo import ui
 
     return ui.prompt_str(prompt, default)
 
 
 def _prompt_int(prompt: str, default: int) -> int:
     """Prompt for an integer with a default."""
-    from fabprint import ui
+    from estampo import ui
 
     return ui.prompt_int(prompt, default)
 
 
 def _prompt_yn(prompt: str, default: bool = True) -> bool:
     """Prompt yes/no with a default."""
-    from fabprint import ui
+    from estampo import ui
 
     return ui.prompt_yn(prompt, default)
 
@@ -581,7 +593,7 @@ def _validate_override(value: str, spec_type: str) -> str | None:
 
     Returns the normalised value, or ``None`` if invalid.
     """
-    from fabprint import ui
+    from estampo import ui
 
     value = value.strip()
     if not value:
@@ -632,7 +644,7 @@ def _prompt_overrides() -> dict[str, str]:
     Shows a numbered table of common overrides. User picks a number to
     configure that override, or enters N to finish.
     """
-    from fabprint import ui
+    from estampo import ui
 
     overrides: dict[str, str] = {}
     while True:
@@ -715,7 +727,7 @@ def _wizard_pick_profiles(
 
     Returns ``(printer_profile, process_profile, machine_info)``.
     """
-    from fabprint import ui
+    from estampo import ui
 
     # --- Step 3: Pick printer profile ---
     printer_profile = None
@@ -755,7 +767,7 @@ def _wizard_pick_filaments(
 
     Returns a list of filament profile names.
     """
-    from fabprint import ui
+    from estampo import ui
 
     filament_names: list[str] = []
     filament_options = sorted(profiles.get("filament", []))
@@ -810,7 +822,7 @@ def _wizard_pick_parts() -> list[dict]:
     Returns a list of part config dicts (filament slot defaults to 1,
     assigned later by ``_wizard_assign_filament_slots``).
     """
-    from fabprint import ui
+    from estampo import ui
 
     ui.heading("CAD Files")
     cwd = Path.cwd()
@@ -866,7 +878,7 @@ def _wizard_assign_filament_slots(parts_config: list[dict], filament_names: list
     if len(filament_names) <= 1:
         return
 
-    from fabprint import ui
+    from estampo import ui
 
     ui.heading("Filament Assignment")
     for p in parts_config:
@@ -880,7 +892,7 @@ def _wizard_pick_plate(machine_info: _MachineInfo) -> tuple[int, int]:
 
     Returns ``(plate_x, plate_y)``.
     """
-    from fabprint import ui
+    from estampo import ui
 
     if machine_info.plate_size:
         w, d = machine_info.plate_size
@@ -900,7 +912,7 @@ def _wizard_pick_slicer_version() -> str | None:
 
     Returns the version string, or ``None`` if skipped.
     """
-    from fabprint import ui
+    from estampo import ui
 
     ui.heading("Slicer Version")
     slicer_version = _prompt_slicer_version()
@@ -914,7 +926,7 @@ def _wizard_pick_printer() -> str | None:
 
     Returns the printer name, or ``None`` if skipped.
     """
-    from fabprint import ui
+    from estampo import ui
 
     ui.heading("Printer (optional)")
     configured = _list_configured_printers()
@@ -925,8 +937,8 @@ def _wizard_pick_printer() -> str | None:
         ui.console.print()
         return pick
 
-    if _prompt_yn("Connect a printer? (run 'fabprint setup' first)", default=False):
-        printer_name = _prompt_str("Printer name (from 'fabprint setup')", "")
+    if _prompt_yn("Connect a printer? (run 'estampo setup' first)", default=False):
+        printer_name = _prompt_str("Printer name (from 'estampo setup')", "")
         ui.console.print()
         return printer_name or None
 
@@ -942,10 +954,10 @@ def run_wizard(output: Path | None = None) -> str:
     slicer version → profiles → filaments → filament slots → overrides →
     preview.
     """
-    from fabprint import ui
-    from fabprint.profiles import discover_profile_names
+    from estampo import ui
+    from estampo.profiles import discover_profile_names
 
-    ui.heading("fabprint init")
+    ui.heading("estampo init")
     ui.console.print()
 
     engine = "orca"
@@ -1028,7 +1040,7 @@ def run_wizard(output: Path | None = None) -> str:
     )
 
     # --- Preview and confirm ---
-    dest = output or Path("fabprint.toml")
+    dest = output or Path("estampo.toml")
 
     while True:
         ui.heading("Preview")

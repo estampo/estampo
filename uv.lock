@@ -548,6 +548,54 @@ wheels = [
 ]
 
 [[package]]
+name = "estampo"
+version = "0.2.0"
+source = { editable = "." }
+dependencies = [
+    { name = "bambu-lab-cloud-api" },
+    { name = "bambulabs-api" },
+    { name = "build123d" },
+    { name = "defusedxml" },
+    { name = "questionary" },
+    { name = "rectpack" },
+    { name = "requests" },
+    { name = "sf-hamilton" },
+    { name = "trimesh", extra = ["easy"] },
+    { name = "typer" },
+    { name = "watchfiles" },
+]
+
+[package.optional-dependencies]
+dev = [
+    { name = "mypy" },
+    { name = "packaging" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "bambu-lab-cloud-api" },
+    { name = "bambulabs-api", specifier = ">=2.6.0" },
+    { name = "build123d", specifier = ">=0.10.0" },
+    { name = "defusedxml", specifier = ">=0.7.0" },
+    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10.0" },
+    { name = "packaging", marker = "extra == 'dev'", specifier = ">=23.0" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=6.0.0" },
+    { name = "questionary", specifier = ">=2.1.0" },
+    { name = "rectpack", specifier = ">=0.2.0" },
+    { name = "requests", specifier = ">=2.28" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4.0" },
+    { name = "sf-hamilton", specifier = ">=1.82.0" },
+    { name = "trimesh", extras = ["easy"], specifier = ">=4.0.0" },
+    { name = "typer", specifier = ">=0.15.0" },
+    { name = "watchfiles", specifier = ">=1.0.0" },
+]
+provides-extras = ["dev"]
+
+[[package]]
 name = "executing"
 version = "2.2.1"
 source = { registry = "https://pypi.org/simple" }
@@ -594,54 +642,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/1f/09/896ab8e30095007a99682b41d4367503e512178331539827c495844a84e0/ezdxf-1.4.3-cp313-cp313-win_amd64.whl", hash = "sha256:d95cd8dcc6e6051ff9adf6eaed0d055ac464abea23c2a71aaba701dcfe7f49de", size = 2917537, upload-time = "2025-10-19T03:52:32.268Z" },
     { url = "https://files.pythonhosted.org/packages/65/c9/a3a21eb7fc2c515a73d023052f67ab44c3ba580dfc08a6825fc15cf00cac/ezdxf-1.4.3-py3-none-any.whl", hash = "sha256:19e464aa4525dca3f1dabce165308de7ac262f1122b3c3986320cbec9e8ca6be", size = 1330027, upload-time = "2025-10-19T03:47:33.617Z" },
 ]
-
-[[package]]
-name = "fabprint"
-version = "0.1.140"
-source = { editable = "." }
-dependencies = [
-    { name = "bambu-lab-cloud-api" },
-    { name = "bambulabs-api" },
-    { name = "build123d" },
-    { name = "defusedxml" },
-    { name = "questionary" },
-    { name = "rectpack" },
-    { name = "requests" },
-    { name = "sf-hamilton" },
-    { name = "trimesh", extra = ["easy"] },
-    { name = "typer" },
-    { name = "watchfiles" },
-]
-
-[package.optional-dependencies]
-dev = [
-    { name = "mypy" },
-    { name = "packaging" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "bambu-lab-cloud-api" },
-    { name = "bambulabs-api", specifier = ">=2.6.0" },
-    { name = "build123d", specifier = ">=0.10.0" },
-    { name = "defusedxml", specifier = ">=0.7.0" },
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10.0" },
-    { name = "packaging", marker = "extra == 'dev'", specifier = ">=23.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
-    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=6.0.0" },
-    { name = "questionary", specifier = ">=2.1.0" },
-    { name = "rectpack", specifier = ">=0.2.0" },
-    { name = "requests", specifier = ">=2.28" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4.0" },
-    { name = "sf-hamilton", specifier = ">=1.82.0" },
-    { name = "trimesh", extras = ["easy"], specifier = ">=4.0.0" },
-    { name = "typer", specifier = ">=0.15.0" },
-    { name = "watchfiles", specifier = ">=1.0.0" },
-]
-provides-extras = ["dev"]
 
 [[package]]
 name = "flask"

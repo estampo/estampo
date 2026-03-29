@@ -1,10 +1,10 @@
-# fabprint
+# estampo
 
-[![PyPI version](https://img.shields.io/pypi/v/fabprint)](https://pypi.org/project/fabprint/)
-[![CI](https://github.com/pzfreo/fabprint/actions/workflows/ci.yml/badge.svg)](https://github.com/pzfreo/fabprint/actions/workflows/ci.yml)
-[![Python 3.11+](https://img.shields.io/pypi/pyversions/fabprint)](https://pypi.org/project/fabprint/)
+[![PyPI version](https://img.shields.io/pypi/v/estampo)](https://pypi.org/project/estampo/)
+[![CI](https://github.com/estampo/estampo/actions/workflows/ci.yml/badge.svg)](https://github.com/estampo/estampo/actions/workflows/ci.yml)
+[![Python 3.11+](https://img.shields.io/pypi/pyversions/estampo)](https://pypi.org/project/estampo/)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![codecov](https://codecov.io/gh/pzfreo/fabprint/branch/main/graph/badge.svg)](https://codecov.io/gh/pzfreo/fabprint)
+[![codecov](https://codecov.io/gh/estampo/estampo/branch/main/graph/badge.svg)](https://codecov.io/gh/estampo/estampo)
 
 **Reproducible 3D print builds.**
 
@@ -15,7 +15,7 @@ Works with STL, STEP, and 3MF files, and pairs naturally with code-CAD tools lik
 and [cadquery](https://github.com/cadquery/cadquery).
 
 ```toml
-# fabprint.toml — a multi-part print with slicer overrides
+# estampo.toml — a multi-part print with slicer overrides
 
 [[parts]]
 file = "enclosure_base.step"
@@ -49,11 +49,11 @@ name = "workshop"
 ```
 
 ```bash
-fabprint run        # arrange → slice → print, one command
+estampo run        # arrange → slice → print, one command
 ```
 
 ```
-  Output → fabprint_output/enclosure
+  Output → estampo_output/enclosure
 ✔ Loaded 3 parts
 ✔ Arranged 3 parts onto plate  (256×256mm)
 ✔ Plate exported → plate.3mf
@@ -63,11 +63,11 @@ fabprint run        # arrange → slice → print, one command
 ✔ Sent to printer "workshop"
 ```
 
-## What fabprint does
+## What estampo does
 
-![fabprint demo](https://raw.githubusercontent.com/pzfreo/fabprint/main/docs/recordings/demo.gif)
+![estampo demo](https://raw.githubusercontent.com/estampo/estampo/main/docs/recordings/demo.gif)
 
-1. **Define** parts + settings in `fabprint.toml`
+1. **Define** parts + settings in `estampo.toml`
 2. **Arrange** — bin-packs models onto the build plate
 3. **Slice** — using a pinned OrcaSlicer version (via Docker) for identical G-code across machines
 4. **Print** — sends the result to your printer
@@ -76,11 +76,11 @@ Everything is declared in a single TOML file — git-friendly, diffable, and com
 your CAD files. Lock the slicer version, pin the profiles, and the output is reproducible on any
 machine or in CI.
 
-![fabprint pipeline](https://raw.githubusercontent.com/pzfreo/fabprint/main/docs/images/pipeline.png)
+![estampo pipeline](https://raw.githubusercontent.com/estampo/estampo/main/docs/images/pipeline.png)
 
 ### Why not just use OrcaSlicer CLI?
 
-OrcaSlicer CLI is great for slicing a prepared plate. fabprint builds a reproducible pipeline around it:
+OrcaSlicer CLI is great for slicing a prepared plate. estampo builds a reproducible pipeline around it:
 
 - **Arrangement** — bin-packs multiple STLs onto the build plate (OrcaSlicer CLI has no arrange step)
 - **Multi-part filament mapping** — per-part filament slot assignment and paint color preservation, injected into the 3MF metadata
@@ -91,7 +91,7 @@ OrcaSlicer CLI is great for slicing a prepared plate. fabprint builds a reproduc
 
 ## Best fit
 
-fabprint is best suited to:
+estampo is best suited to:
 
 - Hardware teams keeping CAD and manufacturing inputs in Git
 - Engineers who want deterministic slicing in CI
@@ -103,7 +103,7 @@ If you mostly want interactive print setup in a GUI, use OrcaSlicer directly.
 
 ### Stable
 
-- Declarative print config in `fabprint.toml`
+- Declarative print config in `estampo.toml`
 - Multi-part arrangement
 - Docker-based slicing with pinned OrcaSlicer versions
 - Slicing for any printer supported by OrcaSlicer
@@ -121,32 +121,32 @@ If you mostly want interactive print setup in a GUI, use OrcaSlicer directly.
 ## Quick start
 
 **Prerequisites:** Python 3.11+ and [Docker](https://docs.docker.com/get-docker/). Docker is
-central to fabprint — it runs OrcaSlicer in a container with a pinned version so every machine
+central to estampo — it runs OrcaSlicer in a container with a pinned version so every machine
 produces identical G-code, and it powers cloud printing via the Bambu Connect bridge. A local
 [OrcaSlicer](https://github.com/SoftFever/OrcaSlicer) install can be used as an alternative but is not recommended.
 
 ```bash
-pip install fabprint
+pip install estampo
 # or, to install as an isolated CLI tool:
-pipx install fabprint
+pipx install estampo
 ```
 
 Generate a config with the interactive wizard, or dump a commented template:
 
 ```bash
-fabprint setup                      # configures printer targets
-fabprint init                       # interactive wizard — discovers profiles and CAD files, creates TOML
-fabprint init --template            # dump a commented template
+estampo setup                      # configures printer targets
+estampo init                       # interactive wizard — discovers profiles and CAD files, creates TOML
+estampo init --template            # dump a commented template
 ```
 
-Or create `fabprint.toml` by hand (see [full config reference](https://github.com/pzfreo/fabprint/blob/main/docs/config.md)):
+Or create `estampo.toml` by hand (see [full config reference](https://github.com/estampo/estampo/blob/main/docs/config.md)):
 
 ```toml
 [pipeline]
 stages = ["load", "arrange", "plate", "slice", "print"]
 
 [printer]
-name = "workshop"       # references ~/.config/fabprint/credentials.toml
+name = "workshop"       # references ~/.config/estampo/credentials.toml
 
 [plate]
 size = [256, 256]       # build plate dimensions in mm
@@ -177,24 +177,24 @@ orient = "upright"
 filament = "Generic PETG-CF @base"
 ```
 
-Run it (see [full CLI reference](https://github.com/pzfreo/fabprint/blob/main/docs/cli.md)):
+Run it (see [full CLI reference](https://github.com/estampo/estampo/blob/main/docs/cli.md)):
 
 ```bash
-fabprint run                   # arrange, slice and send to printer
-fabprint run --until slice     # stop after slicing
-fabprint run --dry-run         # full pipeline without sending to printer
+estampo run                   # arrange, slice and send to printer
+estampo run --until slice     # stop after slicing
+estampo run --dry-run         # full pipeline without sending to printer
 ```
 
 The arrangement (`plate`) stage generates a `plate_preview.3mf` — open it in any 3MF viewer to check placement:
 
-![plate preview](https://raw.githubusercontent.com/pzfreo/fabprint/main/docs/images/plate_preview.png)
+![plate preview](https://raw.githubusercontent.com/estampo/estampo/main/docs/images/plate_preview.png)
 
 ## Reproducibility
 
 Pin profiles into your repo so builds are identical across machines:
 
 ```bash
-fabprint profiles pin          # copies slicer profiles into ./profiles/
+estampo profiles pin          # copies slicer profiles into ./profiles/
 git add profiles/              # commit to lock them
 ```
 
@@ -213,7 +213,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: pzfreo/fabprint@main
+      - uses: estampo/estampo@main
         with:
           orca-version: "2.3.1"
 ```
@@ -223,32 +223,32 @@ The action slices your model, uploads G-code as an artifact, and posts print tim
 ## CLI overview
 
 ```bash
-fabprint init                        # interactive config wizard
-fabprint init --template             # dump commented TOML template
-fabprint validate                    # check config for issues
-fabprint setup                       # set up a printer (credentials + connection type)
-fabprint run                         # full pipeline
-fabprint run --until plate           # stop after plating
-fabprint run --only slice            # run just one stage
-fabprint run --dry-run               # everything except sending to printer
-fabprint watch                       # re-run pipeline when input files change
-fabprint status                      # query printer status
-fabprint status -w                   # live printer dashboard
-fabprint profiles list               # list available slicer profiles
-fabprint profiles pin                # pin profiles for reproducible builds
+estampo init                        # interactive config wizard
+estampo init --template             # dump commented TOML template
+estampo validate                    # check config for issues
+estampo setup                       # set up a printer (credentials + connection type)
+estampo run                         # full pipeline
+estampo run --until plate           # stop after plating
+estampo run --only slice            # run just one stage
+estampo run --dry-run               # everything except sending to printer
+estampo watch                       # re-run pipeline when input files change
+estampo status                      # query printer status
+estampo status -w                   # live printer dashboard
+estampo profiles list               # list available slicer profiles
+estampo profiles pin                # pin profiles for reproducible builds
 ```
 
-![fabprint status --watch](https://raw.githubusercontent.com/pzfreo/fabprint/main/docs/images/watch.png)
+![estampo status --watch](https://raw.githubusercontent.com/estampo/estampo/main/docs/images/watch.png)
 
 ## Credentials
 
-Printer credentials are stored in `~/.config/fabprint/credentials.toml`, created by `fabprint setup`. The file is set to `600` permissions (owner read/write only) and is never committed to your repo — only the printer *name* appears in `fabprint.toml`. Credentials can also be supplied via environment variables (`BAMBU_PRINTER_IP`, `BAMBU_ACCESS_CODE`, `BAMBU_SERIAL`) for CI or shared environments.
+Printer credentials are stored in `~/.config/estampo/credentials.toml`, created by `estampo setup`. The file is set to `600` permissions (owner read/write only) and is never committed to your repo — only the printer *name* appears in `estampo.toml`. Credentials can also be supplied via environment variables (`BAMBU_PRINTER_IP`, `BAMBU_ACCESS_CODE`, `BAMBU_SERIAL`) for CI or shared environments.
 
 ## Documentation
 
-- [CLI reference](https://github.com/pzfreo/fabprint/blob/main/docs/cli.md) — all commands, flags, and pipeline stages
-- [Config reference](https://github.com/pzfreo/fabprint/blob/main/docs/config.md) — complete TOML format
-- [Developing](https://github.com/pzfreo/fabprint/blob/main/docs/developing.md) — setup, testing, architecture
+- [CLI reference](https://github.com/estampo/estampo/blob/main/docs/cli.md) — all commands, flags, and pipeline stages
+- [Config reference](https://github.com/estampo/estampo/blob/main/docs/config.md) — complete TOML format
+- [Developing](https://github.com/estampo/estampo/blob/main/docs/developing.md) — setup, testing, architecture
 
 ## License
 

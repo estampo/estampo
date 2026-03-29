@@ -1,4 +1,4 @@
-"""Hamilton DAG nodes for the fabprint pipeline.
+"""Hamilton DAG nodes for the estampo pipeline.
 
 Each public function is a node in the pipeline DAG.  Hamilton auto-wires
 dependencies by matching *parameter names* to *function names* (or to
@@ -7,7 +7,7 @@ values provided at execution time via ``driver.execute(inputs=...)``.
 Typical execution::
 
     from hamilton import driver
-    from fabprint import pipeline, adapters
+    from estampo import pipeline, adapters
 
     dr = driver.Builder().with_modules(pipeline).build()
 
@@ -24,11 +24,11 @@ from pathlib import Path
 
 import trimesh
 
-from fabprint.arrange import Placement, arrange
-from fabprint.config import FabprintConfig, load_config
-from fabprint.loader import extract_paint_colors, load_3mf_objects, load_mesh
-from fabprint.orient import orient_mesh
-from fabprint.plate import build_plate, export_plate
+from estampo.arrange import Placement, arrange
+from estampo.config import EstampoConfig, load_config
+from estampo.loader import extract_paint_colors, load_3mf_objects, load_mesh
+from estampo.orient import orient_mesh
+from estampo.plate import build_plate, export_plate
 
 log = logging.getLogger(__name__)
 
@@ -153,7 +153,7 @@ class ResolvedFilaments:
 # ---------------------------------------------------------------------------
 
 
-def load_parts(cfg: FabprintConfig, global_scale: float | None = None) -> LoadedParts:
+def load_parts(cfg: EstampoConfig, global_scale: float | None = None) -> LoadedParts:
     """Load and prepare meshes from config parts.
 
     For parts with 'object' set, loads a specific named object from a
@@ -304,22 +304,22 @@ def format_summary(loaded_parts: LoadedParts, plate_size: tuple[float, float]) -
 # ---------------------------------------------------------------------------
 
 
-def config(config_path: Path) -> FabprintConfig:
-    """Load and validate the fabprint TOML config."""
+def config(config_path: Path) -> EstampoConfig:
+    """Load and validate the estampo TOML config."""
     return load_config(config_path)
 
 
-def loaded_parts(config: FabprintConfig, global_scale: float | None) -> LoadedParts:
+def loaded_parts(config: EstampoConfig, global_scale: float | None) -> LoadedParts:
     """Load, orient, and scale all meshes from the config."""
     return load_parts(config, global_scale)
 
 
-def part_summary(loaded_parts: LoadedParts, config: FabprintConfig) -> str:
+def part_summary(loaded_parts: LoadedParts, config: EstampoConfig) -> str:
     """Human-readable build summary."""
     return format_summary(loaded_parts, config.plate.size)
 
 
-def placements(loaded_parts: LoadedParts, config: FabprintConfig) -> list[Placement]:
+def placements(loaded_parts: LoadedParts, config: EstampoConfig) -> list[Placement]:
     """Arrange parts on the build plate via 2D bin-packing."""
     return arrange(
         loaded_parts.meshes,
@@ -329,7 +329,7 @@ def placements(loaded_parts: LoadedParts, config: FabprintConfig) -> list[Placem
     )
 
 
-def plate_scene(placements: list[Placement], config: FabprintConfig) -> trimesh.Scene:
+def plate_scene(placements: list[Placement], config: EstampoConfig) -> trimesh.Scene:
     """Assemble a trimesh Scene from placements."""
     return build_plate(placements, config.plate.size)
 
@@ -341,7 +341,7 @@ def plate_3mf_path(plate_scene: trimesh.Scene, loaded_parts: LoadedParts, output
     return output_3mf
 
 
-def preview_path(placements: list[Placement], config: FabprintConfig, output_3mf: Path) -> Path:
+def preview_path(placements: list[Placement], config: EstampoConfig, output_3mf: Path) -> Path:
     """Export a preview 3MF with bed outline."""
     preview_scene = build_plate(placements, config.plate.size, include_bed=True)
     out = output_3mf.with_stem(output_3mf.stem + "_preview")
@@ -351,7 +351,7 @@ def preview_path(placements: list[Placement], config: FabprintConfig, output_3mf
 
 
 def resolved_filaments(
-    config: FabprintConfig,
+    config: EstampoConfig,
     loaded_parts: LoadedParts,
     filament_type_override: str | None,
     filament_slot_override: int,
@@ -373,14 +373,14 @@ def resolved_filaments(
 
 def sliced_output_dir(
     plate_3mf_path: Path,
-    config: FabprintConfig,
+    config: EstampoConfig,
     resolved_filaments: ResolvedFilaments,
     output_dir: Path,
     slicer_local: bool,
     docker_version: str | None,
 ) -> Path:
     """Slice the plate 3MF via OrcaSlicer/BambuStudio."""
-    from fabprint.slicer import slice_plate
+    from estampo.slicer import slice_plate
 
     return slice_plate(
         input_3mf=plate_3mf_path,
@@ -403,8 +403,8 @@ def gcode_stats(sliced_output_dir: Path) -> dict:
     """Parse print time and filament usage from sliced gcode, write stats JSON."""
     import json
 
-    from fabprint.gcode import analyze_gcode
-    from fabprint.slicer import parse_gcode_stats
+    from estampo.gcode import analyze_gcode
+    from estampo.slicer import parse_gcode_stats
 
     stats: dict = dict(parse_gcode_stats(sliced_output_dir))
 
@@ -436,14 +436,14 @@ def gcode_path(sliced_output_dir: Path) -> Path:
 
 def print_result(
     gcode_path: Path,
-    config: FabprintConfig,
+    config: EstampoConfig,
     dry_run: bool,
     upload_only: bool,
     experimental: bool,
     skip_ams_mapping: bool,
 ) -> None:
     """Send sliced gcode to the printer."""
-    from fabprint.printer import send_print
+    from estampo.printer import send_print
 
     if config.printer is None:
         raise ValueError("No [printer] section in config. Required for printing.")

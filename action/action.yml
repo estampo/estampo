@@ -1,4 +1,4 @@
-name: "Fabprint Slice"
+name: "Estampo Slice"
 description: "Slice 3D models with OrcaSlicer and post build metrics to your PR"
 branding:
   icon: "box"
@@ -6,9 +6,9 @@ branding:
 
 inputs:
   config:
-    description: "Path to fabprint.toml (relative to repo root)"
+    description: "Path to estampo.toml (relative to repo root)"
     required: false
-    default: "fabprint.toml"
+    default: "estampo.toml"
   orca-version:
     description: "OrcaSlicer version to use"
     required: false
@@ -20,7 +20,7 @@ inputs:
   output-dir:
     description: "Output directory for sliced files (relative to repo root)"
     required: false
-    default: "fabprint_output"
+    default: "estampo_output"
   comment:
     description: "Post a PR comment with build metrics (true/false)"
     required: false
@@ -49,17 +49,17 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: Pull fabprint image
+    - name: Pull estampo image
       shell: bash
       env:
         ORCA_VERSION: ${{ inputs.orca-version }}
       run: |
-        IMAGE="ghcr.io/pzfreo/fabprint:orca-${ORCA_VERSION}"
+        IMAGE="ghcr.io/${{ github.repository }}:orca-${ORCA_VERSION}"
         echo "::group::Pulling ${IMAGE}"
         docker pull "${IMAGE}"
         echo "::endgroup::"
 
-    - name: Run fabprint pipeline
+    - name: Run estampo pipeline
       shell: bash
       env:
         ORCA_VERSION: ${{ inputs.orca-version }}
@@ -71,13 +71,13 @@ runs:
         docker run --rm \
           -v "${WORKSPACE}:/project" \
           --workdir /project \
-          "ghcr.io/pzfreo/fabprint:orca-${ORCA_VERSION}" \
+          "ghcr.io/${{ github.repository }}:orca-${ORCA_VERSION}" \
           run "${CONFIG}" \
           --until "${UNTIL}" \
           --output-dir "/project/${OUTPUT_DIR}" \
           --local \
           -v \
-          2>&1 | tee /tmp/fabprint-output.log
+          2>&1 | tee /tmp/estampo-output.log
 
         # Docker creates files as root — fix ownership so later steps can read them
         sudo chown -R "$(id -u):$(id -g)" "${WORKSPACE}/${OUTPUT_DIR}" 2>/dev/null || true
@@ -92,7 +92,7 @@ runs:
       run: |
         FULL_OUTPUT_DIR="${WORKSPACE}/${OUTPUT_DIR}"
 
-        # Read stats from JSON written by fabprint pipeline
+        # Read stats from JSON written by estampo pipeline
         STATS_FILE=$(find "${FULL_OUTPUT_DIR}" -name stats.json -type f 2>/dev/null | head -1)
         if [ -n "$STATS_FILE" ]; then
           PRINT_TIME=$(python3 -c "import json; d=json.load(open('$STATS_FILE')); print(d.get('print_time',''))" 2>/dev/null || true)
@@ -124,8 +124,8 @@ runs:
         PROJECT_NAME: ${{ steps.metrics.outputs.project-name }}
         ORCA_VERSION: ${{ inputs.orca-version }}
       run: |
-        TITLE="${PROJECT_NAME:+Fabprint: $PROJECT_NAME}"
-        TITLE="${TITLE:-Fabprint Slice Results}"
+        TITLE="${PROJECT_NAME:+Estampo: $PROJECT_NAME}"
+        TITLE="${TITLE:-Estampo Slice Results}"
         {
           echo "### ${TITLE}"
           echo ""
@@ -143,7 +143,7 @@ runs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v7
       with:
-        name: fabprint-${{ steps.metrics.outputs.project-name || 'output' }}
+        name: estampo-${{ steps.metrics.outputs.project-name || 'output' }}
         path: ${{ inputs.output-dir }}/
         if-no-files-found: warn
 
@@ -190,9 +190,9 @@ runs:
           const orcaVersion = process.env.ORCA_VERSION || 'unknown';
           const projectName = process.env.PROJECT_NAME || '';
           const runUrl = process.env.RUN_URL;
-          const artifactName = `fabprint-${projectName || 'output'}`;
-          const title = projectName ? `Fabprint: ${projectName}` : 'Fabprint Slice Results';
-          const marker = `<!-- fabprint-slice-result-${projectName || 'default'} -->`;
+          const artifactName = `estampo-${projectName || 'output'}`;
+          const title = projectName ? `Estampo: ${projectName}` : 'Estampo Slice Results';
+          const marker = `<!-- estampo-slice-result-${projectName || 'default'} -->`;
 
           const rows = [
             `| Print time | ${printTime} |`,

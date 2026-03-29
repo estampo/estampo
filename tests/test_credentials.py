@@ -1,4 +1,4 @@
-"""Tests for fabprint credentials and setup command."""
+"""Tests for estampo credentials and setup command."""
 
 import json
 import sys
@@ -6,7 +6,7 @@ import tomllib
 
 import pytest
 
-from fabprint.credentials import (
+from estampo.credentials import (
     cloud_token_json,
     list_printers,
     load_cloud_credentials,
@@ -57,24 +57,24 @@ def _mock_ui_inputs(monkeypatch, inputs):
             return default
         return str(val).lower().startswith("y")
 
-    monkeypatch.setattr("fabprint.ui.prompt_str", next_str)
-    monkeypatch.setattr("fabprint.ui.prompt_int", next_int)
-    monkeypatch.setattr("fabprint.ui.prompt_yn", next_yn)
-    monkeypatch.setattr("fabprint.ui.prompt_password", lambda prompt: next_str(prompt))
+    monkeypatch.setattr("estampo.ui.prompt_str", next_str)
+    monkeypatch.setattr("estampo.ui.prompt_int", next_int)
+    monkeypatch.setattr("estampo.ui.prompt_yn", next_yn)
+    monkeypatch.setattr("estampo.ui.prompt_password", lambda prompt: next_str(prompt))
     # Silence Rich output
-    monkeypatch.setattr("fabprint.ui.heading", lambda text: None)
-    monkeypatch.setattr("fabprint.ui.success", lambda text: None)
-    monkeypatch.setattr("fabprint.ui.warn", lambda text: None)
-    monkeypatch.setattr("fabprint.ui.error", lambda text: None)
-    monkeypatch.setattr("fabprint.ui.info", lambda text: None)
-    monkeypatch.setattr("fabprint.ui.choice_table", lambda items, columns: None)
-    monkeypatch.setattr("fabprint.ui.preview_toml", lambda text: None)
+    monkeypatch.setattr("estampo.ui.heading", lambda text: None)
+    monkeypatch.setattr("estampo.ui.success", lambda text: None)
+    monkeypatch.setattr("estampo.ui.warn", lambda text: None)
+    monkeypatch.setattr("estampo.ui.error", lambda text: None)
+    monkeypatch.setattr("estampo.ui.info", lambda text: None)
+    monkeypatch.setattr("estampo.ui.choice_table", lambda items, columns: None)
+    monkeypatch.setattr("estampo.ui.preview_toml", lambda text: None)
 
 
 class TestSetupPrinter:
     def test_creates_bambu_lan(self, tmp_path, monkeypatch):
         cred_path = tmp_path / "credentials.toml"
-        monkeypatch.setattr("fabprint.credentials._credentials_path", lambda: cred_path)
+        monkeypatch.setattr("estampo.credentials._credentials_path", lambda: cred_path)
 
         # name, type choice, ip, access_code, serial
         _mock_ui_inputs(monkeypatch, ["workshop", "1", "192.168.1.100", "12345678", "01P00A123"])
@@ -93,7 +93,7 @@ class TestSetupPrinter:
 
     def test_creates_moonraker(self, tmp_path, monkeypatch):
         cred_path = tmp_path / "credentials.toml"
-        monkeypatch.setattr("fabprint.credentials._credentials_path", lambda: cred_path)
+        monkeypatch.setattr("estampo.credentials._credentials_path", lambda: cred_path)
 
         # name, type choice (3=moonraker), url, api_key (optional)
         _mock_ui_inputs(monkeypatch, ["voron", "3", "http://voron.local:7125", "my-key"])
@@ -109,7 +109,7 @@ class TestSetupPrinter:
     def test_adds_to_existing(self, tmp_path, monkeypatch):
         cred_path = tmp_path / "credentials.toml"
         cred_path.write_text('[printers.old]\ntype = "bambu-lan"\nip = "10.0.0.1"\n')
-        monkeypatch.setattr("fabprint.credentials._credentials_path", lambda: cred_path)
+        monkeypatch.setattr("estampo.credentials._credentials_path", lambda: cred_path)
 
         # name, type (default=1), ip, access_code, serial
         _mock_ui_inputs(monkeypatch, ["new-printer", "1", "192.168.1.50", "99887766", "ABC123"])
@@ -126,7 +126,7 @@ class TestSetupPrinter:
 
     def test_default_name_used_on_empty_input(self, tmp_path, monkeypatch):
         cred_path = tmp_path / "credentials.toml"
-        monkeypatch.setattr("fabprint.credentials._credentials_path", lambda: cred_path)
+        monkeypatch.setattr("estampo.credentials._credentials_path", lambda: cred_path)
 
         # Empty name input → default "workshop" is used
         _mock_ui_inputs(monkeypatch, ["", "1", "10.0.0.1", "12345678", "SN001"])
@@ -139,7 +139,7 @@ class TestSetupPrinter:
 
     def test_creates_parent_dirs(self, tmp_path, monkeypatch):
         cred_path = tmp_path / "deep" / "nested" / "credentials.toml"
-        monkeypatch.setattr("fabprint.credentials._credentials_path", lambda: cred_path)
+        monkeypatch.setattr("estampo.credentials._credentials_path", lambda: cred_path)
 
         _mock_ui_inputs(monkeypatch, ["p1", "1", "10.0.0.1", "12345678", "SN001"])
 
@@ -149,10 +149,10 @@ class TestSetupPrinter:
 
     def test_cli_setup(self, tmp_path, monkeypatch):
         """CLI wiring works."""
-        from fabprint.cli import main
+        from estampo.cli import main
 
         cred_path = tmp_path / "credentials.toml"
-        monkeypatch.setattr("fabprint.credentials._credentials_path", lambda: cred_path)
+        monkeypatch.setattr("estampo.credentials._credentials_path", lambda: cred_path)
 
         _mock_ui_inputs(monkeypatch, ["test", "1", "1.2.3.4", "99887766", "SN001"])
 
@@ -172,7 +172,7 @@ class TestListPrinters:
             '[printers.workshop]\ntype = "bambu-lan"\nip = "10.0.0.1"\n\n'
             '[printers.voron]\ntype = "moonraker"\nurl = "http://voron:7125"\n'
         )
-        monkeypatch.setattr("fabprint.credentials._credentials_path", lambda: cred_path)
+        monkeypatch.setattr("estampo.credentials._credentials_path", lambda: cred_path)
 
         printers = list_printers()
         assert "workshop" in printers
@@ -182,7 +182,7 @@ class TestListPrinters:
 
     def test_returns_empty_when_no_file(self, tmp_path, monkeypatch):
         cred_path = tmp_path / "credentials.toml"
-        monkeypatch.setattr("fabprint.credentials._credentials_path", lambda: cred_path)
+        monkeypatch.setattr("estampo.credentials._credentials_path", lambda: cred_path)
 
         assert list_printers() == {}
 
@@ -190,7 +190,7 @@ class TestListPrinters:
 class TestCloudCredentials:
     def test_save_and_load(self, tmp_path, monkeypatch):
         cred_path = tmp_path / "credentials.toml"
-        monkeypatch.setattr("fabprint.credentials._credentials_path", lambda: cred_path)
+        monkeypatch.setattr("estampo.credentials._credentials_path", lambda: cred_path)
 
         save_cloud_credentials(
             token="tok123",
@@ -207,7 +207,7 @@ class TestCloudCredentials:
 
     def test_load_returns_none_when_missing(self, tmp_path, monkeypatch):
         cred_path = tmp_path / "credentials.toml"
-        monkeypatch.setattr("fabprint.credentials._credentials_path", lambda: cred_path)
+        monkeypatch.setattr("estampo.credentials._credentials_path", lambda: cred_path)
 
         assert load_cloud_credentials() is None
 
@@ -215,7 +215,7 @@ class TestCloudCredentials:
         """Saving cloud creds should not clobber existing printers."""
         cred_path = tmp_path / "credentials.toml"
         cred_path.write_text('[printers.workshop]\ntype = "bambu-lan"\nip = "10.0.0.1"\n')
-        monkeypatch.setattr("fabprint.credentials._credentials_path", lambda: cred_path)
+        monkeypatch.setattr("estampo.credentials._credentials_path", lambda: cred_path)
 
         save_cloud_credentials(
             token="tok",
@@ -237,7 +237,7 @@ class TestCloudTokenJson:
             '[cloud]\ntoken = "mytoken"\nrefresh_token = "myrefresh"\n'
             'email = "a@b.com"\nuid = "123"\n'
         )
-        monkeypatch.setattr("fabprint.credentials._credentials_path", lambda: cred_path)
+        monkeypatch.setattr("estampo.credentials._credentials_path", lambda: cred_path)
 
         with cloud_token_json() as path:
             assert path.exists()
@@ -252,11 +252,11 @@ class TestCloudTokenJson:
 
     def test_raises_without_cloud_creds(self, tmp_path, monkeypatch):
         cred_path = tmp_path / "credentials.toml"
-        monkeypatch.setattr("fabprint.credentials._credentials_path", lambda: cred_path)
+        monkeypatch.setattr("estampo.credentials._credentials_path", lambda: cred_path)
 
-        from fabprint import FabprintError
+        from estampo import EstampoError
 
-        with pytest.raises(FabprintError, match="No cloud credentials"):
+        with pytest.raises(EstampoError, match="No cloud credentials"):
             with cloud_token_json():
                 pass
 
@@ -266,7 +266,7 @@ class TestCloudTokenJson:
         cred_path.write_text(
             '[cloud]\ntoken = "tok"\nrefresh_token = "ref"\nemail = "a@b.com"\nuid = "1"\n'
         )
-        monkeypatch.setattr("fabprint.credentials._credentials_path", lambda: cred_path)
+        monkeypatch.setattr("estampo.credentials._credentials_path", lambda: cred_path)
 
         temp_path = None
         with pytest.raises(RuntimeError):
@@ -284,52 +284,122 @@ class TestCloudTokenJson:
         cred_path.write_text(
             '[cloud]\ntoken = "tok"\nrefresh_token = "ref"\nemail = "a@b.com"\nuid = "1"\n'
         )
-        monkeypatch.setattr("fabprint.credentials._credentials_path", lambda: cred_path)
+        monkeypatch.setattr("estampo.credentials._credentials_path", lambda: cred_path)
 
         if sys.platform != "win32":
             with cloud_token_json() as path:
                 assert path.stat().st_mode & 0o777 == 0o600
 
 
+class TestMigrateConfigDir:
+    def test_copies_old_to_new(self, tmp_path, monkeypatch):
+        """Copies ~/.config/fabprint → ~/.config/estampo when old exists, new doesn't."""
+        from estampo.credentials import _migrate_config_dir
+
+        monkeypatch.setattr("sys.platform", "linux")
+        monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path)
+        old_dir = tmp_path / ".config" / "fabprint"
+        old_dir.mkdir(parents=True)
+        (old_dir / "credentials.toml").write_text("test")
+
+        _migrate_config_dir()
+
+        new_dir = tmp_path / ".config" / "estampo"
+        assert new_dir.exists()
+        assert (new_dir / "credentials.toml").read_text() == "test"
+
+    def test_skips_when_new_exists(self, tmp_path, monkeypatch):
+        """Does not overwrite when ~/.config/estampo already exists."""
+        from estampo.credentials import _migrate_config_dir
+
+        monkeypatch.setattr("sys.platform", "linux")
+        monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path)
+        old_dir = tmp_path / ".config" / "fabprint"
+        old_dir.mkdir(parents=True)
+        (old_dir / "credentials.toml").write_text("old")
+        new_dir = tmp_path / ".config" / "estampo"
+        new_dir.mkdir(parents=True)
+        (new_dir / "credentials.toml").write_text("new")
+
+        _migrate_config_dir()
+
+        assert (new_dir / "credentials.toml").read_text() == "new"
+
+    def test_skips_when_old_missing(self, tmp_path, monkeypatch):
+        """No error when old dir doesn't exist."""
+        from estampo.credentials import _migrate_config_dir
+
+        monkeypatch.setattr("sys.platform", "linux")
+        monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path)
+
+        _migrate_config_dir()  # should not raise
+
+    def test_skips_symlink(self, tmp_path, monkeypatch):
+        """Refuses to migrate if old dir is a symlink."""
+        from estampo.credentials import _migrate_config_dir
+
+        monkeypatch.setattr("sys.platform", "linux")
+        monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path)
+        real_dir = tmp_path / "real_config"
+        real_dir.mkdir()
+        (real_dir / "credentials.toml").write_text("test")
+        config_dir = tmp_path / ".config"
+        config_dir.mkdir(parents=True)
+        (config_dir / "fabprint").symlink_to(real_dir)
+
+        _migrate_config_dir()
+
+        assert not (config_dir / "estampo").exists()
+
+
 class TestCredentialsPath:
     def test_env_var_override(self, tmp_path, monkeypatch):
-        """FABPRINT_CREDENTIALS env var overrides default path."""
-        from fabprint.credentials import _credentials_path
+        """ESTAMPO_CREDENTIALS env var overrides default path."""
+        from estampo.credentials import _credentials_path
 
         custom_path = tmp_path / "custom_creds.toml"
+        monkeypatch.setenv("ESTAMPO_CREDENTIALS", str(custom_path))
+        assert _credentials_path() == custom_path
+
+    def test_legacy_env_var_fallback(self, tmp_path, monkeypatch):
+        """FABPRINT_CREDENTIALS env var works as fallback."""
+        from estampo.credentials import _credentials_path
+
+        custom_path = tmp_path / "custom_creds.toml"
+        monkeypatch.delenv("ESTAMPO_CREDENTIALS", raising=False)
         monkeypatch.setenv("FABPRINT_CREDENTIALS", str(custom_path))
         assert _credentials_path() == custom_path
 
     def test_windows_path(self, monkeypatch):
         """On Windows, credentials go to AppData/Roaming."""
-        from fabprint.credentials import _credentials_path
+        from estampo.credentials import _credentials_path
 
-        monkeypatch.delenv("FABPRINT_CREDENTIALS", raising=False)
+        monkeypatch.delenv("ESTAMPO_CREDENTIALS", raising=False)
         monkeypatch.setattr("sys.platform", "win32")
         path = _credentials_path()
         assert "AppData" in str(path) or "Roaming" in str(path)
 
     def test_linux_path(self, monkeypatch):
-        """On Linux, credentials go to .config/fabprint."""
-        from fabprint.credentials import _credentials_path
+        """On Linux, credentials go to .config/estampo."""
+        from estampo.credentials import _credentials_path
 
-        monkeypatch.delenv("FABPRINT_CREDENTIALS", raising=False)
+        monkeypatch.delenv("ESTAMPO_CREDENTIALS", raising=False)
         monkeypatch.setattr("sys.platform", "linux")
         path = _credentials_path()
-        assert ".config" in path.parts and "fabprint" in path.parts
+        assert ".config" in path.parts and "estampo" in path.parts
 
 
 class TestLoadPrinterCredentials:
     def test_env_var_overrides(self, tmp_path, monkeypatch):
         """Environment variables override file credentials."""
-        from fabprint.credentials import load_printer_credentials
+        from estampo.credentials import load_printer_credentials
 
         cred_path = tmp_path / "credentials.toml"
         cred_path.write_text(
             '[printers.test]\ntype = "bambu-lan"\nip = "10.0.0.1"\n'
             'access_code = "filecode"\nserial = "FILESERIAL"\n'
         )
-        monkeypatch.setattr("fabprint.credentials._credentials_path", lambda: cred_path)
+        monkeypatch.setattr("estampo.credentials._credentials_path", lambda: cred_path)
         monkeypatch.setenv("BAMBU_PRINTER_IP", "192.168.1.99")
         monkeypatch.setenv("BAMBU_ACCESS_CODE", "envcode")
         monkeypatch.setenv("BAMBU_SERIAL", "ENVSERIAL")
@@ -342,7 +412,7 @@ class TestLoadPrinterCredentials:
 
     def test_no_name_returns_env_only(self, monkeypatch):
         """With name=None, only env vars are returned."""
-        from fabprint.credentials import load_printer_credentials
+        from estampo.credentials import load_printer_credentials
 
         monkeypatch.setenv("BAMBU_PRINTER_IP", "1.2.3.4")
         monkeypatch.setenv("BAMBU_ACCESS_CODE", "code")
@@ -355,26 +425,26 @@ class TestLoadPrinterCredentials:
         assert creds["type"] is None
 
     def test_missing_credentials_file_raises(self, tmp_path, monkeypatch):
-        """Raises FabprintError when credentials file doesn't exist."""
-        from fabprint import FabprintError
-        from fabprint.credentials import load_printer_credentials
+        """Raises EstampoError when credentials file doesn't exist."""
+        from estampo import EstampoError
+        from estampo.credentials import load_printer_credentials
 
         cred_path = tmp_path / "nonexistent" / "credentials.toml"
-        monkeypatch.setattr("fabprint.credentials._credentials_path", lambda: cred_path)
+        monkeypatch.setattr("estampo.credentials._credentials_path", lambda: cred_path)
 
-        with pytest.raises(FabprintError, match="Credentials file not found"):
+        with pytest.raises(EstampoError, match="Credentials file not found"):
             load_printer_credentials("myprinter")
 
     def test_printer_not_in_file_raises(self, tmp_path, monkeypatch):
-        """Raises FabprintError when named printer isn't in the file."""
-        from fabprint import FabprintError
-        from fabprint.credentials import load_printer_credentials
+        """Raises EstampoError when named printer isn't in the file."""
+        from estampo import EstampoError
+        from estampo.credentials import load_printer_credentials
 
         cred_path = tmp_path / "credentials.toml"
         cred_path.write_text('[printers.workshop]\ntype = "bambu-lan"\nip = "10.0.0.1"\n')
-        monkeypatch.setattr("fabprint.credentials._credentials_path", lambda: cred_path)
+        monkeypatch.setattr("estampo.credentials._credentials_path", lambda: cred_path)
 
-        with pytest.raises(FabprintError, match="Printer 'missing' not found"):
+        with pytest.raises(EstampoError, match="Printer 'missing' not found"):
             load_printer_credentials("missing")
 
 
@@ -396,12 +466,12 @@ class TestSetupPrinterBambuCloud:
     def test_bambu_cloud_without_login(self, tmp_path, monkeypatch):
         """Bambu cloud setup with no existing token and user skips login."""
         cred_path = tmp_path / "credentials.toml"
-        monkeypatch.setattr("fabprint.credentials._credentials_path", lambda: cred_path)
+        monkeypatch.setattr("estampo.credentials._credentials_path", lambda: cred_path)
 
         # name, type=2 (bambu-cloud), skip login (n), serial
         _mock_ui_inputs(monkeypatch, ["cloudprinter", "2", "n", "SN_CLOUD_001"])
         # Mock _pick_cloud_printer to return None (no token)
-        monkeypatch.setattr("fabprint.credentials._pick_cloud_printer", lambda cloud: None)
+        monkeypatch.setattr("estampo.credentials._pick_cloud_printer", lambda cloud: None)
 
         setup_printer()
 
@@ -414,7 +484,7 @@ class TestSetupPrinterBambuCloud:
     def test_moonraker_no_api_key(self, tmp_path, monkeypatch):
         """Moonraker setup without optional api_key."""
         cred_path = tmp_path / "credentials.toml"
-        monkeypatch.setattr("fabprint.credentials._credentials_path", lambda: cred_path)
+        monkeypatch.setattr("estampo.credentials._credentials_path", lambda: cred_path)
 
         # name, type=3 (moonraker), url, api_key empty (optional)
         _mock_ui_inputs(monkeypatch, ["klipper", "3", "http://klipper.local:7125", ""])

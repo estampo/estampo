@@ -7,7 +7,7 @@ import logging
 
 import requests
 
-from fabprint import FabprintError
+from estampo import EstampoError
 
 log = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ SLICER_HEADERS = {
 
 def _request_verification_code(email: str) -> None:
     """Request a verification code be sent to the user's email."""
-    from fabprint import ui
+    from estampo import ui
 
     resp = requests.post(
         f"{API_BASE}/v1/user-service/user/sendemail/code",
@@ -38,7 +38,7 @@ def _request_verification_code(email: str) -> None:
 def _login(email: str, password: str) -> tuple[str, str]:
     """Login and return (access_token, refresh_token). Handles all auth flows."""
 
-    from fabprint import ui
+    from estampo import ui
 
     # Step 1: Try password login
     ui.info("Attempting password login...")
@@ -89,7 +89,7 @@ def _login(email: str, password: str) -> tuple[str, str]:
 
     if not token:
         log.debug("Login response: %s", json.dumps(data, indent=2))
-        raise FabprintError("Login failed — no access token in response")
+        raise EstampoError("Login failed — no access token in response")
 
     return token, refresh_token
 
@@ -121,8 +121,8 @@ def _get_devices(token: str) -> list[dict]:
 
 def _show_devices(token: str) -> None:
     """Print bound printers."""
-    from fabprint import ui
-    from fabprint.credentials import mask_serial
+    from estampo import ui
+    from estampo.credentials import mask_serial
 
     devices = _get_devices(token)
     if devices:

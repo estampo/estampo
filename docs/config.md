@@ -1,6 +1,6 @@
 # Configuration reference
 
-fabprint is configured with a single TOML file (typically `fabprint.toml`). This page documents every section and field.
+estampo is configured with a single TOML file (typically `estampo.toml`). This page documents every section and field.
 
 ## Full example
 
@@ -42,7 +42,7 @@ filament = "Generic PETG-CF @base"
 
 ## `name`
 
-Optional project name. When set, outputs go into `fabprint_output/{name}/` by default (e.g. `fabprint_output/benchy/plate.3mf`). This keeps outputs from different configs separated. Explicit `-o` overrides this.
+Optional project name. When set, outputs go into `estampo_output/{name}/` by default (e.g. `estampo_output/benchy/plate.3mf`). This keeps outputs from different configs separated. Explicit `-o` overrides this.
 
 | Key    | Type     | Default | Description                              |
 |--------|----------|---------|------------------------------------------|
@@ -75,16 +75,16 @@ Defines which printer to send gcode to. Optional — omit if you only need to pl
 
 | Key    | Type     | Default | Description                                           |
 |--------|----------|---------|-------------------------------------------------------|
-| `name` | `string` | —       | Printer name in `~/.config/fabprint/credentials.toml` |
+| `name` | `string` | —       | Printer name in `~/.config/estampo/credentials.toml` |
 
-The `name` field references a printer configured via `fabprint setup`. All connection details (type, IP, credentials) are stored in `credentials.toml`, not in the project config.
+The `name` field references a printer configured via `estampo setup`. All connection details (type, IP, credentials) are stored in `credentials.toml`, not in the project config.
 
 ### Credentials file
 
-Run `fabprint setup` to create `~/.config/fabprint/credentials.toml`. It stores printer connection details and optional cloud login:
+Run `estampo setup` to create `~/.config/estampo/credentials.toml`. It stores printer connection details and optional cloud login:
 
 ```toml
-# ~/.config/fabprint/credentials.toml
+# ~/.config/estampo/credentials.toml
 
 [cloud]
 token = "..."
@@ -236,8 +236,8 @@ filament = "Generic PETG-CF @base"
 sequence = 2
 ```
 
-Both objects come from the same 3MF, so fabprint guarantees identical bed positioning. Run each sequence separately:
+Both objects come from the same 3MF, so estampo guarantees identical bed positioning. Run each sequence separately:
 
 ```bash
-fabprint run fabprint.toml --only print   # after slicing sequence 1
+estampo run estampo.toml --only print   # after slicing sequence 1
 ```
