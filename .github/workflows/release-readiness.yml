@@ -183,12 +183,12 @@ jobs:
 
       - name: Verify output
         run: |
-          echo "Checking for gcode output..."
-          ls -la examples/output/*.gcode
+          echo "Checking for slice output..."
+          ls -la examples/estampo_output/
           echo "Slice test OK"
 
       - uses: actions/upload-artifact@v7
         with:
           name: slice-output
-          path: examples/output/
+          path: examples/estampo_output/
           retention-days: 5
