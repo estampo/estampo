@@ -10,16 +10,18 @@ Before pushing any PR branch, always run locally:
 Do NOT push a PR until all four checks pass locally.
 
 ## Changelog (MANDATORY)
-Every PR must include a CHANGELOG.md update:
-1. Add bullet points under the `## Unreleased` section at the top of CHANGELOG.md
-2. If `## Unreleased` doesn't exist, create it above the latest version heading
-3. List changes as bullet points — concise, user-facing descriptions
-4. Do NOT assign a version number — that happens at release time
+Every PR must include a **towncrier fragment file** in the `changes/` directory:
+1. Create a file: `changes/<PR-number>.<type>` where type is `feature`, `bugfix`, or `misc`
+2. Write a single line — concise, user-facing description of the change
+3. If the PR has no number yet, use `+descriptive-name.<type>` (orphan fragment)
+4. Do NOT edit CHANGELOG.md directly — towncrier compiles fragments at release time
 
-At release time (not during normal PRs):
-1. Rename `## Unreleased` to `## <version> — YYYY-MM-DD`
-2. Bump `version` in `pyproject.toml` to match
-3. Tag with `v<version>` to trigger the Release workflow (publishes to PyPI)
+Example: `changes/245.feature` containing:
+```
+Add ``prepare-release.yml`` workflow for single-command release preparation
+```
+
+At release time, `prepare-release.yml` runs `towncrier build --version X.Y.Z` which compiles all fragments into CHANGELOG.md and deletes them.
 
 ## Post-PR Checklist (MANDATORY)
 After pushing a PR or merging to main:
@@ -50,22 +52,33 @@ OrcaSlicer profiles are extracted from the Docker image and committed to `src/es
 
 ## Release Process
 
-1. Ensure profiles are up-to-date in `src/estampo/data/` (release-readiness does this automatically on push to main)
-2. Run `release-readiness` workflow manually to verify everything passes end-to-end
-3. Update `CHANGELOG.md` — rename `## Unreleased` to `## <version> — YYYY-MM-DD`
-4. Bump `version` in `pyproject.toml`
-5. Commit, tag `v<version>`, push tag
-6. The release workflow: runs readiness gate → builds all artifacts → publishes PyPI + Docker + cloud-bridge (nothing publishes until everything builds successfully)
+### Automated flow (preferred)
 
-**Critical**: PyPI versions are immutable. A failed release burns the version number. Always use TestPyPI first and ensure the release-readiness workflow passes before tagging.
+1. Run: `gh workflow run prepare-release.yml -f version=X.Y.Z`
+2. The workflow creates a `release/vX.Y.Z` branch with version bump + changelog (towncrier compiles fragment files from `changes/`)
+3. Review the PR, adjust changelog if needed, merge
+4. On merge, `release.yml` detects the merged PR came from a `release/vX.Y.Z` branch, then: builds all artifacts → validates on TestPyPI → creates git tag → publishes to PyPI + Docker Hub + GHCR → creates GitHub Release
+
+### Re-running prepare-release
+
+If issues arise between prepare and merge (e.g. a hotfix lands), re-run `prepare-release.yml` with the same version. It will force-update the release branch and refresh the existing PR with the new changelog.
+
+### Manual fallback
+
+If the automatic pipeline fails after tagging: `gh workflow run release.yml -f tag=vX.Y.Z`
+
+Both TestPyPI and PyPI have `skip-existing` enabled, so re-runs resume from where they left off.
+
+**Critical**: PyPI versions are immutable. A failed release burns the version number. The TestPyPI dry-run gate catches most issues before the real publish. The tag is only created after TestPyPI succeeds.
 
 ## CI Workflows
 
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
-| `ci.yml` | PR / push to main | Lint, test (3 OS × 3 Python), coverage |
-| `test-pypi.yml` | PR / push to main | Publish dev package to TestPyPI |
-| `publish-docker.yml` | Push to main | Build Docker images when relevant files change |
-| `publish-cloud-bridge.yml` | Tag push (`v*`) | Full release: readiness gate → build all → publish all |
-| `release-readiness.yml` | Push to main / nightly / manual / workflow_call | E2e: Docker build, smoke test, profile extraction + commit, real slice |
+| `ci.yml` | PR / push to main | Lint, type check, test (3 OS × 3 Python), coverage, towncrier fragment check |
+| `test-pypi.yml` | PR / push to main | Publish `.dev` package to TestPyPI (skips release PR merges) |
+| `publish-docker.yml` | Push to main | Build Docker images when relevant files change (skips release PR merges) |
+| `release.yml` | Push to main (release PR merge) / manual | Full release: detect release branch → build → TestPyPI gate → tag → publish all → GitHub Release |
+| `prepare-release.yml` | Manual | Create release PR with version bump + towncrier changelog |
+| `release-readiness.yml` | Push to main / nightly / manual | E2e: Docker build, smoke test, profile extraction + commit, real slice |
 | `slice.yml` | Manual | Run a slice with custom config |

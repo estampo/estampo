@@ -1,0 +1,387 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g. v0.2.3) — use only as fallback"
+        required: true
+
+jobs:
+  # ── Detect release PR merge on push to main ─────────────────────────
+  detect-release:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      is_release: ${{ steps.check.outputs.is_release }}
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - name: Check if this is a release PR merge
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SHA="${{ github.sha }}"
+          echo "Checking commit $SHA for associated release PR..."
+
+          # Find merged PRs associated with this commit whose head branch
+          # matches the release/vX.Y.Z pattern created by prepare-release.
+          # This API call must succeed — if it fails, the job fails rather
+          # than silently skipping a release.
+          BRANCHES=$(gh api "repos/${{ github.repository }}/commits/${SHA}/pulls" \
+            --jq '.[].head.ref')
+          echo "Associated PR branches: ${BRANCHES:-<none>}"
+
+          VERSION=$(echo "$BRANCHES" \
+            | grep -oP '^release/v\K\d+\.\d+\.\d+$' \
+            | head -1 || true)
+
+          if [[ -n "$VERSION" ]]; then
+            # Verify no existing tag (404 = no tag, which is what we want)
+            HTTP_CODE=$(gh api "repos/${{ github.repository }}/git/refs/tags/v${VERSION}" \
+              --silent -w '%{http_code}' -o /dev/null 2>/dev/null || echo "000")
+            if [[ "$HTTP_CODE" == "200" ]]; then
+              echo "::warning::Tag v${VERSION} already exists — skipping"
+              echo "is_release=false" >> "$GITHUB_OUTPUT"
+            elif [[ "$HTTP_CODE" == "404" ]]; then
+              echo "is_release=true" >> "$GITHUB_OUTPUT"
+              echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+              echo "::notice::Detected release PR merge for v${VERSION}"
+            else
+              echo "::error::Unexpected API response ($HTTP_CODE) checking tag v${VERSION}"
+              exit 1
+            fi
+          else
+            echo "is_release=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # ── Verify version ──────────────────────────────────────────────────
+  version:
+    needs: detect-release
+    if: |
+      always() &&
+      ((needs.detect-release.outputs.is_release == 'true') ||
+       github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - name: Extract and verify version
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            # Auto path: version from detect-release
+            VERSION="${{ needs.detect-release.outputs.version }}"
+          else
+            # workflow_dispatch
+            TAG="${{ inputs.tag }}"
+            VERSION="${TAG#v}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+          TOML_VERSION=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          if [[ "$TOML_VERSION" != "$VERSION" ]]; then
+            echo "::error::Version mismatch: pyproject.toml=$TOML_VERSION, release=$VERSION"
+            exit 1
+          fi
+          echo "::notice::Releasing version $VERSION"
+
+  # ── Build everything (no publishing) ────────────────────────────────
+  build-pypi:
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Build and validate package
+        run: |
+          pip install build twine
+          python -m build
+          twine check dist/*
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: pypi-dist
+          path: dist/
+          retention-days: 5
+
+  build-docker:
+    needs: version
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        orca-version: ["2.3.1"]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Check if orca-base already exists
+        id: base_exists
+        run: |
+          if docker pull "estampo/orca-base:${{ matrix.orca-version }}" 2>/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build orca-base (if needed)
+        if: steps.base_exists.outputs.exists == 'false'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.orca-base
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: estampo/orca-base:${{ matrix.orca-version }}
+          build-args: ORCA_VERSION=${{ matrix.orca-version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build estampo image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: estampo/estampo:orca-${{ matrix.orca-version }}
+          build-args: ORCA_VERSION=${{ matrix.orca-version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Capture image digest
+        id: digest
+        run: |
+          DIGEST=$(docker inspect --format='{{.Id}}' "estampo/estampo:orca-${{ matrix.orca-version }}")
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+          echo "::notice::Image digest: $DIGEST"
+
+      - name: Save image as artifact
+        run: |
+          docker save estampo/estampo:orca-${{ matrix.orca-version }} \
+            -o estampo-image.tar
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: docker-image-${{ matrix.orca-version }}
+          path: estampo-image.tar
+          retention-days: 5
+
+  build-cloud-bridge:
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build cloud-bridge image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.cloud-bridge
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: estampo/cloud-bridge:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Save image as artifact
+        run: docker save estampo/cloud-bridge:latest -o cloud-bridge.tar
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: cloud-bridge-image
+          path: cloud-bridge.tar
+          retention-days: 5
+
+  # ── Dry-run: validate on TestPyPI before real publish ───────────────
+  dry-run-publish:
+    needs: [version, build-pypi]
+    runs-on: ubuntu-latest
+    environment: testpypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: pypi-dist
+          path: dist/
+
+      - name: Publish to TestPyPI (dry-run gate)
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+
+  # ── Create tag only after TestPyPI succeeds ─────────────────────────
+  create-tag:
+    needs: [detect-release, dry-run-publish]
+    # Only auto-tag on push to main (not workflow_dispatch — tag already exists)
+    if: needs.detect-release.outputs.is_release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Create and push tag
+        run: |
+          VERSION="${{ needs.detect-release.outputs.version }}"
+          git tag "v${VERSION}"
+          git push origin "v${VERSION}"
+          echo "::notice::Created tag v${VERSION}"
+
+  # ── Publish everything ──────────────────────────────────────────────
+  publish-pypi:
+    needs: [version, create-tag, dry-run-publish, build-docker, build-cloud-bridge]
+    # Run after tag creation for push events, or directly for workflow_dispatch
+    if: |
+      always() &&
+      needs.dry-run-publish.result == 'success' &&
+      needs.build-docker.result == 'success' &&
+      needs.build-cloud-bridge.result == 'success' &&
+      (needs.create-tag.result == 'success' || needs.create-tag.result == 'skipped')
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: pypi-dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
+
+  publish-docker:
+    needs: [version, publish-pypi]
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    strategy:
+      matrix:
+        orca-version: ["2.3.1"]
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: docker-image-${{ matrix.orca-version }}
+
+      - name: Load image
+        run: |
+          docker load -i estampo-image.tar
+          echo "Loaded image digest: $(docker inspect --format='{{.Id}}' estampo/estampo:orca-${{ matrix.orca-version }})"
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag and push estampo image
+        run: |
+          VERSION="${{ needs.version.outputs.version }}"
+          ORCA="${{ matrix.orca-version }}"
+          docker tag "estampo/estampo:orca-${ORCA}" "estampo/estampo:orca-${ORCA}-${VERSION}"
+          docker tag "estampo/estampo:orca-${ORCA}" "ghcr.io/${{ github.repository }}:orca-${ORCA}-${VERSION}"
+          docker tag "estampo/estampo:orca-${ORCA}" "ghcr.io/${{ github.repository }}:orca-${ORCA}"
+          docker push "estampo/estampo:orca-${ORCA}"
+          docker push "estampo/estampo:orca-${ORCA}-${VERSION}"
+          docker push "ghcr.io/${{ github.repository }}:orca-${ORCA}-${VERSION}"
+          docker push "ghcr.io/${{ github.repository }}:orca-${ORCA}"
+
+  publish-cloud-bridge:
+    needs: [version, publish-pypi]
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: cloud-bridge-image
+
+      - name: Load image
+        run: docker load -i cloud-bridge.tar
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag and push cloud-bridge
+        run: |
+          VERSION="${{ needs.version.outputs.version }}"
+          docker tag estampo/cloud-bridge:latest "estampo/cloud-bridge:${VERSION}"
+          docker tag estampo/cloud-bridge:latest "ghcr.io/${{ github.repository }}/cloud-bridge:${VERSION}"
+          docker push "estampo/cloud-bridge:${VERSION}"
+          docker push estampo/cloud-bridge:latest
+          docker push "ghcr.io/${{ github.repository }}/cloud-bridge:${VERSION}"
+
+  # ── Create GitHub Release ───────────────────────────────────────────
+  github-release:
+    needs: [version, publish-pypi, publish-docker, publish-cloud-bridge]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: pypi-dist
+          path: dist/
+
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          VERSION="${{ needs.version.outputs.version }}"
+          # Extract section between "## VERSION" and the next "## " heading
+          BODY=$(awk "/^## ${VERSION//./\\.} /{found=1; next} /^## /{if(found) exit} found{print}" CHANGELOG.md)
+          # Write to file to avoid quoting issues
+          echo "$BODY" > /tmp/release-body.md
+          echo "Changelog body:"
+          cat /tmp/release-body.md
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ needs.version.outputs.version }}"
+          WHEEL=$(ls dist/*.whl 2>/dev/null | head -1)
+          ARGS=(gh release create "v${VERSION}" --title "v${VERSION}" --notes-file /tmp/release-body.md)
+          if [[ -n "$WHEEL" ]]; then
+            ARGS+=("$WHEEL")
+          fi
+          "${ARGS[@]}"

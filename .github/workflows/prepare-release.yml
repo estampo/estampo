@@ -1,0 +1,132 @@
+name: Prepare Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (e.g. 0.2.3)"
+        required: true
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # full history for changelog generation
+
+      - name: Validate version format
+        run: |
+          VERSION="${{ inputs.version }}"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid version format: $VERSION (expected X.Y.Z)"
+            exit 1
+          fi
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Install project dependencies
+        run: uv sync --extra dev
+
+      - name: Check version is newer than current
+        run: |
+          VERSION="${{ inputs.version }}"
+          CURRENT=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          echo "Current version: $CURRENT"
+          echo "Target version:  $VERSION"
+          uv run python -c "
+          from packaging.version import Version
+          current = Version('$CURRENT')
+          target = Version('$VERSION')
+          if target <= current:
+              raise SystemExit(f'Target {target} must be newer than current {current}')
+          print(f'OK: {current} → {target}')
+          "
+
+      - name: Check no existing tag
+        run: |
+          VERSION="${{ inputs.version }}"
+          if git ls-remote --tags origin "refs/tags/v${VERSION}" | grep -q .; then
+            echo "::error::Tag v${VERSION} already exists"
+            exit 1
+          fi
+
+      - name: Create or reset release branch
+        run: |
+          VERSION="${{ inputs.version }}"
+          BRANCH="release/v${VERSION}"
+          # If branch exists remotely, start from main (overwrite previous attempt)
+          if git ls-remote --heads origin "refs/heads/${BRANCH}" | grep -q .; then
+            echo "Branch ${BRANCH} already exists — will overwrite"
+          fi
+          git checkout -b "$BRANCH"
+
+      - name: Bump version in pyproject.toml
+        run: |
+          VERSION="${{ inputs.version }}"
+          sed -i "s/^version = \".*\"/version = \"${VERSION}\"/" pyproject.toml
+          # Verify the change
+          grep "^version = \"${VERSION}\"" pyproject.toml
+
+      - name: Build changelog with towncrier
+        run: |
+          VERSION="${{ inputs.version }}"
+          # Preview first
+          echo "=== Changelog preview ==="
+          uv run towncrier build --draft --version "$VERSION"
+          echo "========================="
+          # Build for real (compiles fragments into CHANGELOG.md, deletes fragments)
+          uv run towncrier build --version "$VERSION" --yes
+          echo "--- Updated CHANGELOG.md (first 30 lines) ---"
+          head -30 CHANGELOG.md
+
+      - name: Commit and push
+        run: |
+          VERSION="${{ inputs.version }}"
+          BRANCH="release/v${VERSION}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pyproject.toml CHANGELOG.md changes/
+          git commit -m "Release v${VERSION}"
+          git push --force origin "$BRANCH"
+
+      - name: Create or update pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ inputs.version }}"
+          BRANCH="release/v${VERSION}"
+
+          # Extract the changelog body for this version
+          CHANGELOG_BODY=$(awk "/^## ${VERSION//./\\.} /{found=1; next} /^## /{if(found) exit} found{print}" CHANGELOG.md)
+
+          PR_BODY="$(cat <<EOF
+          ## Release v${VERSION}
+
+          ${CHANGELOG_BODY}
+
+          ---
+          **Merge this PR to trigger the release pipeline.**
+          The release workflow will auto-tag \`v${VERSION}\`, build all artifacts, validate on TestPyPI, then publish to PyPI + Docker Hub + GHCR.
+          EOF
+          )"
+
+          # Check if PR already exists for this branch
+          EXISTING_PR=$(gh pr list --head "$BRANCH" --json number --jq '.[0].number' 2>/dev/null || echo "")
+
+          if [[ -n "$EXISTING_PR" ]]; then
+            echo "Updating existing PR #${EXISTING_PR}"
+            gh pr edit "$EXISTING_PR" \
+              --title "Release v${VERSION}" \
+              --body "$PR_BODY"
+            gh pr comment "$EXISTING_PR" --body "♻️ Release branch refreshed — changelog and version bump regenerated from latest main."
+          else
+            gh pr create \
+              --title "Release v${VERSION}" \
+              --body "$PR_BODY" \
+              --base main \
+              --head "$BRANCH"
+          fi

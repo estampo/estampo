@@ -2,6 +2,8 @@
 
 All notable changes to this project are documented here.
 
+<!-- towncrier release notes start -->
+
 ## 0.2.2 — 2026-03-30
 
 - Fix `profiles pin` using stale local system profiles instead of Docker-extracted profiles when `slicer.version` is set
