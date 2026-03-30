@@ -49,10 +49,14 @@ jobs:
             exit 1
           fi
 
-      - name: Create release branch
+      - name: Create or reset release branch
         run: |
           VERSION="${{ inputs.version }}"
           BRANCH="release/v${VERSION}"
+          # If branch exists remotely, start from main (overwrite previous attempt)
+          if git ls-remote --heads origin "refs/heads/${BRANCH}" | grep -q .; then
+            echo "Branch ${BRANCH} already exists — will overwrite"
+          fi
           git checkout -b "$BRANCH"
 
       - name: Bump version in pyproject.toml
@@ -155,9 +159,9 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add pyproject.toml CHANGELOG.md
           git commit -m "Release v${VERSION}"
-          git push origin "$BRANCH"
+          git push --force origin "$BRANCH"
 
-      - name: Create pull request
+      - name: Create or update pull request
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -165,19 +169,32 @@ jobs:
           BRANCH="release/v${VERSION}"
 
           # Extract the changelog body for this version
-          BODY=$(awk "/^## ${VERSION//./\\.} /{found=1; next} /^## /{if(found) exit} found{print}" CHANGELOG.md)
+          CHANGELOG_BODY=$(awk "/^## ${VERSION//./\\.} /{found=1; next} /^## /{if(found) exit} found{print}" CHANGELOG.md)
 
-          gh pr create \
-            --title "Release v${VERSION}" \
-            --body "$(cat <<EOF
+          PR_BODY="$(cat <<EOF
           ## Release v${VERSION}
 
-          ${BODY}
+          ${CHANGELOG_BODY}
 
           ---
           **Merge this PR to trigger the release pipeline.**
           The release workflow will auto-tag \`v${VERSION}\`, build all artifacts, validate on TestPyPI, then publish to PyPI + Docker Hub + GHCR.
           EOF
-          )" \
-            --base main \
-            --head "$BRANCH"
+          )"
+
+          # Check if PR already exists for this branch
+          EXISTING_PR=$(gh pr list --head "$BRANCH" --json number --jq '.[0].number' 2>/dev/null || echo "")
+
+          if [[ -n "$EXISTING_PR" ]]; then
+            echo "Updating existing PR #${EXISTING_PR}"
+            gh pr edit "$EXISTING_PR" \
+              --title "Release v${VERSION}" \
+              --body "$PR_BODY"
+            gh pr comment "$EXISTING_PR" --body "♻️ Release branch refreshed — changelog and version bump regenerated from latest main."
+          else
+            gh pr create \
+              --title "Release v${VERSION}" \
+              --body "$PR_BODY" \
+              --base main \
+              --head "$BRANCH"
+          fi
