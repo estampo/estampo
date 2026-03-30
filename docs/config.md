@@ -52,6 +52,18 @@ Optional project name. When set, outputs go into `estampo_output/{name}/` by def
 name = "benchy"
 ```
 
+## `output_dir`
+
+Directory for build outputs, relative to the config file. CLI `--output-dir` / `-o` overrides this.
+
+| Key          | Type     | Default            | Description              |
+|--------------|----------|--------------------|--------------------------|
+| `output_dir` | `string` | `"estampo_output"` | Output directory path    |
+
+```toml
+output_dir = "build/output"
+```
+
 ## `[pipeline]`
 
 Controls which stages run and in what order. Optional — defaults to the full pipeline.

@@ -42,13 +42,22 @@ In the GitHub Action context, estampo runs *inside* the Docker container. Docker
 
 All Docker image tags use the format `estampo/estampo:orca-<version>`. The `docker_image()` function in `slicer.py` is the single source of truth — always import it rather than constructing the tag string manually.
 
+## Bundled Profiles
+
+OrcaSlicer profiles are extracted from the Docker image and committed to `src/estampo/data/`. This happens automatically via the `release-readiness` workflow on push to main. The profiles are bundled in the pip package so `estampo init` works without Docker.
+
+**Key rule**: Never tag a release without confirming `src/estampo/data/profiles.orca.*.json` files exist and are up-to-date. The `test_bundled_profiles_*` tests in `test_profiles.py` enforce this.
+
 ## Release Process
 
-1. Run `release-readiness` workflow manually before tagging — it builds Docker images, runs smoke tests, extracts profiles, and does a real slice end-to-end
-2. Update `CHANGELOG.md` — rename `## Unreleased` to `## <version> — YYYY-MM-DD`
-3. Bump `version` in `pyproject.toml`
-4. Commit, tag `v<version>`, push tag
-5. The release workflow publishes to PyPI, builds Docker images, and opens a PR for bundled profiles
+1. Ensure profiles are up-to-date in `src/estampo/data/` (release-readiness does this automatically on push to main)
+2. Run `release-readiness` workflow manually to verify everything passes end-to-end
+3. Update `CHANGELOG.md` — rename `## Unreleased` to `## <version> — YYYY-MM-DD`
+4. Bump `version` in `pyproject.toml`
+5. Commit, tag `v<version>`, push tag
+6. The release workflow: runs readiness gate → builds all artifacts → publishes PyPI + Docker + cloud-bridge (nothing publishes until everything builds successfully)
+
+**Critical**: PyPI versions are immutable. A failed release burns the version number. Always use TestPyPI first and ensure the release-readiness workflow passes before tagging.
 
 ## CI Workflows
 
@@ -57,6 +66,6 @@ All Docker image tags use the format `estampo/estampo:orca-<version>`. The `dock
 | `ci.yml` | PR / push to main | Lint, test (3 OS × 3 Python), coverage |
 | `test-pypi.yml` | PR / push to main | Publish dev package to TestPyPI |
 | `publish-docker.yml` | Push to main | Build Docker images when relevant files change |
-| `publish-cloud-bridge.yml` | Tag push (`v*`) | Full release: PyPI, Docker images, profile extraction |
-| `release-readiness.yml` | Manual / push to main | Pre-release e2e: Docker build, smoke test, profiles, real slice |
+| `publish-cloud-bridge.yml` | Tag push (`v*`) | Full release: readiness gate → build all → publish all |
+| `release-readiness.yml` | Push to main / nightly / manual / workflow_call | E2e: Docker build, smoke test, profile extraction + commit, real slice |
 | `slice.yml` | Manual | Run a slice with custom config |

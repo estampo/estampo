@@ -175,6 +175,37 @@ def test_load_bundled_profiles_missing(tmp_path):
     assert result == {}
 
 
+def test_bundled_profiles_exist():
+    """Real bundled profiles must be shipped with the package."""
+    from estampo.profiles import _BUNDLED_DIR
+
+    profiles = sorted(_BUNDLED_DIR.glob("profiles.orca.*.json"))
+    assert profiles, f"No bundled profiles found in {_BUNDLED_DIR}"
+
+
+def test_bundled_profiles_valid():
+    """Bundled profile files must be valid JSON with required structure."""
+    from estampo.profiles import _BUNDLED_DIR
+
+    for path in sorted(_BUNDLED_DIR.glob("profiles.orca.*.json")):
+        data = json.load(open(path))
+        assert data.get("engine") == "orca", f"{path.name}: bad engine"
+        assert "version" in data, f"{path.name}: missing version"
+        for cat in ("machine", "process", "filament"):
+            assert cat in data, f"{path.name}: missing {cat}"
+            assert isinstance(data[cat], list), f"{path.name}: {cat} not a list"
+            assert len(data[cat]) > 0, f"{path.name}: {cat} is empty"
+
+
+def test_bundled_profiles_loadable():
+    """load_bundled_profiles returns real data from shipped profiles."""
+    result = load_bundled_profiles("orca")
+    assert result, "load_bundled_profiles returned empty — profiles not bundled?"
+    assert len(result["machine"]) > 10, "Expected many machine profiles"
+    assert len(result["process"]) > 10, "Expected many process profiles"
+    assert len(result["filament"]) > 10, "Expected many filament profiles"
+
+
 # ---------------------------------------------------------------------------
 # discover_profile_names
 # ---------------------------------------------------------------------------
@@ -269,6 +300,79 @@ def test_resolve_profile_data_from_dir_not_found(tmp_path):
     (tmp_path / "process").mkdir()
     with pytest.raises(FileNotFoundError, match="not found"):
         _resolve_profile_data_from_dir("Nope", "process", tmp_path)
+
+
+def test_resolve_profile_data_from_dir_base_dir_fallback(tmp_path):
+    """Parent in base_dir/category is found via fallback when not a sibling."""
+    cat_dir = tmp_path / "process"
+    cat_dir.mkdir()
+    (cat_dir / "Parent.json").write_text(
+        json.dumps({"use_relative_e_distances": "0", "layer_height": 0.2})
+    )
+    (cat_dir / "Child.json").write_text(json.dumps({"inherits": "Parent", "layer_height": 0.3}))
+
+    data = _resolve_profile_data_from_dir("Child", "process", tmp_path)
+    assert data["layer_height"] == 0.3  # child override
+    assert data["use_relative_e_distances"] == "0"  # inherited from parent
+    assert "inherits" not in data
+
+
+def test_resolve_profile_data_from_dir_warns_missing_parent(tmp_path, caplog):
+    """Warning is logged when parent profile is not found."""
+    import logging
+
+    cat_dir = tmp_path / "process"
+    cat_dir.mkdir()
+    (cat_dir / "Orphan.json").write_text(
+        json.dumps({"inherits": "MissingParent", "layer_height": 0.2})
+    )
+
+    with caplog.at_level(logging.WARNING):
+        data = _resolve_profile_data_from_dir("Orphan", "process", tmp_path)
+    assert data["layer_height"] == 0.2
+    assert "MissingParent" in caplog.text
+
+
+def test_resolve_profile_data_docker_dir_fallback(tmp_path):
+    """Parent profile is found in docker_profile_dir during chain walk."""
+    # Set up: child in project pinned profiles, parent only in docker dir
+    project = tmp_path / "project"
+    pinned = project / "profiles" / "process"
+    pinned.mkdir(parents=True)
+    (pinned / "Child.json").write_text(json.dumps({"inherits": "DockerParent", "wall_loops": 4}))
+
+    docker_dir = tmp_path / "docker"
+    docker_process = docker_dir / "process"
+    docker_process.mkdir(parents=True)
+    (docker_process / "DockerParent.json").write_text(
+        json.dumps({"wall_loops": 2, "use_relative_e_distances": "0"})
+    )
+
+    data = resolve_profile_data(
+        "Child",
+        "orca",
+        "process",
+        project_dir=project,
+        docker_profile_dir=docker_dir,
+    )
+    assert data["wall_loops"] == 4  # child override
+    assert data["use_relative_e_distances"] == "0"  # inherited via docker fallback
+    assert "inherits" not in data
+
+
+def test_resolve_profile_data_warns_missing_parent(tmp_path, caplog):
+    """Warning is logged when parent is not found in any location."""
+    import logging
+
+    project = tmp_path / "project"
+    pinned = project / "profiles" / "process"
+    pinned.mkdir(parents=True)
+    (pinned / "Lonely.json").write_text(json.dumps({"inherits": "Ghost", "layer_height": 0.2}))
+
+    with caplog.at_level(logging.WARNING):
+        data = resolve_profile_data("Lonely", "orca", "process", project_dir=project)
+    assert data["layer_height"] == 0.2
+    assert "Ghost" in caplog.text
 
 
 # ---------------------------------------------------------------------------

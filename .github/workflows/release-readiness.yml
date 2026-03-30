@@ -181,11 +181,13 @@ jobs:
           git checkout -b "$BRANCH"
           git commit -m "Update bundled OrcaSlicer profiles (${{ env.ORCA_VERSION }})"
           git push origin "$BRANCH"
+          # Try to create PR; if repo settings disallow it, just log the branch URL
           gh pr create \
             --title "Update bundled OrcaSlicer profiles" \
             --body "Auto-extracted from estampo/estampo:orca-${{ env.ORCA_VERSION }}-test." \
             --base main \
-            --head "$BRANCH"
+            --head "$BRANCH" \
+          || echo "::warning::Could not create PR automatically. Branch '$BRANCH' pushed — create the PR manually."
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

@@ -62,6 +62,7 @@ class EstampoConfig:
     parts: list[PartConfig]
     base_dir: Path  # directory containing the toml file
     name: str | None = None  # optional project name, used to prefix output filenames
+    output_dir: str = "estampo_output"  # output directory, relative to base_dir
     printer: PrinterConfig | None = None
     pipeline: PipelineConfig = field(default_factory=PipelineConfig)
 
@@ -332,12 +333,19 @@ def load_config(path: Path) -> EstampoConfig:
             raise EstampoError("name must be a non-empty string")
         project_name = project_name.strip()
 
+    # Top-level output_dir (optional, default "estampo_output")
+    output_dir: str = raw.get("output_dir", "estampo_output")
+    if not isinstance(output_dir, str) or not output_dir.strip():
+        raise EstampoError("output_dir must be a non-empty string")
+    output_dir = output_dir.strip()
+
     return EstampoConfig(
         plate=plate,
         slicer=slicer,
         parts=parts,
         base_dir=base_dir,
         name=project_name,
+        output_dir=output_dir,
         printer=printer,
         pipeline=pipeline,
     )

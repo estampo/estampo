@@ -955,3 +955,49 @@ file = "cube.stl"
     )
     with pytest.raises(EstampoError, match="name must be a non-empty string"):
         load_config(path)
+
+
+def test_output_dir_parsed(tmp_path):
+    """Custom output_dir is parsed from config."""
+    path = _write_toml(
+        tmp_path,
+        """
+output_dir = "build/output"
+
+[[parts]]
+file = "cube.stl"
+""",
+        create_files=["cube.stl"],
+    )
+    cfg = load_config(path)
+    assert cfg.output_dir == "build/output"
+
+
+def test_output_dir_default(tmp_path):
+    """output_dir defaults to 'estampo_output'."""
+    path = _write_toml(
+        tmp_path,
+        """
+[[parts]]
+file = "cube.stl"
+""",
+        create_files=["cube.stl"],
+    )
+    cfg = load_config(path)
+    assert cfg.output_dir == "estampo_output"
+
+
+def test_output_dir_empty_rejected(tmp_path):
+    """Empty output_dir should be rejected."""
+    path = _write_toml(
+        tmp_path,
+        """
+output_dir = ""
+
+[[parts]]
+file = "cube.stl"
+""",
+        create_files=["cube.stl"],
+    )
+    with pytest.raises(EstampoError, match="output_dir must be a non-empty string"):
+        load_config(path)
