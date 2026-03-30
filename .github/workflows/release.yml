@@ -23,10 +23,21 @@ jobs:
       - name: Check if this is a release merge
         id: check
         run: |
-          MSG=$(git log -1 --pretty=%s)
-          echo "Commit message: $MSG"
-          if [[ "$MSG" =~ ^Release\ v([0-9]+\.[0-9]+\.[0-9]+) ]]; then
+          # Check commit subject (squash merge) and full body (merge commit
+          # includes "Release vX.Y.Z" as the PR title in the body)
+          MSG=$(git log -1 --pretty=%B)
+          echo "Commit message:"
+          echo "$MSG"
+          VERSION=""
+          # Squash merge: subject line is "Release vX.Y.Z"
+          if [[ "$(echo "$MSG" | head -1)" =~ Release\ v([0-9]+\.[0-9]+\.[0-9]+) ]]; then
             VERSION="${BASH_REMATCH[1]}"
+          # Merge commit: subject is "Merge pull request #N from ...", body contains PR title
+          elif echo "$MSG" | grep -qP 'Release v(\d+\.\d+\.\d+)'; then
+            VERSION=$(echo "$MSG" | grep -oP 'Release v\K\d+\.\d+\.\d+' | head -1)
+          fi
+
+          if [[ -n "$VERSION" ]]; then
             # Verify no existing tag
             if git ls-remote --tags origin "refs/tags/v${VERSION}" | grep -q .; then
               echo "::warning::Tag v${VERSION} already exists — skipping"
@@ -247,6 +258,8 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
 
   publish-docker:
     needs: [version, publish-pypi]

@@ -12,6 +12,8 @@ on:
 
 jobs:
   detect-changes:
+    # Skip on release commits — release.yml handles versioned Docker publishes
+    if: "!contains(github.event.head_commit.message, 'Release v')"
     runs-on: ubuntu-latest
     outputs:
       bridge: ${{ steps.check.outputs.bridge }}
