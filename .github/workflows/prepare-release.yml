@@ -26,13 +26,18 @@ jobs:
             exit 1
           fi
 
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Install project dependencies
+        run: uv sync --extra dev
+
       - name: Check version is newer than current
         run: |
           VERSION="${{ inputs.version }}"
           CURRENT=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
           echo "Current version: $CURRENT"
           echo "Target version:  $VERSION"
-          python3 -c "
+          uv run python -c "
           from packaging.version import Version
           current = Version('$CURRENT')
           target = Version('$VERSION')
@@ -59,14 +64,6 @@ jobs:
           fi
           git checkout -b "$BRANCH"
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.11"
-
-      - name: Install towncrier
-        run: pip install towncrier
-
       - name: Bump version in pyproject.toml
         run: |
           VERSION="${{ inputs.version }}"
@@ -79,10 +76,10 @@ jobs:
           VERSION="${{ inputs.version }}"
           # Preview first
           echo "=== Changelog preview ==="
-          towncrier build --draft --version "$VERSION"
+          uv run towncrier build --draft --version "$VERSION"
           echo "========================="
           # Build for real (compiles fragments into CHANGELOG.md, deletes fragments)
-          towncrier build --version "$VERSION" --yes
+          uv run towncrier build --version "$VERSION" --yes
           echo "--- Updated CHANGELOG.md (first 30 lines) ---"
           head -30 CHANGELOG.md
 

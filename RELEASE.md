@@ -49,10 +49,11 @@ Open the PR, review the changelog, edit if needed, then merge.
 
 ### 3. Automatic pipeline
 
-On merge, `release.yml` detects the "Release v0.3.0" commit and runs:
+On merge, `release.yml` detects that the merged PR came from a `release/v*`
+branch and runs:
 
 ```
-detect release commit
+detect release branch (via GitHub API)
   → verify version matches pyproject.toml
   → build PyPI package (+ twine check)
   → build Docker images (estampo + cloud-bridge)
@@ -127,9 +128,9 @@ The release workflow uses [trusted publishing](https://docs.pypi.org/trusted-pub
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
 | `ci.yml` | PR / push to main | Lint, type check, test (3 OS x 3 Python), coverage, towncrier check |
-| `test-pypi.yml` | PR / push to main | Publish `.dev` package to TestPyPI (skipped on release commits) |
-| `publish-docker.yml` | Push to main | Build Docker images when relevant files change (skipped on release commits) |
-| `release.yml` | Push to main (release merge) / manual | Full release pipeline (see above) |
+| `test-pypi.yml` | PR / push to main | Publish `.dev` package to TestPyPI (skips release PR merges) |
+| `publish-docker.yml` | Push to main | Build Docker images when relevant files change (skips release PR merges) |
+| `release.yml` | Push to main (release PR merge) / manual | Full release pipeline (see above) |
 | `prepare-release.yml` | Manual | Create release PR with version bump + changelog |
 | `release-readiness.yml` | Push to main / nightly / manual | E2e: Docker build, smoke test, profile extraction, real slice |
 | `slice.yml` | Manual | Run a slice with custom config |

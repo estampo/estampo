@@ -12,8 +12,6 @@ on:
 
 jobs:
   detect-changes:
-    # Skip on release commits — release.yml handles versioned Docker publishes
-    if: "!contains(github.event.head_commit.message, 'Release v')"
     runs-on: ubuntu-latest
     outputs:
       bridge: ${{ steps.check.outputs.bridge }}
@@ -23,8 +21,24 @@ jobs:
         with:
           fetch-depth: 2
 
+      - name: Skip if this is a release PR merge
+        id: release
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH=$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/pulls" \
+            --jq '.[0].head.ref' 2>/dev/null || true)
+          if [[ "$BRANCH" =~ ^release/v ]]; then
+            echo "::notice::Release PR merge — skipping (release.yml handles Docker)"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Detect changed files
         id: check
+        if: steps.release.outputs.skip != 'true'
         run: |
           CHANGED=$(git diff HEAD~1 HEAD --name-only)
           echo "$CHANGED" | grep -qE 'Dockerfile\.cloud-bridge|scripts/bambu_cloud_bridge\.cpp' \

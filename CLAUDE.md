@@ -55,28 +55,30 @@ OrcaSlicer profiles are extracted from the Docker image and committed to `src/es
 ### Automated flow (preferred)
 
 1. Run: `gh workflow run prepare-release.yml -f version=X.Y.Z`
-2. The workflow creates a `release/vX.Y.Z` branch with version bump + changelog (auto-generated from merged PR titles, merged with any `## Unreleased` entries)
+2. The workflow creates a `release/vX.Y.Z` branch with version bump + changelog (towncrier compiles fragment files from `changes/`)
 3. Review the PR, adjust changelog if needed, merge
-4. On merge, `release.yml` detects the `Release vX.Y.Z` commit, auto-creates a git tag, then: builds all artifacts → validates on TestPyPI → publishes to PyPI + Docker Hub + GHCR → creates GitHub Release
+4. On merge, `release.yml` detects the merged PR came from a `release/vX.Y.Z` branch, then: builds all artifacts → validates on TestPyPI → creates git tag → publishes to PyPI + Docker Hub + GHCR → creates GitHub Release
 
 ### Re-running prepare-release
 
-If issues arise between prepare and merge (e.g. a hotfix lands), re-run `prepare-release.yml` with the same version. It will recreate the branch and PR with updated changelog.
+If issues arise between prepare and merge (e.g. a hotfix lands), re-run `prepare-release.yml` with the same version. It will force-update the release branch and refresh the existing PR with the new changelog.
 
 ### Manual fallback
 
-If auto-tag fails or you need to re-release: `gh workflow run release.yml -f tag=vX.Y.Z`
+If the automatic pipeline fails after tagging: `gh workflow run release.yml -f tag=vX.Y.Z`
 
-**Critical**: PyPI versions are immutable. A failed release burns the version number. The TestPyPI dry-run gate catches most issues before the real publish.
+Both TestPyPI and PyPI have `skip-existing` enabled, so re-runs resume from where they left off.
+
+**Critical**: PyPI versions are immutable. A failed release burns the version number. The TestPyPI dry-run gate catches most issues before the real publish. The tag is only created after TestPyPI succeeds.
 
 ## CI Workflows
 
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
-| `ci.yml` | PR / push to main | Lint, test (3 OS × 3 Python), coverage |
-| `test-pypi.yml` | PR / push to main | Publish dev package to TestPyPI |
-| `publish-docker.yml` | Push to main | Build Docker images when relevant files change |
-| `release.yml` | Push to main (release PR merge) / tag push / manual | Full release: auto-tag → build → TestPyPI gate → publish all → GitHub Release |
-| `prepare-release.yml` | Manual | Create release PR with version bump + auto-changelog |
+| `ci.yml` | PR / push to main | Lint, type check, test (3 OS × 3 Python), coverage, towncrier fragment check |
+| `test-pypi.yml` | PR / push to main | Publish `.dev` package to TestPyPI (skips release PR merges) |
+| `publish-docker.yml` | Push to main | Build Docker images when relevant files change (skips release PR merges) |
+| `release.yml` | Push to main (release PR merge) / manual | Full release: detect release branch → build → TestPyPI gate → tag → publish all → GitHub Release |
+| `prepare-release.yml` | Manual | Create release PR with version bump + towncrier changelog |
 | `release-readiness.yml` | Push to main / nightly / manual | E2e: Docker build, smoke test, profile extraction + commit, real slice |
 | `slice.yml` | Manual | Run a slice with custom config |

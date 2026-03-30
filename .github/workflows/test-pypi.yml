@@ -9,8 +9,6 @@ on:
 
 jobs:
   test-publish:
-    # Skip on release commits — release.yml handles the real publish
-    if: "!contains(github.event.head_commit.message, 'Release v')"
     runs-on: ubuntu-latest
     environment: testpypi
     permissions:
@@ -18,12 +16,29 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Skip if this is a release PR merge
+        id: release
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH=$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/pulls" \
+            --jq '.[0].head.ref' 2>/dev/null || true)
+          if [[ "$BRANCH" =~ ^release/v ]]; then
+            echo "::notice::Release PR merge — skipping (release.yml handles publishing)"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Set up Python
+        if: steps.release.outputs.skip != 'true'
         uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
       - name: Build dev package for TestPyPI
+        if: steps.release.outputs.skip != 'true'
         run: |
           pip install build
           VERSION=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
@@ -32,6 +47,7 @@ jobs:
           python -m build
 
       - name: Publish to TestPyPI
+        if: steps.release.outputs.skip != 'true'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
