@@ -17,6 +17,18 @@ jobs:
       - run: uv run ruff format --check src tests
       - run: uv run mypy src/estampo
 
+  changelog:
+    # Ensure PRs include a towncrier fragment in changes/
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --extra dev
+      - run: uv run towncrier check --compare-with origin/main
+
   test:
     runs-on: ${{ matrix.os }}
     strategy:

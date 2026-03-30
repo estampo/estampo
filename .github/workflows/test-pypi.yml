@@ -9,6 +9,8 @@ on:
 
 jobs:
   test-publish:
+    # Skip on release commits — release.yml handles the real publish
+    if: "!startsWith(github.event.head_commit.message, 'Release v')"
     runs-on: ubuntu-latest
     environment: testpypi
     permissions:

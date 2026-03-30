@@ -206,6 +206,7 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
 
   # ── Create tag only after TestPyPI succeeds ─────────────────────────
   create-tag:
