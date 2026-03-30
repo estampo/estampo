@@ -5,6 +5,7 @@ All notable changes to this project are documented here.
 ## Unreleased
 
 - Fix `profiles pin` inheritance: resolve parent profiles across directories and from Docker-extracted profiles
+- Fix `profiles pin` using stale local system profiles instead of Docker-extracted profiles when `slicer.version` is set
 - Extract full BBL profile tree from Docker (includes root-level base profiles)
 - Log warning when a profile's `inherits` parent cannot be found
 - Add `output_dir` config setting in `estampo.toml` (default: `estampo_output`)
