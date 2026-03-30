@@ -10,16 +10,18 @@ Before pushing any PR branch, always run locally:
 Do NOT push a PR until all four checks pass locally.
 
 ## Changelog (MANDATORY)
-Every PR must include a CHANGELOG.md update:
-1. Add bullet points under the `## Unreleased` section at the top of CHANGELOG.md
-2. If `## Unreleased` doesn't exist, create it above the latest version heading
-3. List changes as bullet points — concise, user-facing descriptions
-4. Do NOT assign a version number — that happens at release time
+Every PR must include a **towncrier fragment file** in the `changes/` directory:
+1. Create a file: `changes/<PR-number>.<type>` where type is `feature`, `bugfix`, or `misc`
+2. Write a single line — concise, user-facing description of the change
+3. If the PR has no number yet, use `+descriptive-name.<type>` (orphan fragment)
+4. Do NOT edit CHANGELOG.md directly — towncrier compiles fragments at release time
 
-At release time (not during normal PRs):
-1. Rename `## Unreleased` to `## <version> — YYYY-MM-DD`
-2. Bump `version` in `pyproject.toml` to match
-3. Tag with `v<version>` to trigger the Release workflow (publishes to PyPI)
+Example: `changes/245.feature` containing:
+```
+Add ``prepare-release.yml`` workflow for single-command release preparation
+```
+
+At release time, `prepare-release.yml` runs `towncrier build --version X.Y.Z` which compiles all fragments into CHANGELOG.md and deletes them.
 
 ## Post-PR Checklist (MANDATORY)
 After pushing a PR or merging to main:
