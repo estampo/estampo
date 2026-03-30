@@ -656,6 +656,20 @@ class TestRunBridgeDockerPull:
             with pytest.raises(RuntimeError, match="Docker is required"):
                 _run_bridge(["status", "DEV123", "/tmp/tok.json"])
 
+    def test_docker_not_running_raises_runtime_error(self):
+        """Docker installed but not running raises RuntimeError with helpful message."""
+        mock_docker_info = MagicMock(returncode=1, stderr="Cannot connect to Docker daemon")
+        with (
+            patch("estampo.cloud.bridge._find_bridge", return_value=None),
+            patch("platform.system", return_value="Linux"),
+            patch(
+                "estampo.cloud.bridge.subprocess.run",
+                return_value=mock_docker_info,
+            ),
+        ):
+            with pytest.raises(RuntimeError, match="Docker is not running"):
+                _run_bridge(["status", "DEV123", "/tmp/tok.json"])
+
     def test_docker_run_mounts_file_args(self, tmp_path):
         """File arguments should be mounted individually."""
         threemf = tmp_path / "test.3mf"

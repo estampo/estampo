@@ -121,9 +121,9 @@ def _run_bridge(
     use_docker = bridge is None or platform.system() == "Darwin"
 
     if use_docker:
-        # Check Docker is available
+        # Check Docker is available and running
         try:
-            subprocess.run(
+            docker_info = subprocess.run(
                 ["docker", "info"],
                 capture_output=True,
                 timeout=10,
@@ -133,6 +133,11 @@ def _run_bridge(
                 "Docker is required for Bambu Cloud printing but is not installed. "
                 "Install Docker Desktop from https://www.docker.com/products/docker-desktop/"
             ) from None
+        if docker_info.returncode != 0:
+            raise RuntimeError(
+                "Docker is not running. "
+                "Start Docker (e.g. 'colima start' or Docker Desktop) and try again."
+            )
 
         # Pull image if stale (default: once per 24h). Override with
         # ESTAMPO_DOCKER_PULL=always|never|auto.
