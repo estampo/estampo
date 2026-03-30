@@ -336,6 +336,8 @@ def _run_pipeline(
 
     if output_dir:
         out_dir = output_dir
+    elif cfg.output_dir != "estampo_output":
+        out_dir = cfg.base_dir / cfg.output_dir
     elif cfg.name:
         out_dir = Path("estampo_output") / cfg.name
     else:

@@ -212,18 +212,45 @@ def extract_docker_profiles(
             raise EstampoError(f"docker create failed: {result.stderr.strip()}")
         container_id = result.stdout.strip()
 
-        # Copy profile directories out
-        for category in CATEGORIES:
-            src = f"{container_id}:{_DOCKER_PROFILE_ROOT}/{category}"
-            dest = tmp_dir / category
-            cp_result = subprocess.run(
-                ["docker", "cp", src, str(dest)],
-                capture_output=True,
-                text=True,
-                timeout=30,
+        # Copy the entire BBL profile tree (includes root-level base profiles
+        # that category profiles may inherit from).
+        # docker cp copies directory contents into the destination, so
+        # the result is bbl_dest/{machine,process,filament,...}
+        bbl_dest = tmp_dir / "_bbl"
+        cp_result = subprocess.run(
+            ["docker", "cp", f"{container_id}:{_DOCKER_PROFILE_ROOT}/.", str(bbl_dest)],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if cp_result.returncode == 0 and bbl_dest.is_dir():
+            # Move category dirs up to tmp_dir for backwards compatibility
+            for category in CATEGORIES:
+                src_cat = bbl_dest / category
+                dest_cat = tmp_dir / category
+                if src_cat.is_dir():
+                    src_cat.rename(dest_cat)
+            # Move any remaining files/dirs (root-level base profiles, common/, etc.)
+            for item in list(bbl_dest.iterdir()):
+                item.rename(tmp_dir / item.name)
+            if not any(bbl_dest.iterdir()):
+                bbl_dest.rmdir()
+        else:
+            log.debug(
+                "Bulk docker cp failed, falling back to per-category copy: %s",
+                cp_result.stderr.strip(),
             )
-            if cp_result.returncode != 0:
-                log.debug("docker cp %s failed: %s", category, cp_result.stderr.strip())
+            for category in CATEGORIES:
+                src = f"{container_id}:{_DOCKER_PROFILE_ROOT}/{category}"
+                dest = tmp_dir / category
+                cat_result = subprocess.run(
+                    ["docker", "cp", src, str(dest)],
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                )
+                if cat_result.returncode != 0:
+                    log.debug("docker cp %s failed: %s", category, cat_result.stderr.strip())
 
     finally:
         # Clean up the container
@@ -260,10 +287,20 @@ def _resolve_profile_data_from_dir(
         parent_name = data.get("inherits")
         if not parent_name:
             break
-        parent = current.parent / f"{parent_name}.json"
-        if parent.exists():
-            current = parent
+        # Check sibling directory first, then base_dir/category as fallback
+        sibling = current.parent / f"{parent_name}.json"
+        fallback = base_dir / category / f"{parent_name}.json"
+        if sibling.exists():
+            current = sibling
+        elif fallback != sibling and fallback.exists():
+            current = fallback
         else:
+            log.warning(
+                "Profile '%s' inherits from '%s' but parent not found in %s",
+                current.stem,
+                parent_name,
+                base_dir,
+            )
             break
 
     # Merge root-first so leaf values override parents
@@ -362,14 +399,24 @@ def resolve_profile_data(
         parent_name = data.get("inherits")
         if not parent_name:
             break
-        # Check sibling directory first, then system dir
+        # Check sibling directory, then Docker-extracted dir, then system dir
         sibling = current.parent / f"{parent_name}.json"
+        docker = (
+            (docker_profile_dir / category / f"{parent_name}.json") if docker_profile_dir else None
+        )
         system = (base / category / f"{parent_name}.json") if base else None
         if sibling.exists():
             current = sibling
+        elif docker and docker.exists():
+            current = docker
         elif system and system.exists():
             current = system
         else:
+            log.warning(
+                "Profile '%s' inherits from '%s' but parent not found",
+                current.stem,
+                parent_name,
+            )
             break
 
     # Merge root-first so leaf values override parents
