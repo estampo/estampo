@@ -50,14 +50,22 @@ OrcaSlicer profiles are extracted from the Docker image and committed to `src/es
 
 ## Release Process
 
-1. Ensure profiles are up-to-date in `src/estampo/data/` (release-readiness does this automatically on push to main)
-2. Run `release-readiness` workflow manually to verify everything passes end-to-end
-3. Update `CHANGELOG.md` — rename `## Unreleased` to `## <version> — YYYY-MM-DD`
-4. Bump `version` in `pyproject.toml`
-5. Commit, tag `v<version>`, push tag
-6. The release workflow: runs readiness gate → builds all artifacts → publishes PyPI + Docker + cloud-bridge (nothing publishes until everything builds successfully)
+### Automated flow (preferred)
 
-**Critical**: PyPI versions are immutable. A failed release burns the version number. Always use TestPyPI first and ensure the release-readiness workflow passes before tagging.
+1. Run: `gh workflow run prepare-release.yml -f version=X.Y.Z`
+2. The workflow creates a `release/vX.Y.Z` branch with version bump + changelog (auto-generated from merged PR titles, merged with any `## Unreleased` entries)
+3. Review the PR, adjust changelog if needed, merge
+4. On merge, `release.yml` detects the `Release vX.Y.Z` commit, auto-creates a git tag, then: builds all artifacts → validates on TestPyPI → publishes to PyPI + Docker Hub + GHCR → creates GitHub Release
+
+### Re-running prepare-release
+
+If issues arise between prepare and merge (e.g. a hotfix lands), re-run `prepare-release.yml` with the same version. It will recreate the branch and PR with updated changelog.
+
+### Manual fallback
+
+If auto-tag fails or you need to re-release: `gh workflow run release.yml -f tag=vX.Y.Z`
+
+**Critical**: PyPI versions are immutable. A failed release burns the version number. The TestPyPI dry-run gate catches most issues before the real publish.
 
 ## CI Workflows
 
@@ -66,6 +74,7 @@ OrcaSlicer profiles are extracted from the Docker image and committed to `src/es
 | `ci.yml` | PR / push to main | Lint, test (3 OS × 3 Python), coverage |
 | `test-pypi.yml` | PR / push to main | Publish dev package to TestPyPI |
 | `publish-docker.yml` | Push to main | Build Docker images when relevant files change |
-| `publish-cloud-bridge.yml` | Tag push (`v*`) | Full release: readiness gate → build all → publish all |
-| `release-readiness.yml` | Push to main / nightly / manual / workflow_call | E2e: Docker build, smoke test, profile extraction + commit, real slice |
+| `release.yml` | Push to main (release PR merge) / tag push / manual | Full release: auto-tag → build → TestPyPI gate → publish all → GitHub Release |
+| `prepare-release.yml` | Manual | Create release PR with version bump + auto-changelog |
+| `release-readiness.yml` | Push to main / nightly / manual | E2e: Docker build, smoke test, profile extraction + commit, real slice |
 | `slice.yml` | Manual | Run a slice with custom config |

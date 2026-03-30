@@ -11,12 +11,10 @@ on:
         description: "OrcaSlicer version to test"
         required: true
         default: "2.3.1"
-  workflow_call:
-    inputs:
-      orca_version:
-        description: "OrcaSlicer version to test"
-        type: string
-        default: "2.3.1"
+  # NOTE: workflow_call was removed because calling this workflow from a
+  # tag-push-triggered workflow causes startup_failure (zero jobs created).
+  # See: https://github.com/estampo/estampo/pull/244
+  # Release gating is now handled by CI on the release PR + TestPyPI dry-run.
 
 concurrency:
   group: release-readiness-${{ github.ref }}

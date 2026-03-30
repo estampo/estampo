@@ -1,0 +1,183 @@
+name: Prepare Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (e.g. 0.2.3)"
+        required: true
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # full history for changelog generation
+
+      - name: Validate version format
+        run: |
+          VERSION="${{ inputs.version }}"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid version format: $VERSION (expected X.Y.Z)"
+            exit 1
+          fi
+
+      - name: Check version is newer than current
+        run: |
+          VERSION="${{ inputs.version }}"
+          CURRENT=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          echo "Current version: $CURRENT"
+          echo "Target version:  $VERSION"
+          python3 -c "
+          from packaging.version import Version
+          current = Version('$CURRENT')
+          target = Version('$VERSION')
+          if target <= current:
+              raise SystemExit(f'Target {target} must be newer than current {current}')
+          print(f'OK: {current} → {target}')
+          "
+
+      - name: Check no existing tag
+        run: |
+          VERSION="${{ inputs.version }}"
+          if git ls-remote --tags origin "refs/tags/v${VERSION}" | grep -q .; then
+            echo "::error::Tag v${VERSION} already exists"
+            exit 1
+          fi
+
+      - name: Create release branch
+        run: |
+          VERSION="${{ inputs.version }}"
+          BRANCH="release/v${VERSION}"
+          git checkout -b "$BRANCH"
+
+      - name: Bump version in pyproject.toml
+        run: |
+          VERSION="${{ inputs.version }}"
+          sed -i "s/^version = \".*\"/version = \"${VERSION}\"/" pyproject.toml
+          # Verify the change
+          grep "^version = \"${VERSION}\"" pyproject.toml
+
+      - name: Generate changelog
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ inputs.version }}"
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          TODAY=$(date +%Y-%m-%d)
+
+          # Collect PR titles merged since last tag
+          if [[ -n "$LAST_TAG" ]]; then
+            LAST_TAG_DATE=$(git log -1 --format=%aI "$LAST_TAG")
+            echo "Collecting PRs merged since $LAST_TAG ($LAST_TAG_DATE)..."
+            PR_ENTRIES=$(gh pr list --state merged --base main \
+              --search "merged:>=${LAST_TAG_DATE}" \
+              --json title,number \
+              --jq '.[] | "- \(.title) (#\(.number))"' 2>/dev/null || echo "")
+          else
+            echo "No previous tag found, collecting all merged PRs..."
+            PR_ENTRIES=$(gh pr list --state merged --base main \
+              --json title,number \
+              --jq '.[] | "- \(.title) (#\(.number))"' 2>/dev/null || echo "")
+          fi
+
+          echo "Auto-generated entries:"
+          echo "$PR_ENTRIES"
+
+          # Read existing Unreleased section (if any)
+          UNRELEASED=""
+          if grep -q "^## Unreleased" CHANGELOG.md; then
+            UNRELEASED=$(awk '/^## Unreleased/{found=1; next} /^## /{if(found) exit} found && NF{print}' CHANGELOG.md)
+          fi
+
+          # Build the new version section
+          NEW_SECTION="## ${VERSION} — ${TODAY}"
+          BODY=""
+
+          # Merge: manual Unreleased entries first, then auto-generated PR entries
+          if [[ -n "$UNRELEASED" ]]; then
+            BODY="${UNRELEASED}"
+          fi
+          if [[ -n "$PR_ENTRIES" ]]; then
+            # Filter out PRs that are just "Release v*" commits
+            FILTERED=$(echo "$PR_ENTRIES" | grep -v "^- Release v" || true)
+            if [[ -n "$FILTERED" ]]; then
+              if [[ -n "$BODY" ]]; then
+                # Deduplicate: skip auto entries already present in manual entries
+                while IFS= read -r line; do
+                  if ! echo "$BODY" | grep -qF "$line"; then
+                    BODY="${BODY}"$'\n'"${line}"
+                  fi
+                done <<< "$FILTERED"
+              else
+                BODY="$FILTERED"
+              fi
+            fi
+          fi
+
+          if [[ -z "$BODY" ]]; then
+            BODY="- (No changes recorded)"
+          fi
+
+          # Replace or insert in CHANGELOG.md
+          {
+            echo "# Changelog"
+            echo ""
+            echo "All notable changes to this project are documented here."
+            echo ""
+            echo "${NEW_SECTION}"
+            echo ""
+            echo "${BODY}"
+            echo ""
+            # Append everything after the first version heading (skip Unreleased if present)
+            if grep -q "^## Unreleased" CHANGELOG.md; then
+              # Skip header + Unreleased section, keep from next ## onward
+              awk '/^## [0-9]/{found=1} found{print}' CHANGELOG.md
+            else
+              # Skip header, keep from first ## onward
+              awk '/^## /{found=1} found{print}' CHANGELOG.md
+            fi
+          } > CHANGELOG.tmp
+          mv CHANGELOG.tmp CHANGELOG.md
+
+          echo "--- Updated CHANGELOG.md (first 30 lines) ---"
+          head -30 CHANGELOG.md
+
+      - name: Commit and push
+        run: |
+          VERSION="${{ inputs.version }}"
+          BRANCH="release/v${VERSION}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pyproject.toml CHANGELOG.md
+          git commit -m "Release v${VERSION}"
+          git push origin "$BRANCH"
+
+      - name: Create pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ inputs.version }}"
+          BRANCH="release/v${VERSION}"
+
+          # Extract the changelog body for this version
+          BODY=$(awk "/^## ${VERSION//./\\.} /{found=1; next} /^## /{if(found) exit} found{print}" CHANGELOG.md)
+
+          gh pr create \
+            --title "Release v${VERSION}" \
+            --body "$(cat <<EOF
+          ## Release v${VERSION}
+
+          ${BODY}
+
+          ---
+          **Merge this PR to trigger the release pipeline.**
+          The release workflow will auto-tag \`v${VERSION}\`, build all artifacts, validate on TestPyPI, then publish to PyPI + Docker Hub + GHCR.
+          EOF
+          )" \
+            --base main \
+            --head "$BRANCH"

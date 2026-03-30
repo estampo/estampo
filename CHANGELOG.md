@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented here.
 
+## Unreleased
+
+- Add `prepare-release.yml` workflow: single-command release preparation with automatic changelog from PR titles
+- Restructure release workflow (`release.yml`): auto-tag on release PR merge, TestPyPI dry-run gate, GitHub Release creation
+- Remove reusable `workflow_call` from release-readiness (fixes startup_failure on tag push)
+- Delete obsolete `publish-cloud-bridge.yml` (replaced by `release.yml`)
+- Add `workflow_dispatch` fallback trigger to release workflow
+
 ## 0.2.2 — 2026-03-30
 
 - Fix `profiles pin` using stale local system profiles instead of Docker-extracted profiles when `slicer.version` is set
