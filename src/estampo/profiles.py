@@ -473,6 +473,8 @@ def pin_profiles(
 
     Returns list of pinned file paths.
     """
+    import shutil
+
     pinned: list[Path] = []
 
     items: list[tuple[str, str]] = []
@@ -483,50 +485,42 @@ def pin_profiles(
     for f in filaments:
         items.append(("filament", f))
 
-    # Try local resolution first; collect failures for Docker fallback
-    docker_needed: list[tuple[str, str]] = []
-    for category, name in items:
-        if _is_path(name):
-            log.info("Skipping '%s' (already a path)", name)
-            continue
+    # When docker_version is specified, extract Docker profiles upfront so they
+    # take priority over local system profiles.  This ensures pinned profiles
+    # match what the Docker slicer will actually use at slice time.
+    docker_dir: Path | None = None
+    if docker_version:
+        docker_dir = extract_docker_profiles(docker_version)
 
-        dest_dir = project_dir / profiles_dir / category
-        dest_dir.mkdir(parents=True, exist_ok=True)
-        dest = dest_dir / f"{name}.json"
+    try:
+        for category, name in items:
+            if _is_path(name):
+                log.info("Skipping '%s' (already a path)", name)
+                continue
 
-        try:
-            data = resolve_profile_data(name, engine, category, project_dir)
+            dest_dir = project_dir / profiles_dir / category
+            dest_dir.mkdir(parents=True, exist_ok=True)
+            dest = dest_dir / f"{name}.json"
+
+            try:
+                data = resolve_profile_data(
+                    name, engine, category, project_dir, profiles_dir, docker_dir
+                )
+            except FileNotFoundError:
+                if not docker_version:
+                    raise EstampoError(
+                        f"Profile '{name}' not found locally. Set slicer.version in "
+                        "your config or install OrcaSlicer to access profiles."
+                    )
+                raise
+
             with open(dest, "w") as fh:
                 json.dump(data, fh, indent=4)
-            log.info("Pinned %s → %s (flattened)", name, dest)
+            source = "Docker" if docker_dir else "system"
+            log.info("Pinned %s → %s (flattened, from %s)", name, dest, source)
             pinned.append(dest)
-        except FileNotFoundError:
-            docker_needed.append((category, name))
-
-    # Docker fallback for profiles not found locally
-    if docker_needed:
-        if not docker_version:
-            names = ", ".join(f"'{n}'" for _, n in docker_needed)
-            raise EstampoError(
-                f"Profile(s) {names} not found locally. Set slicer.version in your "
-                "config or install OrcaSlicer to access profiles."
-            )
-
-        import shutil
-
-        docker_dir = extract_docker_profiles(docker_version)
-        try:
-            for category, name in docker_needed:
-                dest_dir = project_dir / profiles_dir / category
-                dest_dir.mkdir(parents=True, exist_ok=True)
-                dest = dest_dir / f"{name}.json"
-
-                data = _resolve_profile_data_from_dir(name, category, docker_dir)
-                with open(dest, "w") as fh:
-                    json.dump(data, fh, indent=4)
-                log.info("Pinned %s → %s (from Docker, flattened)", name, dest)
-                pinned.append(dest)
-        finally:
+    finally:
+        if docker_dir:
             shutil.rmtree(docker_dir, ignore_errors=True)
 
     return pinned

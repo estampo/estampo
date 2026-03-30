@@ -511,6 +511,180 @@ def test_pin_profiles_docker_fallback(tmp_path):
     assert data["printer_model"] == "test"
 
 
+def test_pin_profiles_docker_overrides_system(tmp_path, monkeypatch):
+    """Docker-extracted profiles take priority over local system profiles."""
+    # Set up a fake system profile dir with a "stale" layer_change_gcode
+    system_dir = tmp_path / "system" / "machine"
+    system_dir.mkdir(parents=True)
+    (system_dir / "TestPrinter.json").write_text(
+        json.dumps(
+            {
+                "type": "machine",
+                "name": "TestPrinter",
+                "from": "system",
+                "layer_change_gcode": "stale gcode from local install",
+            }
+        )
+    )
+    monkeypatch.setattr("estampo.profiles.SYSTEM_DIRS", {"orca": system_dir.parent})
+
+    # Set up Docker-extracted profiles with the correct gcode
+    docker_dir = tmp_path / "docker_profiles"
+    docker_machine = docker_dir / "machine"
+    docker_machine.mkdir(parents=True)
+    (docker_machine / "TestPrinter.json").write_text(
+        json.dumps(
+            {
+                "type": "machine",
+                "name": "TestPrinter",
+                "from": "system",
+                "layer_change_gcode": "correct gcode with G92 E0",
+            }
+        )
+    )
+
+    project = tmp_path / "project"
+    project.mkdir()
+
+    with patch("estampo.profiles.extract_docker_profiles", return_value=docker_dir):
+        pinned = pin_profiles(
+            engine="orca",
+            printer="TestPrinter",
+            process=None,
+            filaments=[],
+            project_dir=project,
+            docker_version="2.3.1",
+        )
+
+    assert len(pinned) == 1
+    data = json.loads(pinned[0].read_text())
+    # Must use Docker profile, NOT the stale system profile
+    assert data["layer_change_gcode"] == "correct gcode with G92 E0"
+
+
+def test_pin_profiles_docker_flattens_inheritance(tmp_path):
+    """Docker pinning walks the full inheritance chain and flattens correctly.
+
+    Regression test: a truncated chain produced pinned profiles missing
+    layer_change_gcode (with G92 E0), causing OrcaSlicer validation errors.
+    """
+    docker_dir = tmp_path / "docker_profiles"
+    machine_dir = docker_dir / "machine"
+    machine_dir.mkdir(parents=True)
+
+    # Root profile — base settings, no layer_change_gcode
+    (machine_dir / "base_common.json").write_text(
+        json.dumps(
+            {
+                "type": "machine",
+                "name": "base_common",
+                "from": "system",
+                "gcode_flavor": "marlin",
+            }
+        )
+    )
+
+    # Mid-chain profile — adds layer_change_gcode with G92 E0
+    (machine_dir / "mid_common.json").write_text(
+        json.dumps(
+            {
+                "type": "machine",
+                "name": "mid_common",
+                "from": "system",
+                "inherits": "base_common",
+                "layer_change_gcode": "M622 J1\nG92 E0\nM623\nM73 L{layer_num+1}",
+            }
+        )
+    )
+
+    # Leaf profile — overrides layer_change_gcode (still has G92 E0)
+    (machine_dir / "MyPrinter 0.4 nozzle.json").write_text(
+        json.dumps(
+            {
+                "type": "machine",
+                "name": "MyPrinter 0.4 nozzle",
+                "from": "system",
+                "inherits": "mid_common",
+                "printer_model": "MyPrinter",
+                "layer_change_gcode": "M622 J1\nG92 E0\nG1 X65\nM623\nM73 L{layer_num+1}",
+            }
+        )
+    )
+
+    project = tmp_path / "project"
+    project.mkdir()
+
+    with patch("estampo.profiles.extract_docker_profiles", return_value=docker_dir):
+        pinned = pin_profiles(
+            engine="orca",
+            printer="MyPrinter 0.4 nozzle",
+            process=None,
+            filaments=[],
+            project_dir=project,
+            docker_version="2.3.1",
+        )
+
+    assert len(pinned) == 1
+    data = json.loads(pinned[0].read_text())
+
+    # Leaf values override parents
+    assert data["printer_model"] == "MyPrinter"
+    assert "G92 E0" in data["layer_change_gcode"]
+    assert "G1 X65" in data["layer_change_gcode"]  # leaf-specific addition
+    # Root values inherited
+    assert data["gcode_flavor"] == "marlin"
+    # Inheritance key must be stripped
+    assert "inherits" not in data
+
+
+def test_pin_profiles_repin_overwrites_stale(tmp_path):
+    """Re-pinning replaces an existing stale pinned profile with Docker data."""
+    # Pre-existing stale pinned profile (missing G92 E0)
+    project = tmp_path / "project"
+    pinned_dir = project / "profiles" / "machine"
+    pinned_dir.mkdir(parents=True)
+    (pinned_dir / "Printer.json").write_text(
+        json.dumps(
+            {
+                "type": "machine",
+                "name": "Printer",
+                "from": "system",
+                "layer_change_gcode": "stale — no G92 E0",
+            }
+        )
+    )
+
+    # Docker profiles with correct data
+    docker_dir = tmp_path / "docker_profiles"
+    docker_machine = docker_dir / "machine"
+    docker_machine.mkdir(parents=True)
+    (docker_machine / "Printer.json").write_text(
+        json.dumps(
+            {
+                "type": "machine",
+                "name": "Printer",
+                "from": "system",
+                "layer_change_gcode": "G92 E0\nM73 L{layer_num+1}",
+            }
+        )
+    )
+
+    with patch("estampo.profiles.extract_docker_profiles", return_value=docker_dir):
+        pinned = pin_profiles(
+            engine="orca",
+            printer="Printer",
+            process=None,
+            filaments=[],
+            project_dir=project,
+            docker_version="2.3.1",
+        )
+
+    assert len(pinned) == 1
+    data = json.loads(pinned[0].read_text())
+    # Docker profile must replace the stale pinned data
+    assert "G92 E0" in data["layer_change_gcode"]
+
+
 def test_pin_profiles_no_docker_version_raises(tmp_path):
     """Without docker_version, missing profiles raise EstampoError."""
     project = tmp_path / "project"
