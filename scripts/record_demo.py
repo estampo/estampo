@@ -17,7 +17,7 @@ Usage:
     # Convert to GIF (done automatically):
     agg --font-size 20 docs/recordings/demo.cast docs/recordings/demo.gif
 
-Phases: setup, status, init, profiles-pin, validate, run, status-w
+Phases: setup (pre-recorded), status, init, profiles-pin, validate, run, status-w
 
 Requires: pexpect, asciinema, agg (brew install agg)
 """
