@@ -2,16 +2,13 @@
 
 All notable changes to this project are documented here.
 
-## Unreleased
+## 0.2.2 — 2026-03-30
 
-- Fix `profiles pin` inheritance: resolve parent profiles across directories and from Docker-extracted profiles
 - Fix `profiles pin` using stale local system profiles instead of Docker-extracted profiles when `slicer.version` is set
+- Fix `profiles pin` inheritance: resolve parent profiles across directories and from Docker-extracted profiles
 - Extract full BBL profile tree from Docker (includes root-level base profiles)
 - Log warning when a profile's `inherits` parent cannot be found
 - Add `output_dir` config setting in `estampo.toml` (default: `estampo_output`)
-
-## 0.2.2 — 2026-03-29
-
 - Bundle OrcaSlicer profiles in the pip package (fixes `estampo init` for pip/pipx users)
 - Add tests to verify bundled profiles exist, are valid, and are loadable
 - Fix `estampo status` showing cryptic "non-JSON output" error when Docker is not running; now reports "Docker is not running. Start Docker..." clearly
