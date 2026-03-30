@@ -10,6 +10,9 @@
 
 Define parts, slicer settings, and printer targets in code and generate reproducible print artifacts locally or in CI.
 
+> **Note:** This project was previously called **fabprint**. If you have an existing install,
+> run `pip install estampo` to upgrade — config files and credentials are migrated automatically.
+
 Works with STL, STEP, and 3MF files, and pairs naturally with code-CAD tools like
 [build123d](https://github.com/gumyr/build123d), [OpenSCAD](https://openscad.org),
 and [cadquery](https://github.com/cadquery/cadquery).
