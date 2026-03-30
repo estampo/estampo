@@ -27,22 +27,31 @@ jobs:
           echo "Checking commit $SHA for associated release PR..."
 
           # Find merged PRs associated with this commit whose head branch
-          # matches the release/vX.Y.Z pattern created by prepare-release
-          VERSION=$(gh api "repos/${{ github.repository }}/commits/${SHA}/pulls" \
-            --jq '.[].head.ref' 2>/dev/null \
+          # matches the release/vX.Y.Z pattern created by prepare-release.
+          # This API call must succeed — if it fails, the job fails rather
+          # than silently skipping a release.
+          BRANCHES=$(gh api "repos/${{ github.repository }}/commits/${SHA}/pulls" \
+            --jq '.[].head.ref')
+          echo "Associated PR branches: ${BRANCHES:-<none>}"
+
+          VERSION=$(echo "$BRANCHES" \
             | grep -oP '^release/v\K\d+\.\d+\.\d+$' \
             | head -1 || true)
 
           if [[ -n "$VERSION" ]]; then
-            # Verify no existing tag
-            if gh api "repos/${{ github.repository }}/git/refs/tags/v${VERSION}" \
-                 --silent 2>/dev/null; then
+            # Verify no existing tag (404 = no tag, which is what we want)
+            HTTP_CODE=$(gh api "repos/${{ github.repository }}/git/refs/tags/v${VERSION}" \
+              --silent -w '%{http_code}' -o /dev/null 2>/dev/null || echo "000")
+            if [[ "$HTTP_CODE" == "200" ]]; then
               echo "::warning::Tag v${VERSION} already exists — skipping"
               echo "is_release=false" >> "$GITHUB_OUTPUT"
-            else
+            elif [[ "$HTTP_CODE" == "404" ]]; then
               echo "is_release=true" >> "$GITHUB_OUTPUT"
               echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
               echo "::notice::Detected release PR merge for v${VERSION}"
+            else
+              echo "::error::Unexpected API response ($HTTP_CODE) checking tag v${VERSION}"
+              exit 1
             fi
           else
             echo "is_release=false" >> "$GITHUB_OUTPUT"
