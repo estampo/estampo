@@ -18,7 +18,7 @@
 - Printer configs drift across machines and slicer versions
 - There's no way to version, diff, or audit a print job
 
-estampo fixes this. Define parts, slicer settings, and printer targets in a single TOML file — git-friendly, diffable, and committable alongside your CAD files. Same repo, same config → same G-code, locally or in CI.
+estampo fixes this. Define parts, slicer settings, and printer targets in a single TOML file — git-friendly, diffable, and committable alongside your CAD files. Same repo, same config → same G-code, locally or [in CI](#cicd-example).
 
 > **Note:** This project was previously called **fabprint**. If you have an existing install,
 > run `pip install estampo` to upgrade — config files and credentials are migrated automatically.
