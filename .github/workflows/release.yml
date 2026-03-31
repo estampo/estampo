@@ -385,3 +385,7 @@ jobs:
             ARGS+=("$WHEEL")
           fi
           "${ARGS[@]}"
+
+      - name: Remind to update website
+        run: |
+          echo "::notice::Release complete! Remember to redeploy estampo.dev — run the deploy workflow at https://github.com/estampo/website/actions/workflows/deploy.yml"
