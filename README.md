@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/estampo/estampo/main/docs/images/estampo-logo-color-256.png" alt="estampo logo" width="128">
+</p>
+
 # estampo
 
 [![PyPI version](https://img.shields.io/pypi/v/estampo)](https://pypi.org/project/estampo/)
