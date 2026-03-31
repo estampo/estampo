@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+<title>Estampo Favicon</title>
+<rect width="32" height="32" rx="6" fill="#0f1419"/>
+<rect x="6" y="4" width="2" height="24" fill="#80d5cb"/>
+<rect x="6" y="4" width="20" height="2" fill="#80d5cb"/>
+<rect x="6" y="26" width="20" height="2" fill="#80d5cb"/>
+<rect x="24" y="4" width="2" height="6" fill="#80d5cb"/>
+<rect x="24" y="22" width="2" height="6" fill="#80d5cb"/>
+<rect x="8" y="7" width="16" height="1" fill="#5eead4"/>
+<rect x="8" y="24" width="16" height="1" fill="#5eead4"/>
+<rect x="8" y="14" width="14" height="2" fill="#2dd4bf"/>
+<rect x="8" y="17" width="14" height="1" fill="#14b8a6"/>
+</svg>
