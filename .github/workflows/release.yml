@@ -73,7 +73,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.tag || github.ref }}
+          ref: main
 
       - name: Extract and verify version
         id: version
@@ -102,7 +102,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.tag || github.ref }}
+          ref: main
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -130,7 +130,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.tag || github.ref }}
+          ref: main
       - uses: docker/setup-buildx-action@v3
 
       - name: Check if orca-base already exists
@@ -193,7 +193,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.tag || github.ref }}
+          ref: main
       - uses: docker/setup-buildx-action@v3
 
       - name: Build cloud-bridge image
@@ -363,7 +363,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.tag || github.ref }}
+          ref: main
 
       - uses: actions/download-artifact@v7
         with:
