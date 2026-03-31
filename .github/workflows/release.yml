@@ -40,8 +40,11 @@ jobs:
 
           if [[ -n "$VERSION" ]]; then
             # Verify no existing tag (404 = no tag, which is what we want)
-            HTTP_CODE=$(gh api "repos/${{ github.repository }}/git/refs/tags/v${VERSION}" \
-              --silent -w '%{http_code}' -o /dev/null 2>/dev/null || echo "000")
+            if gh api "repos/${{ github.repository }}/git/refs/tags/v${VERSION}" >/dev/null 2>&1; then
+              HTTP_CODE="200"
+            else
+              HTTP_CODE="404"
+            fi
             if [[ "$HTTP_CODE" == "200" ]]; then
               echo "::warning::Tag v${VERSION} already exists — skipping"
               echo "is_release=false" >> "$GITHUB_OUTPUT"
