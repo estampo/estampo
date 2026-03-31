@@ -8,6 +8,7 @@ from estampo.cloud.ams import (
     parse_ams_trays,
 )
 from estampo.cloud.bridge import (
+    DOCKER_IMAGE,
     PersistentBridge,
     _find_bridge,
     _record_pull,
@@ -22,6 +23,7 @@ from estampo.cloud.bridge import (
 )
 
 __all__ = [
+    "DOCKER_IMAGE",
     "PersistentBridge",
     "_build_ams_mapping",
     "_find_bridge",

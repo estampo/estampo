@@ -201,12 +201,12 @@ jobs:
           platforms: linux/amd64
           push: false
           load: true
-          tags: estampo/cloud-bridge:latest
+          tags: estampo/cloud-bridge:build
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Save image as artifact
-        run: docker save estampo/cloud-bridge:latest -o cloud-bridge.tar
+        run: docker save estampo/cloud-bridge:build -o cloud-bridge.tar
 
       - uses: actions/upload-artifact@v7
         with:
@@ -341,10 +341,14 @@ jobs:
       - name: Tag and push cloud-bridge
         run: |
           VERSION="${{ needs.version.outputs.version }}"
-          docker tag estampo/cloud-bridge:latest "estampo/cloud-bridge:${VERSION}"
-          docker tag estampo/cloud-bridge:latest "ghcr.io/${{ github.repository }}/cloud-bridge:${VERSION}"
+          BAMBU_VERSION="02.05.00.00"
+          docker tag estampo/cloud-bridge:build "estampo/cloud-bridge:bambu-${BAMBU_VERSION}"
+          docker tag estampo/cloud-bridge:build "estampo/cloud-bridge:${VERSION}"
+          docker tag estampo/cloud-bridge:build "ghcr.io/${{ github.repository }}/cloud-bridge:bambu-${BAMBU_VERSION}"
+          docker tag estampo/cloud-bridge:build "ghcr.io/${{ github.repository }}/cloud-bridge:${VERSION}"
+          docker push "estampo/cloud-bridge:bambu-${BAMBU_VERSION}"
           docker push "estampo/cloud-bridge:${VERSION}"
-          docker push estampo/cloud-bridge:latest
+          docker push "ghcr.io/${{ github.repository }}/cloud-bridge:bambu-${BAMBU_VERSION}"
           docker push "ghcr.io/${{ github.repository }}/cloud-bridge:${VERSION}"
 
   # ── Create GitHub Release ───────────────────────────────────────────

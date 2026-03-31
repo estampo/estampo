@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from estampo.cloud import (
+    DOCKER_IMAGE,
     PersistentBridge,
     _build_ams_mapping,
     _build_ams_mapping_from_state,
@@ -446,7 +447,7 @@ class TestRunBridgeDockerPull:
 
             # Second call should be the pull
             pull_cmd = mock_run.call_args_list[1][0][0]
-            assert pull_cmd == ["docker", "pull", "estampo/cloud-bridge"]
+            assert pull_cmd == ["docker", "pull", DOCKER_IMAGE]
 
     def test_skips_pull_when_recent(self):
         """When image was recently pulled, skip the pull."""
@@ -612,7 +613,7 @@ class TestRunBridgeDockerPull:
             # Last call should be docker run
             run_cmd = mock_run.call_args_list[-1][0][0]
             assert run_cmd[0] == "docker"
-            assert "estampo/cloud-bridge" in run_cmd
+            assert DOCKER_IMAGE in run_cmd
 
     def test_uses_local_bridge_on_linux(self):
         """On Linux with local bridge, should use it directly."""

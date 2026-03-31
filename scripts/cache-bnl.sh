@@ -9,7 +9,7 @@
 set -euo pipefail
 
 VERSION="${1:-02.05.00.00}"
-IMAGE="estampo/cloud-bridge:latest"
+IMAGE="estampo/cloud-bridge:bambu-${VERSION}"
 TMPFILE=$(mktemp)
 
 echo "Extracting libbambu_networking.so from ${IMAGE} ..."

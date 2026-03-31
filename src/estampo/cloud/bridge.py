@@ -26,7 +26,8 @@ from estampo.cloud.ams import (
 log = logging.getLogger(__name__)
 
 BRIDGE_NAME = "bambu_cloud_bridge"
-DOCKER_IMAGE = "estampo/cloud-bridge"
+BAMBU_SLICER_VERSION = "02.05.00.00"
+DOCKER_IMAGE = f"estampo/cloud-bridge:bambu-{BAMBU_SLICER_VERSION}"
 
 # Timeouts (seconds)
 BRIDGE_TIMEOUT = 300
