@@ -64,9 +64,9 @@ RUN mkdir -p /tmp/bambu_plugin \
         -H "Authorization: token ${BNL_TOKEN}" \
         -H "Accept: application/octet-stream" \
         -o /tmp/bambu_plugin/libbambu_networking.so \
-        "https://api.github.com/repos/pzfreo/bnl/releases/assets/$(curl -fsSL \
+        "https://api.github.com/repos/estampo/bnl/releases/assets/$(curl -fsSL \
             -H "Authorization: token ${BNL_TOKEN}" \
-            "https://api.github.com/repos/pzfreo/bnl/releases/tags/v${BAMBU_SLICER_VERSION}" \
+            "https://api.github.com/repos/estampo/bnl/releases/tags/v${BAMBU_SLICER_VERSION}" \
             | python3 -c "import sys,json; print([a for a in json.load(sys.stdin)['assets'] if a['name']=='libbambu_networking.so'][0]['id'])")" \
     && echo "Fetched libbambu_networking.so from private cache")
 

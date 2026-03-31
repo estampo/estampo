@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Cache libbambu_networking.so from a running cloud-bridge image to the
-# private pzfreo/bnl GitHub repo as a release asset.
+# private estampo/bnl GitHub repo as a release asset.
 #
 # Usage:
 #   ./scripts/cache-bnl.sh                     # uses default version 02.05.00.00
@@ -18,9 +18,9 @@ docker run --rm --entrypoint cat "${IMAGE}" /tmp/bambu_plugin/libbambu_networkin
 SHA256=$(shasum -a 256 "${TMPFILE}" | awk '{print $1}')
 echo "SHA256: ${SHA256}"
 
-echo "Creating release v${VERSION} on pzfreo/bnl ..."
+echo "Creating release v${VERSION} on estampo/bnl ..."
 gh release create "v${VERSION}" \
-    --repo pzfreo/bnl \
+    --repo estampo/bnl \
     --title "v${VERSION}" \
     --notes "libbambu_networking.so v${VERSION}
 SHA256: ${SHA256}
@@ -29,9 +29,9 @@ Arch: x86_64 Linux" \
     2>/dev/null \
 || (echo "Release exists, uploading asset..." \
     && gh release upload "v${VERSION}" \
-        --repo pzfreo/bnl \
+        --repo estampo/bnl \
         --clobber \
         "${TMPFILE}#libbambu_networking.so")
 
 rm "${TMPFILE}"
-echo "Done. Cached v${VERSION} to pzfreo/bnl"
+echo "Done. Cached v${VERSION} to estampo/bnl"
