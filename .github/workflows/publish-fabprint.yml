@@ -54,7 +54,6 @@ jobs:
     needs: [build, publish-testpypi]
     if: inputs.dry_run == false
     runs-on: ubuntu-latest
-    environment: pypi
     permissions:
       id-token: write
     steps:
