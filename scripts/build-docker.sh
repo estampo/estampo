@@ -67,7 +67,8 @@ case "$TARGET" in
 
     cloud-bridge)
         PUSH="${2:-}"
-        IMAGE="estampo/cloud-bridge:latest"
+        BAMBU_VERSION="02.05.00.00"
+        IMAGE="estampo/cloud-bridge:bambu-${BAMBU_VERSION}"
         BNL_TOKEN="${BNL_TOKEN:-$(gh auth token 2>/dev/null || true)}"
 
         echo "Building ${IMAGE} ..."

@@ -1,0 +1,1 @@
+Replace mutable ``cloud-bridge:latest`` Docker tag with versioned ``cloud-bridge:bambu-<version>`` tags

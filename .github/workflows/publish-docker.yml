@@ -55,6 +55,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       packages: write
+    strategy:
+      matrix:
+        bambu-version: ["02.05.00.00"]
     steps:
       - uses: actions/checkout@v6
       - uses: docker/login-action@v3
@@ -73,7 +76,10 @@ jobs:
           file: Dockerfile.cloud-bridge
           platforms: linux/amd64
           push: true
-          tags: estampo/cloud-bridge:latest
+          tags: |
+            estampo/cloud-bridge:bambu-${{ matrix.bambu-version }}
+            ghcr.io/${{ github.repository }}/cloud-bridge:bambu-${{ matrix.bambu-version }}
+          build-args: BAMBU_SLICER_VERSION=${{ matrix.bambu-version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
