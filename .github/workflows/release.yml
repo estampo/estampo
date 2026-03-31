@@ -98,6 +98,7 @@ jobs:
   # ── Build everything (no publishing) ────────────────────────────────
   build-pypi:
     needs: version
+    if: always() && needs.version.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -123,6 +124,7 @@ jobs:
 
   build-docker:
     needs: version
+    if: always() && needs.version.result == 'success'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -189,6 +191,7 @@ jobs:
 
   build-cloud-bridge:
     needs: version
+    if: always() && needs.version.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -220,6 +223,7 @@ jobs:
   # ── Dry-run: validate on TestPyPI before real publish ───────────────
   dry-run-publish:
     needs: [version, build-pypi]
+    if: always() && needs.version.result == 'success' && needs.build-pypi.result == 'success'
     runs-on: ubuntu-latest
     environment: testpypi
     permissions:
@@ -238,21 +242,32 @@ jobs:
 
   # ── Create tag only after TestPyPI succeeds ─────────────────────────
   create-tag:
-    needs: [detect-release, dry-run-publish]
-    # Only auto-tag on push to main (not workflow_dispatch — tag already exists)
-    if: needs.detect-release.outputs.is_release == 'true'
+    needs: [version, detect-release, dry-run-publish]
+    # Create tag if it doesn't already exist (works for both push and workflow_dispatch)
+    if: |
+      always() &&
+      needs.version.result == 'success' &&
+      needs.dry-run-publish.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: main
 
-      - name: Create and push tag
+      - name: Create and push tag (if it doesn't exist)
         run: |
-          VERSION="${{ needs.detect-release.outputs.version }}"
-          git tag "v${VERSION}"
-          git push origin "v${VERSION}"
-          echo "::notice::Created tag v${VERSION}"
+          VERSION="${{ needs.version.outputs.version }}"
+          if gh api "repos/${{ github.repository }}/git/refs/tags/v${VERSION}" >/dev/null 2>&1; then
+            echo "::notice::Tag v${VERSION} already exists — skipping"
+          else
+            git tag "v${VERSION}"
+            git push origin "v${VERSION}"
+            echo "::notice::Created tag v${VERSION}"
+          fi
 
   # ── Publish everything ──────────────────────────────────────────────
   publish-pypi:
@@ -280,6 +295,7 @@ jobs:
 
   publish-docker:
     needs: [version, publish-pypi]
+    if: always() && needs.version.result == 'success' && needs.publish-pypi.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -320,6 +336,7 @@ jobs:
 
   publish-cloud-bridge:
     needs: [version, publish-pypi]
+    if: always() && needs.version.result == 'success' && needs.publish-pypi.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -357,6 +374,12 @@ jobs:
   # ── Create GitHub Release ───────────────────────────────────────────
   github-release:
     needs: [version, publish-pypi, publish-docker, publish-cloud-bridge]
+    if: |
+      always() &&
+      needs.version.result == 'success' &&
+      needs.publish-pypi.result == 'success' &&
+      needs.publish-docker.result == 'success' &&
+      needs.publish-cloud-bridge.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: write
