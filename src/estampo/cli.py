@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 
 app = typer.Typer(
     name="estampo",
-    help="Reproducible 3D print builds.",
+    help="The build system for 3D prints.",
     no_args_is_help=True,
 )
 
