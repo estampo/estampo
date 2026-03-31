@@ -80,6 +80,7 @@ class ProgressAdapter(NodeExecutionHook):
             "loaded_parts",
             "placements",
             "plate_3mf_path",
+            "preview_path",
             "sliced_output_dir",
             "gcode_stats",
             "print_result",
