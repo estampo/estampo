@@ -19,7 +19,7 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v6
-      - uses: pzfreo/estampo/action@main
+      - uses: estampo/estampo/action@main
         with:
           config: estampo.toml
 ```
@@ -59,4 +59,4 @@ jobs:
 
 ## Supported OrcaSlicer versions
 
-Only versions with a published `ghcr.io/pzfreo/estampo:orca-<version>` image are supported. Currently: `2.3.1` (default).
+Only versions with a published `ghcr.io/estampo/estampo:orca-<version>` image are supported. Currently: `2.3.1` (default).

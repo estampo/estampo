@@ -25,7 +25,8 @@ Before pushing a PR branch:
 
 1. `uv run ruff check src tests` — lint must pass with zero errors
 2. `uv run ruff format --check src tests` — formatting must pass
-3. `uv run pytest` — all tests must pass
+3. `uv run mypy src/estampo` — type check must pass with zero errors
+4. `uv run pytest` — all tests must pass
 
 ## Publishing
 
@@ -40,25 +41,18 @@ Every merge to main triggers:
 
 No version bump needed for day-to-day work.
 
-### Release (tag)
+### Release (automated)
 
 To publish a release:
 
-```bash
-# 1. Run release-readiness check first
-gh workflow run release-readiness.yml -f orca_version=2.3.1
-# 2. Wait for all 5 jobs to pass
-# 3. Bump version in pyproject.toml
-# 4. Rename "## Unreleased" to "## <version> — YYYY-MM-DD" in CHANGELOG.md
-# 5. Commit, tag, and push
-git tag v0.2.1
-git push origin v0.2.1
-```
+1. Run: `gh workflow run prepare-release.yml -f version=X.Y.Z`
+2. The workflow creates a `release/vX.Y.Z` branch with version bump + changelog (towncrier compiles fragment files from `changes/`)
+3. Review the PR, adjust changelog if needed, merge
+4. On merge, `release.yml` automatically: builds all artifacts → validates on TestPyPI → creates git tag → publishes to PyPI + Docker Hub + GHCR → creates GitHub Release
 
-This triggers:
-- **PyPI** — publishes the release version
-- **Docker** — tags images immutably (e.g. `estampo/estampo:orca-2.3.1-v0.2.1`)
-- **Profiles** — extracts slicer profiles from the Docker image and opens a PR with bundled profile data
+If issues arise between prepare and merge (e.g. a hotfix lands), re-run `prepare-release.yml` with the same version — it force-updates the release branch and refreshes the existing PR.
+
+**Manual fallback:** If the automatic pipeline fails after tagging: `gh workflow run release.yml -f tag=vX.Y.Z`
 
 ### Release readiness
 
