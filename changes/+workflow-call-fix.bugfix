@@ -1,1 +1,0 @@
-Remove reusable ``workflow_call`` from release-readiness (fixes startup_failure on tag push)

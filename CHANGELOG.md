@@ -4,6 +4,36 @@ All notable changes to this project are documented here.
 
 <!-- towncrier release notes start -->
 
+## 0.2.3 — 2026-03-31
+
+### Features
+
+- Add ``prepare-release.yml`` workflow: single-command release preparation with automatic changelog via towncrier
+- Add ``workflow_dispatch`` fallback trigger to release workflow
+- Adopt towncrier for changelog management — each PR adds a fragment file in ``changes/`` instead of editing CHANGELOG.md
+- Restructure release workflow (``release.yml``): auto-tag on release PR merge, TestPyPI dry-run gate, GitHub Release creation
+
+### Bugfixes
+
+- Fix ``publish-fabprint`` workflow to match repo environment configuration
+- Remove reusable ``workflow_call`` from release-readiness (fixes startup_failure on tag push)
+- Show preview 3MF export in CLI output (was silently written to disk)
+
+### Misc
+
+- Rebuild demo GIF: trim duplicate `estampo status` from setup recording; status now appears as its own phase between setup and init ([#246](https://github.com/estampo/estampo/pull/246))
+- Add ``fabprint`` deprecation wrapper package and publish workflow
+- Add dark-background logo variant, PNG exports, and favicon
+- Add post-release reminder to redeploy estampo.dev
+- Fix stale ``pzfreo`` references in action README, update developer guide release process, and add logo to README header
+- Fix stale docs: remove completed ``fabprint-plan.md``, outdated ``init-template.cast``, and update ``pzfreo/bnl`` → ``estampo/bnl`` references
+- Minor updates to demo flow in cast recordings and animated GIF
+- Remove completed internal planning docs (Docker optimization, profile pin fix, init command, migration plan)
+- Replace mutable ``cloud-bridge:latest`` Docker tag with versioned ``cloud-bridge:bambu-<version>`` tags
+- Update tagline to "The build system for 3D prints"
+- Update tagline to "The build system for reproducible 3D prints"
+
+
 ## 0.2.2 — 2026-03-30
 
 - Fix `profiles pin` using stale local system profiles instead of Docker-extracted profiles when `slicer.version` is set
