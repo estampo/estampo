@@ -1,0 +1,69 @@
+name: Publish fabprint wrapper
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (TestPyPI only)"
+        type: boolean
+        default: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Build fabprint wrapper
+        working-directory: fabprint-wrapper
+        run: |
+          pip install build twine
+          python -m build
+          twine check dist/*
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: fabprint-dist
+          path: fabprint-wrapper/dist/
+          retention-days: 5
+
+  publish-testpypi:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: testpypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: fabprint-dist
+          path: dist/
+
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+
+  publish-pypi:
+    needs: [build, publish-testpypi]
+    if: inputs.dry_run == false
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: fabprint-dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
