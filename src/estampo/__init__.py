@@ -1,4 +1,4 @@
-"""estampo — The build system for 3D prints."""
+"""estampo — The build system for reproducible 3D prints."""
 
 from __future__ import annotations
 

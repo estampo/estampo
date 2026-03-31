@@ -1,7 +1,7 @@
 [project]
 name = "estampo"
 version = "0.2.2"
-description = "The build system for 3D prints. Define parts, slicer settings, and printer targets in code."
+description = "The build system for reproducible 3D prints. Define parts, slicer settings, and printer targets in code."
 readme = "README.md"
 requires-python = ">=3.11"
 license = {file = "LICENSE"}
