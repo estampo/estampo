@@ -10,7 +10,7 @@
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![codecov](https://codecov.io/gh/estampo/estampo/branch/main/graph/badge.svg)](https://codecov.io/gh/estampo/estampo)
 
-**The build system for 3D prints.**
+**The build system for reproducible 3D prints.**
 
 3D printing has a reproducibility problem:
 
