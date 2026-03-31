@@ -12,7 +12,13 @@
 
 **Reproducible 3D print builds.**
 
-Define parts, slicer settings, and printer targets in code and generate reproducible print artifacts locally or in CI.
+3D printing has a reproducibility problem:
+
+- Slicer settings get lost between sessions or through human error
+- Printer configs drift across machines and slicer versions
+- There's no way to version, diff, or audit a print job
+
+estampo fixes this. Define parts, slicer settings, and printer targets in a single TOML file — git-friendly, diffable, and committable alongside your CAD files. Same repo, same config → same G-code, locally or in CI.
 
 > **Note:** This project was previously called **fabprint**. If you have an existing install,
 > run `pip install estampo` to upgrade — config files and credentials are migrated automatically.
