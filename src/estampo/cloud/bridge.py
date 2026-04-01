@@ -143,12 +143,15 @@ def _run_bridge(
         # Pull image if stale (default: once per 24h). Override with
         # ESTAMPO_DOCKER_PULL=always|never|auto.
         if _should_pull_image():
-            pull = subprocess.run(
-                ["docker", "pull", DOCKER_IMAGE],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
+            from estampo import ui
+
+            with ui.status(f"Checking for updated Docker image [bold]{DOCKER_IMAGE}[/bold]"):
+                pull = subprocess.run(
+                    ["docker", "pull", DOCKER_IMAGE],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
             if pull.returncode == 0:
                 _record_pull()
                 if "Downloaded newer image" in pull.stdout:
