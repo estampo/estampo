@@ -1,0 +1,1 @@
+Fix OrcaSlicer 2.3.2 segfault in Docker on Colima by preventing Wayland GL init
