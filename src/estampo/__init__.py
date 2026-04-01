@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from importlib.metadata import version as _pkg_version
 from pathlib import Path
 
-__version__ = "0.2.0"
+__version__ = _pkg_version("estampo")
 
 
 class EstampoError(Exception):
