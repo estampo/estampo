@@ -49,6 +49,12 @@ RUN --mount=type=cache,id=apt-runtime,target=/var/cache/apt \
 COPY --from=orca /opt/orca-slicer /opt/orca-slicer
 RUN ln -s /opt/orca-slicer/bin/orca-slicer /usr/bin/orca-slicer
 
+# Prevent OrcaSlicer from attempting Wayland GL init in headless mode.
+# Without this, glfwInit tries to connect to a Wayland display and may
+# segfault on some Docker runtimes (e.g. Colima on macOS).
+ENV XDG_SESSION_TYPE=x11
+ENV DISPLAY=:0
+
 # Wire up system profiles so estampo can discover them
 # estampo looks at ~/.config/OrcaSlicer/system/BBL on Linux
 ENV HOME=/home/estampo
