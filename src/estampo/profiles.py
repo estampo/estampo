@@ -198,59 +198,62 @@ def extract_docker_profiles(
             "Install OrcaSlicer locally or check your Docker setup."
         )
 
+    from estampo import ui
+
     tmp_dir = Path(tempfile.mkdtemp(prefix="estampo_profiles_"))
     container_id = None
     try:
-        # Create a stopped container (does not start it)
-        result = subprocess.run(
-            ["docker", "create", "--platform", "linux/amd64", image, "true"],
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-        if result.returncode != 0:
-            raise EstampoError(f"docker create failed: {result.stderr.strip()}")
-        container_id = result.stdout.strip()
-
-        # Copy the entire BBL profile tree (includes root-level base profiles
-        # that category profiles may inherit from).
-        # docker cp copies directory contents into the destination, so
-        # the result is bbl_dest/{machine,process,filament,...}
-        bbl_dest = tmp_dir / "_bbl"
-        cp_result = subprocess.run(
-            ["docker", "cp", f"{container_id}:{_DOCKER_PROFILE_ROOT}/.", str(bbl_dest)],
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-        if cp_result.returncode == 0 and bbl_dest.is_dir():
-            # Move category dirs up to tmp_dir for backwards compatibility
-            for category in CATEGORIES:
-                src_cat = bbl_dest / category
-                dest_cat = tmp_dir / category
-                if src_cat.is_dir():
-                    src_cat.rename(dest_cat)
-            # Move any remaining files/dirs (root-level base profiles, common/, etc.)
-            for item in list(bbl_dest.iterdir()):
-                item.rename(tmp_dir / item.name)
-            if not any(bbl_dest.iterdir()):
-                bbl_dest.rmdir()
-        else:
-            log.debug(
-                "Bulk docker cp failed, falling back to per-category copy: %s",
-                cp_result.stderr.strip(),
+        with ui.status("Extracting profiles from Docker image"):
+            # Create a stopped container (does not start it)
+            result = subprocess.run(
+                ["docker", "create", "--platform", "linux/amd64", image, "true"],
+                capture_output=True,
+                text=True,
+                timeout=30,
             )
-            for category in CATEGORIES:
-                src = f"{container_id}:{_DOCKER_PROFILE_ROOT}/{category}"
-                dest = tmp_dir / category
-                cat_result = subprocess.run(
-                    ["docker", "cp", src, str(dest)],
-                    capture_output=True,
-                    text=True,
-                    timeout=30,
+            if result.returncode != 0:
+                raise EstampoError(f"docker create failed: {result.stderr.strip()}")
+            container_id = result.stdout.strip()
+
+            # Copy the entire BBL profile tree (includes root-level base profiles
+            # that category profiles may inherit from).
+            # docker cp copies directory contents into the destination, so
+            # the result is bbl_dest/{machine,process,filament,...}
+            bbl_dest = tmp_dir / "_bbl"
+            cp_result = subprocess.run(
+                ["docker", "cp", f"{container_id}:{_DOCKER_PROFILE_ROOT}/.", str(bbl_dest)],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            if cp_result.returncode == 0 and bbl_dest.is_dir():
+                # Move category dirs up to tmp_dir for backwards compatibility
+                for category in CATEGORIES:
+                    src_cat = bbl_dest / category
+                    dest_cat = tmp_dir / category
+                    if src_cat.is_dir():
+                        src_cat.rename(dest_cat)
+                # Move any remaining files/dirs (root-level base profiles, common/, etc.)
+                for item in list(bbl_dest.iterdir()):
+                    item.rename(tmp_dir / item.name)
+                if not any(bbl_dest.iterdir()):
+                    bbl_dest.rmdir()
+            else:
+                log.debug(
+                    "Bulk docker cp failed, falling back to per-category copy: %s",
+                    cp_result.stderr.strip(),
                 )
-                if cat_result.returncode != 0:
-                    log.debug("docker cp %s failed: %s", category, cat_result.stderr.strip())
+                for category in CATEGORIES:
+                    src = f"{container_id}:{_DOCKER_PROFILE_ROOT}/{category}"
+                    dest = tmp_dir / category
+                    cat_result = subprocess.run(
+                        ["docker", "cp", src, str(dest)],
+                        capture_output=True,
+                        text=True,
+                        timeout=30,
+                    )
+                    if cat_result.returncode != 0:
+                        log.debug("docker cp %s failed: %s", category, cat_result.stderr.strip())
 
     finally:
         # Clean up the container

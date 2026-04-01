@@ -50,6 +50,17 @@ def info(text: str) -> None:
     console.print(f"  [dim]{text}[/dim]")
 
 
+def status(message: str):  # noqa: ANN201 — returns rich.status.Status
+    """Return a Rich Status spinner context manager for slow operations.
+
+    Usage::
+
+        with ui.status("Pulling Docker image"):
+            do_slow_thing()
+    """
+    return console.status(f"  {message}", spinner="dots")
+
+
 def prompt_str(prompt: str, default: str | None = None) -> str:
     """Prompt for a string value with optional default."""
     result = Prompt.ask(f"  {prompt}", default=default, console=console)

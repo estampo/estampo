@@ -146,14 +146,17 @@ def _has_docker_image(image: str) -> bool:
 
 def _pull_docker_image(image: str) -> bool:
     """Pull a Docker image from the registry. Returns True on success."""
+    from estampo import ui
+
     log.info("Pulling Docker image %s ...", image)
     try:
-        r = subprocess.run(
-            ["docker", "pull", image],
-            capture_output=True,
-            text=True,
-            timeout=300,
-        )
+        with ui.status(f"Pulling Docker image [bold]{image}[/bold] (not cached locally)"):
+            r = subprocess.run(
+                ["docker", "pull", image],
+                capture_output=True,
+                text=True,
+                timeout=300,
+            )
         if r.returncode == 0:
             return True
         log.debug("docker pull failed: %s", r.stderr.strip())
@@ -236,7 +239,10 @@ def _slice_via_docker(
 
     log.info("Slicing via Docker (%s): %s", image, " ".join(cmd))
 
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    from estampo import ui
+
+    with ui.status("Slicing"):
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
 
     if result.returncode != 0:
         log.error("Docker slicer stderr:\n%s", result.stderr)
@@ -660,12 +666,15 @@ def slice_plate(
 
         log.info("Slicing with %s: %s", engine, " ".join(cmd))
 
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=300,
-        )
+        from estampo import ui
+
+        with ui.status("Slicing"):
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=300,
+            )
 
         if result.returncode != 0:
             log.error("Slicer stderr:\n%s", result.stderr)
