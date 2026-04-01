@@ -5,10 +5,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from estampo import EstampoError
 from estampo.slicer import (
     SLICER_PATHS,
     _apply_overrides,
     _has_docker_image,
+    _resolve_profiles,
     _slice_via_docker,
     docker_image,
     find_slicer,
@@ -68,6 +70,40 @@ def test_apply_overrides():
     assert result["sparse_infill_density"] == "25%"
     assert result["other_setting"] == "keep"
     assert result is data  # modifies in place
+
+
+# --- _resolve_profiles: filament resolution ---
+
+
+def test_resolve_profiles_all_filaments_resolved(tmp_path):
+    """All filament slots are resolved to their actual profiles."""
+    profiles_dir = tmp_path / "profiles" / "filament"
+    profiles_dir.mkdir(parents=True)
+    (profiles_dir / "PLA.json").write_text('{"name": "PLA"}')
+    (profiles_dir / "PETG-CF.json").write_text('{"name": "PETG-CF"}')
+
+    out = tmp_path / "out"
+    out.mkdir()
+
+    _, filament_arg = _resolve_profiles(
+        engine="orca",
+        printer=None,
+        process=None,
+        filaments=["PLA", "PETG-CF"],
+        overrides=None,
+        project_dir=tmp_path,
+        tmp_dir=out,
+        profiles_dir="profiles",
+    )
+
+    assert filament_arg is not None
+    paths = filament_arg.split(";")
+    assert len(paths) == 2
+
+    import json
+
+    assert json.loads(Path(paths[0]).read_text())["name"] == "PLA"
+    assert json.loads(Path(paths[1]).read_text())["name"] == "PETG-CF"
 
 
 # --- docker_image ---
@@ -371,6 +407,87 @@ def test_slice_plate_docker_fallback_to_local(tmp_path):
 
     cmd = mock_run.call_args[0][0]
     assert cmd[0] == str(slicer_path)
+
+
+# --- slice_plate: stale pinned profiles ---
+
+
+def test_slice_plate_errors_on_stale_pinned_profiles_no_marker(tmp_path):
+    """Error when pinned profiles exist without a version marker."""
+    input_3mf = tmp_path / "plate.3mf"
+    input_3mf.write_text("fake")
+
+    # Create pinned profiles without version marker
+    profiles = tmp_path / "profiles" / "machine"
+    profiles.mkdir(parents=True)
+    (profiles / "Printer.json").write_text('{"name": "Printer"}')
+
+    with (
+        patch("estampo.slicer._ensure_docker_image", return_value=True),
+        pytest.raises(EstampoError, match="no version marker"),
+    ):
+        slice_plate(
+            input_3mf,
+            engine="orca",
+            printer="Printer",
+            project_dir=tmp_path,
+            docker_version="2.3.2",
+        )
+
+
+def test_slice_plate_errors_on_version_mismatch(tmp_path):
+    """Error when pinned profiles were created for a different slicer version."""
+    input_3mf = tmp_path / "plate.3mf"
+    input_3mf.write_text("fake")
+
+    # Create pinned profiles with mismatched version marker
+    profiles = tmp_path / "profiles" / "machine"
+    profiles.mkdir(parents=True)
+    (profiles / "Printer.json").write_text('{"name": "Printer"}')
+    (tmp_path / "profiles" / ".slicer-version").write_text("2.3.1\n")
+
+    with (
+        patch("estampo.slicer._ensure_docker_image", return_value=True),
+        pytest.raises(EstampoError, match="created for slicer 2.3.1"),
+    ):
+        slice_plate(
+            input_3mf,
+            engine="orca",
+            printer="Printer",
+            project_dir=tmp_path,
+            docker_version="2.3.2",
+        )
+
+
+def test_slice_plate_ok_with_matching_version(tmp_path):
+    """No error when pinned profiles match the target slicer version."""
+    input_3mf = tmp_path / "plate.3mf"
+    input_3mf.write_text("fake")
+    output_dir = tmp_path / "output"
+
+    # Create pinned profiles with matching version marker
+    profiles = tmp_path / "profiles" / "machine"
+    profiles.mkdir(parents=True)
+    (profiles / "Printer.json").write_text('{"type": "machine", "name": "Printer"}')
+    (tmp_path / "profiles" / ".slicer-version").write_text("2.3.2\n")
+
+    with (
+        patch("estampo.slicer._ensure_docker_image", return_value=True),
+        patch("estampo.slicer._slice_via_docker", return_value=output_dir) as mock_docker,
+        patch("estampo.slicer._fix_sliced_3mf"),
+        patch("estampo.profiles.extract_docker_profiles", return_value=tmp_path / "docker"),
+    ):
+        slice_plate(
+            input_3mf,
+            engine="orca",
+            output_dir=output_dir,
+            printer="Printer",
+            project_dir=tmp_path,
+            docker_version="2.3.2",
+        )
+
+    # Should reach the Docker slicer call without error
+    mock_docker.assert_called_once()
 
 
 # --- parse_gcode_stats ---

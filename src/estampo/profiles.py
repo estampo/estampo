@@ -427,6 +427,17 @@ def resolve_profile_data(
     return merged
 
 
+def pinned_profiles_version(project_dir: Path, profiles_dir: str = "profiles") -> str | None:
+    """Read the slicer version that pinned profiles were created with.
+
+    Returns ``None`` if no marker file exists (pre-marker pinned profiles).
+    """
+    marker = project_dir / profiles_dir / ".slicer-version"
+    if marker.exists():
+        return marker.read_text().strip()
+    return None
+
+
 def validate_override_keys(
     overrides: dict[str, object],
     engine: str,
@@ -519,6 +530,12 @@ def pin_profiles(
             source = "Docker" if docker_dir else "system"
             log.info("Pinned %s → %s (flattened, from %s)", name, dest, source)
             pinned.append(dest)
+
+        # Write a version marker so slice-time can detect stale profiles.
+        if docker_version:
+            marker = project_dir / profiles_dir / ".slicer-version"
+            marker.write_text(docker_version + "\n")
+            log.debug("Wrote slicer version marker: %s", marker)
     finally:
         if docker_dir:
             shutil.rmtree(docker_dir, ignore_errors=True)
