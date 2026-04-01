@@ -33,6 +33,7 @@ engine = "orca"
 printer = "Bambu Lab P1S 0.4 nozzle"       # machine profile name
 process = "0.20mm Standard @BBL X1C"       # process/quality profile
 filaments = ["Generic PLA @base"]          # filament profiles (one per AMS slot)
+# bed_type = "Textured PEI Plate"          # or: Cool Plate, Engineering Plate, High Temp Plate
 
 # Per-slot filament mapping (alternative to filaments list):
 # [slicer.slots]
@@ -1032,7 +1033,20 @@ def run_wizard(output: Path | None = None) -> str:
     # --- Step 7: Assign filament slots to parts (if multiple filaments) ---
     _wizard_assign_filament_slots(parts_config, filament_names)
 
-    # --- Step 8: Slicer overrides ---
+    # --- Step 8: Bed type ---
+    ui.heading("Bed Type")
+    BED_TYPES = ["Cool Plate", "Engineering Plate", "High Temp Plate", "Textured PEI Plate"]
+    ui.info("Select bed/plate type (affects filament compatibility):")
+    for i, bt in enumerate(BED_TYPES, 1):
+        ui.info(f"  {i}. {bt}")
+    bed_pick = _prompt_str("Pick bed type (or Enter to skip)", "").strip()
+    bed_type: str | None = None
+    if bed_pick.isdigit() and 1 <= int(bed_pick) <= len(BED_TYPES):
+        bed_type = BED_TYPES[int(bed_pick) - 1]
+        ui.info(f"  → {bed_type}")
+    ui.console.print()
+
+    # --- Step 9: Slicer overrides ---
     ui.heading("Slicer Overrides")
     overrides = _prompt_overrides()
     ui.console.print()
@@ -1049,6 +1063,7 @@ def run_wizard(output: Path | None = None) -> str:
         slicer_version=slicer_version or None,
         stages=stages,
         printer_name=printer_name,
+        bed_type=bed_type,
         overrides=overrides,
     )
 
@@ -1090,6 +1105,7 @@ def _build_toml(
     slicer_version: str | None,
     stages: list[str],
     printer_name: str | None,
+    bed_type: str | None = None,
     overrides: dict[str, str] | None = None,
 ) -> str:
     """Build a TOML string from wizard answers."""
@@ -1124,6 +1140,8 @@ def _build_toml(
     if filament_names:
         fil_list = ", ".join(f'"{f}"' for f in filament_names)
         lines.append(f"filaments = [{fil_list}]")
+    if bed_type:
+        lines.append(f'bed_type = "{bed_type}"')
     lines.append("")
 
     # Slicer overrides

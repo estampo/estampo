@@ -586,6 +586,7 @@ class TestWizard:
                 "256",  # plate depth
                 "",  # slicer version (skip)
                 "Generic PLA @base",  # Filament name
+                "",  # Bed type (skip)
                 "n",  # Add slicer overrides? -> no
                 "w",  # Write / Go back / Quit
             ],
@@ -626,6 +627,7 @@ class TestWizard:
                 "256",  # plate depth
                 "",  # slicer version (skip)
                 "My PLA",  # Filament name
+                "",  # Bed type (skip)
                 "n",  # Add slicer overrides? -> no
                 "q",  # Write / Go back / Quit
             ],

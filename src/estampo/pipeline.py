@@ -396,6 +396,7 @@ def sliced_output_dir(
         docker_version=docker_version,
         required_version=config.slicer.version,
         profiles_dir=config.slicer.profiles_dir,
+        bed_type=config.slicer.bed_type,
     )
 
 

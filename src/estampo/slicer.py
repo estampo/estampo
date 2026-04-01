@@ -252,6 +252,7 @@ def _resolve_profiles(
     tmp_dir: Path,
     profiles_dir: str = "profiles",
     docker_profile_dir: Path | None = None,
+    bed_type: str | None = None,
 ) -> tuple[str | None, str | None]:
     """Resolve and flatten all profiles into tmp_dir.
 
@@ -270,6 +271,9 @@ def _resolve_profiles(
                 f"not a slicer profile. Use the nozzle-specific variant instead, "
                 f"e.g. '{printer} 0.4 nozzle'"
             )
+        if bed_type:
+            data["curr_bed_type"] = bed_type
+            log.info("Set bed type to '%s' in machine profile", bed_type)
         path = _write_tmp_profile(data, tmp_dir, "machine")
         settings.append(str(path))
     if process:
@@ -448,6 +452,7 @@ def slice_plate(
     docker_version: str | None = None,
     required_version: str | None = None,
     profiles_dir: str = "profiles",
+    bed_type: str | None = None,
 ) -> Path:
     """Slice a 3MF file using BambuStudio or OrcaSlicer CLI.
 
@@ -569,6 +574,7 @@ def slice_plate(
             tmp_dir,
             profiles_dir,
             docker_profile_dir,
+            bed_type,
         )
 
         if use_docker:
