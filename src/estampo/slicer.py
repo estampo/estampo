@@ -14,7 +14,7 @@ from pathlib import Path
 
 from estampo import EstampoError, require_file
 from estampo.gcode import parse_gcode_metadata
-from estampo.profiles import resolve_profile_data
+from estampo.profiles import pinned_profiles_version, resolve_profile_data
 from estampo.thumbnails import generate_plate_thumbnail
 
 log = logging.getLogger(__name__)
@@ -176,6 +176,7 @@ def _slice_via_docker(
     settings_arg: str | None,
     filament_arg: str | None,
     image: str,
+    allow_mix_temp: bool = False,
 ) -> Path:
     """Run the slicer inside the estampo Docker container.
 
@@ -212,6 +213,12 @@ def _slice_via_docker(
     if filament_arg:
         rewritten = filament_arg.replace(host_prefix, container_prefix)
         cmd.extend(["--load-filaments", rewritten])
+
+    # AMS printers load multiple filament types through a single nozzle.
+    # OrcaSlicer 2.3.2 rejects mixed-temp filaments by default; tell it
+    # the hardware can handle filament changes.
+    if allow_mix_temp:
+        cmd.append("--allow-mix-temp")
 
     sliced_3mf_name = input_3mf.stem + "_sliced.gcode.3mf"
     cmd.extend(
@@ -287,8 +294,7 @@ def _resolve_profiles(
 
     filament_arg = None
     if filaments:
-        resolved = []
-        # Resolve real profiles; reuse the first for gap (empty) slots
+        resolved: list[str] = []
         first_path: str | None = None
         for i, f in enumerate(filaments):
             if f:
@@ -299,11 +305,12 @@ def _resolve_profiles(
                 resolved.append(str(path))
                 if first_path is None:
                     first_path = str(path)
+            elif first_path:
+                # Empty slot — use first resolved filament as placeholder
+                resolved.append(first_path)
             else:
                 resolved.append("")
-        # Fill gap slots with the first resolved profile (same file, no re-resolve)
-        if first_path:
-            resolved = [p if p else first_path for p in resolved]
+
         filament_arg = ";".join(resolved)
 
     settings_arg = ";".join(settings) if settings else None
@@ -553,6 +560,33 @@ def slice_plate(
     else:
         tmp_dir = Path(tempfile.mkdtemp(prefix="estampo_"))
 
+    # Detect stale pinned profiles early, before extracting Docker profiles.
+    # Profiles pinned for one slicer version can crash a different version due
+    # to schema changes (array sizes, removed/added keys).
+    if project_dir and docker_version:
+        pinned_dir = project_dir / profiles_dir
+        has_pinned = pinned_dir.is_dir() and any(pinned_dir.rglob("*.json"))
+        if has_pinned:
+            pinned_ver = pinned_profiles_version(project_dir, profiles_dir)
+            if pinned_ver and pinned_ver != docker_version:
+                raise EstampoError(
+                    f"Pinned profiles were created for slicer {pinned_ver} but "
+                    f"slicer.version is {docker_version}. Profile schemas change "
+                    f"between slicer versions and loading stale profiles can crash "
+                    f"the slicer.\n\n"
+                    f"  Run 'estampo profiles pin' to update your pinned profiles "
+                    f"for {docker_version}."
+                )
+            elif pinned_ver is None:
+                raise EstampoError(
+                    f"Pinned profiles in '{profiles_dir}/' have no version marker "
+                    f"and may be incompatible with slicer {docker_version}. Profile "
+                    f"schemas change between slicer versions and loading stale "
+                    f"profiles can crash the slicer.\n\n"
+                    f"  Run 'estampo profiles pin' to update your pinned profiles "
+                    f"for {docker_version}."
+                )
+
     # When slicing via Docker, extract profiles from the Docker image so we
     # use version-matched profiles instead of the local system install (which
     # may be a different OrcaSlicer version with incompatible gcode templates).
@@ -562,6 +596,11 @@ def slice_plate(
 
         docker_profile_dir = extract_docker_profiles(version=docker_version)
         log.info("Extracted Docker image profiles to %s", docker_profile_dir)
+
+    # AMS printers can have multiple filament types loaded.  OrcaSlicer 2.3.2+
+    # rejects mixed-temperature filaments by default.  Pass --allow-mix-temp
+    # when the config declares more than one distinct filament name.
+    allow_mix_temp = bool(filaments and len(set(f for f in filaments if f)) > 1)
 
     try:
         settings_arg, filament_arg = _resolve_profiles(
@@ -585,6 +624,7 @@ def slice_plate(
                 settings_arg,
                 filament_arg,
                 image,
+                allow_mix_temp,
             )
             _fix_sliced_3mf(result_dir / (input_3mf.stem + "_sliced.gcode.3mf"), input_3mf)
             return result_dir
@@ -595,6 +635,10 @@ def slice_plate(
             cmd.extend(["--load-settings", settings_arg])
         if filament_arg:
             cmd.extend(["--load-filaments", filament_arg])
+
+        # AMS printers load multiple filament types through a single nozzle.
+        if allow_mix_temp:
+            cmd.append("--allow-mix-temp")
 
         # --load-filament-ids only works with STL inputs, not 3MF
         if filament_ids and not str(input_3mf).endswith(".3mf"):

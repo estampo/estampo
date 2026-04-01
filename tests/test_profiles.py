@@ -14,6 +14,7 @@ from estampo.profiles import (
     discover_profiles,
     load_bundled_profiles,
     pin_profiles,
+    pinned_profiles_version,
     resolve_profile,
     resolve_profile_data,
     validate_override_keys,
@@ -757,3 +758,26 @@ def test_validate_override_keys_unresolvable_profile():
         project_dir=None,
     )
     assert warnings == []
+
+
+# --- pinned_profiles_version ---
+
+
+def test_pinned_profiles_version_reads_marker(tmp_path):
+    """Reads version from .slicer-version marker file."""
+    profiles = tmp_path / "profiles"
+    profiles.mkdir()
+    (profiles / ".slicer-version").write_text("2.3.2\n")
+    assert pinned_profiles_version(tmp_path) == "2.3.2"
+
+
+def test_pinned_profiles_version_returns_none_without_marker(tmp_path):
+    """Returns None when no marker file exists."""
+    profiles = tmp_path / "profiles"
+    profiles.mkdir()
+    assert pinned_profiles_version(tmp_path) is None
+
+
+def test_pinned_profiles_version_returns_none_without_dir(tmp_path):
+    """Returns None when profiles dir doesn't exist."""
+    assert pinned_profiles_version(tmp_path) is None
