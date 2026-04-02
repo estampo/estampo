@@ -1,0 +1,1 @@
+Revert ``xvfb-run`` wrapping that caused OrcaSlicer 2.3.2 to segfault on GL init.
