@@ -1,1 +1,1 @@
-Only pass ``--allow-mix-temp`` to OrcaSlicer 2.3.2+; older versions reject the unknown flag.
+Pass ``--allow-mix-temp`` unconditionally on OrcaSlicer 2.3.2+ to fix grouping errors; gate the flag off for older versions.
