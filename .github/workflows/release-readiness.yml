@@ -219,7 +219,13 @@ jobs:
       fail-fast: false
       matrix:
         orca_version: ${{ fromJson(needs.resolve-versions.outputs.versions) }}
-        example: [examples, examples/decoy-case]
+        example:
+          - name: generic
+            workdir: examples
+            config: estampo.toml
+          - name: decoy-case
+            workdir: examples/decoy-case
+            # config resolved per-version in the step below
     steps:
       - uses: actions/checkout@v6
 
@@ -230,22 +236,33 @@ jobs:
       - name: Load image
         run: docker load -i estampo-image.tar
 
-      - name: Run slice with example config
+      - name: Resolve config file
+        id: config
+        run: |
+          if [ "${{ matrix.example.name }}" = "decoy-case" ]; then
+            # Version-specific configs (e.g. estampo-231.toml)
+            SHORT=$(echo "${{ matrix.orca_version }}" | tr -d '.')
+            echo "file=estampo-${SHORT}.toml" >> "$GITHUB_OUTPUT"
+          else
+            echo "file=${{ matrix.example.config }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run slice (${{ matrix.example.name }} on orca-${{ matrix.orca_version }})
         run: |
           docker run --rm \
             -v "${{ github.workspace }}:/project" \
-            -w /project/${{ matrix.example }} \
+            -w /project/${{ matrix.example.workdir }} \
             estampo/estampo:orca-${{ matrix.orca_version }}-test \
-            run estampo.toml -v
+            run ${{ steps.config.outputs.file }} -v
 
       - name: Verify output
         run: |
           echo "Checking for slice output..."
-          ls -la ${{ matrix.example }}/estampo_output/
-          echo "Slice test OK — ${{ matrix.example }} on orca-${{ matrix.orca_version }}"
+          ls -la ${{ matrix.example.workdir }}/estampo_output/
+          echo "Slice test OK — ${{ matrix.example.name }} on orca-${{ matrix.orca_version }}"
 
       - uses: actions/upload-artifact@v7
         with:
-          name: slice-output-${{ matrix.orca_version }}-${{ strategy.job-index }}
-          path: ${{ matrix.example }}/estampo_output/
+          name: slice-output-${{ matrix.example.name }}-${{ matrix.orca_version }}
+          path: ${{ matrix.example.workdir }}/estampo_output/
           retention-days: 5
