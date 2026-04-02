@@ -82,6 +82,7 @@ class ProgressAdapter(NodeExecutionHook):
             "plate_3mf_path",
             "preview_path",
             "sliced_output_dir",
+            "packaged_output",
             "gcode_stats",
             "print_result",
         }
@@ -93,6 +94,7 @@ class ProgressAdapter(NodeExecutionHook):
         "plate_3mf_path": "Exporting plate",
         "preview_path": "Exporting preview",
         "sliced_output_dir": "Slicing",
+        "packaged_output": "Printer-specific packaging",
         "gcode_stats": "Reading gcode",
         "print_result": "Sending to printer",
     }
@@ -227,6 +229,13 @@ class ProgressAdapter(NodeExecutionHook):
                 gcode_files = list(result.glob("*.gcode"))
                 if gcode_files:
                     self._console.print(f"  [dim]→ {gcode_files[0].name}[/dim]")
+
+        elif node_name == "packaged_output":
+            cfg = node_kwargs.get("config")
+            printer_name = ""
+            if cfg and cfg.printer:
+                printer_name = f' for "{cfg.printer.name}"'
+            self._ok(f"Packaged{printer_name}", elapsed)
 
         elif node_name == "gcode_stats":
             parts: list[str] = []
