@@ -92,6 +92,7 @@ def test_resolve_profiles_all_filaments_resolved(tmp_path):
         process=None,
         filaments=["PLA", "PETG-CF"],
         overrides=None,
+        machine_overrides=None,
         project_dir=tmp_path,
         tmp_dir=out,
         profiles_dir="profiles",
@@ -105,6 +106,39 @@ def test_resolve_profiles_all_filaments_resolved(tmp_path):
 
     assert json.loads(Path(paths[0]).read_text())["name"] == "PLA"
     assert json.loads(Path(paths[1]).read_text())["name"] == "PETG-CF"
+
+
+def test_resolve_profiles_machine_overrides(tmp_path: Path):
+    """Machine overrides are applied to the machine profile, broadcasting to arrays."""
+    profiles_dir = tmp_path / "profiles" / "filament"
+    profiles_dir.mkdir(parents=True)
+    machine_dir = tmp_path / "profiles" / "machine"
+    machine_dir.mkdir(parents=True)
+    (machine_dir / "My Printer.json").write_text(
+        '{"name": "My Printer", "type": "machine", '
+        '"nozzle_type": ["stainless_steel", "stainless_steel"]}'
+    )
+
+    out = tmp_path / "out"
+    out.mkdir()
+
+    settings_arg, _ = _resolve_profiles(
+        engine="orca",
+        printer="My Printer",
+        process=None,
+        filaments=None,
+        overrides=None,
+        machine_overrides={"nozzle_type": "hardened_steel"},
+        project_dir=tmp_path,
+        tmp_dir=out,
+        profiles_dir="profiles",
+    )
+
+    assert settings_arg is not None
+    import json
+
+    data = json.loads(Path(settings_arg).read_text())
+    assert data["nozzle_type"] == ["hardened_steel", "hardened_steel"]
 
 
 # --- docker_image ---
