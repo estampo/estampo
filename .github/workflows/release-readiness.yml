@@ -20,9 +20,6 @@ concurrency:
   group: release-readiness-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  ORCA_VERSION: ${{ inputs.orca_version || '2.3.1' }}
-
 jobs:
   detect-changes:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
@@ -43,10 +40,30 @@ jobs:
             echo "relevant=false" >> "$GITHUB_OUTPUT"
           fi
 
-  build-estampo-image:
+  # Resolve which OrcaSlicer versions to build/test.  Manual dispatch
+  # tests a single version; automated runs test all supported versions.
+  resolve-versions:
     needs: detect-changes
     if: always() && !failure() && !cancelled() && (needs.detect-changes.result == 'skipped' || needs.detect-changes.outputs.relevant == 'true')
     runs-on: ubuntu-latest
+    outputs:
+      versions: ${{ steps.set.outputs.versions }}
+    steps:
+      - id: set
+        run: |
+          if [ -n "${{ inputs.orca_version }}" ]; then
+            echo 'versions=["${{ inputs.orca_version }}"]' >> "$GITHUB_OUTPUT"
+          else
+            echo 'versions=["2.3.1","2.3.2"]' >> "$GITHUB_OUTPUT"
+          fi
+
+  build-estampo-image:
+    needs: resolve-versions
+    if: needs.resolve-versions.result == 'success'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        orca_version: ${{ fromJson(needs.resolve-versions.outputs.versions) }}
     steps:
       - uses: actions/checkout@v6
 
@@ -58,32 +75,32 @@ jobs:
 
       - name: Pull or build orca-base image
         run: |
-          docker pull estampo/orca-base:${{ env.ORCA_VERSION }} 2>/dev/null \
+          docker pull estampo/orca-base:${{ matrix.orca_version }} 2>/dev/null \
             || docker build --platform linux/amd64 \
               -f Dockerfile.orca-base \
-              --build-arg ORCA_VERSION=${{ env.ORCA_VERSION }} \
-              -t estampo/orca-base:${{ env.ORCA_VERSION }} .
+              --build-arg ORCA_VERSION=${{ matrix.orca_version }} \
+              -t estampo/orca-base:${{ matrix.orca_version }} .
 
       - name: Build estampo image
         run: |
           docker build --platform linux/amd64 \
-            --build-arg ORCA_VERSION=${{ env.ORCA_VERSION }} \
-            -t estampo/estampo:orca-${{ env.ORCA_VERSION }}-test .
+            --build-arg ORCA_VERSION=${{ matrix.orca_version }} \
+            -t estampo/estampo:orca-${{ matrix.orca_version }}-test .
 
       - name: Save image as artifact
         run: |
-          docker save estampo/estampo:orca-${{ env.ORCA_VERSION }}-test \
+          docker save estampo/estampo:orca-${{ matrix.orca_version }}-test \
             -o estampo-image.tar
 
       - uses: actions/upload-artifact@v7
         with:
-          name: estampo-image
+          name: estampo-image-${{ matrix.orca_version }}
           path: estampo-image.tar
           retention-days: 1
 
   build-cloud-bridge:
-    needs: detect-changes
-    if: always() && !failure() && !cancelled() && (needs.detect-changes.result == 'skipped' || needs.detect-changes.outputs.relevant == 'true')
+    needs: resolve-versions
+    if: needs.resolve-versions.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -99,31 +116,37 @@ jobs:
           docker run --rm estampo/cloud-bridge:test --help
 
   smoke-test:
-    needs: build-estampo-image
+    needs: [resolve-versions, build-estampo-image]
     if: needs.build-estampo-image.result == 'success'
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        orca_version: ${{ fromJson(needs.resolve-versions.outputs.versions) }}
     steps:
       - uses: actions/download-artifact@v7
         with:
-          name: estampo-image
+          name: estampo-image-${{ matrix.orca_version }}
 
       - name: Load image
         run: docker load -i estampo-image.tar
 
       - name: Test estampo CLI
         run: |
-          docker run --rm estampo/estampo:orca-${{ env.ORCA_VERSION }}-test --help
-          docker run --rm estampo/estampo:orca-${{ env.ORCA_VERSION }}-test run --help
+          docker run --rm estampo/estampo:orca-${{ matrix.orca_version }}-test --help
+          docker run --rm estampo/estampo:orca-${{ matrix.orca_version }}-test run --help
 
       - name: Test OrcaSlicer accessible
         run: |
           docker run --rm --entrypoint orca-slicer \
-            estampo/estampo:orca-${{ env.ORCA_VERSION }}-test --help
+            estampo/estampo:orca-${{ matrix.orca_version }}-test --help
 
   profile-extraction:
-    needs: build-estampo-image
+    needs: [resolve-versions, build-estampo-image]
     if: needs.build-estampo-image.result == 'success'
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        orca_version: ${{ fromJson(needs.resolve-versions.outputs.versions) }}
     permissions:
       contents: write
       pull-requests: write
@@ -132,7 +155,7 @@ jobs:
 
       - uses: actions/download-artifact@v7
         with:
-          name: estampo-image
+          name: estampo-image-${{ matrix.orca_version }}
 
       - name: Load image
         run: docker load -i estampo-image.tar
@@ -150,17 +173,17 @@ jobs:
       - name: Extract profiles
         run: |
           uv run python scripts/extract_profiles.py \
-            ${{ env.ORCA_VERSION }} \
-            --image estampo/estampo:orca-${{ env.ORCA_VERSION }}-test
+            ${{ matrix.orca_version }} \
+            --image estampo/estampo:orca-${{ matrix.orca_version }}-test
 
       - name: Validate profile JSON
         run: |
           python3 -c "
           import json, sys
-          f = 'src/estampo/data/profiles.orca.${{ env.ORCA_VERSION }}.json'
+          f = 'src/estampo/data/profiles.orca.${{ matrix.orca_version }}.json'
           d = json.load(open(f))
           assert d['engine'] == 'orca', f'bad engine: {d[\"engine\"]}'
-          assert d['version'] == '${{ env.ORCA_VERSION }}', f'bad version: {d[\"version\"]}'
+          assert d['version'] == '${{ matrix.orca_version }}', f'bad version: {d[\"version\"]}'
           for cat in ('machine', 'process', 'filament'):
               n = len(d[cat])
               assert n > 0, f'{cat} list is empty'
@@ -173,16 +196,15 @@ jobs:
         run: |
           git add src/estampo/data/
           git diff --cached --quiet src/estampo/data/ && echo "No profile changes" && exit 0
-          BRANCH="update-orca-profiles-$(date +%Y%m%d)"
+          BRANCH="update-orca-profiles-${{ matrix.orca_version }}-$(date +%Y%m%d)"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$BRANCH"
-          git commit -m "Update bundled OrcaSlicer profiles (${{ env.ORCA_VERSION }})"
+          git commit -m "Update bundled OrcaSlicer profiles (${{ matrix.orca_version }})"
           git push origin "$BRANCH"
-          # Try to create PR; if repo settings disallow it, just log the branch URL
           gh pr create \
-            --title "Update bundled OrcaSlicer profiles" \
-            --body "Auto-extracted from estampo/estampo:orca-${{ env.ORCA_VERSION }}-test." \
+            --title "Update bundled OrcaSlicer ${{ matrix.orca_version }} profiles" \
+            --body "Auto-extracted from estampo/estampo:orca-${{ matrix.orca_version }}-test." \
             --base main \
             --head "$BRANCH" \
           || echo "::warning::Could not create PR automatically. Branch '$BRANCH' pushed — create the PR manually."
@@ -190,15 +212,20 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   slice-test:
-    needs: build-estampo-image
+    needs: [resolve-versions, build-estampo-image]
     if: needs.build-estampo-image.result == 'success'
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        orca_version: ${{ fromJson(needs.resolve-versions.outputs.versions) }}
+        example: [examples, examples/decoy-case]
     steps:
       - uses: actions/checkout@v6
 
       - uses: actions/download-artifact@v7
         with:
-          name: estampo-image
+          name: estampo-image-${{ matrix.orca_version }}
 
       - name: Load image
         run: docker load -i estampo-image.tar
@@ -207,18 +234,18 @@ jobs:
         run: |
           docker run --rm \
             -v "${{ github.workspace }}:/project" \
-            -w /project/examples \
-            estampo/estampo:orca-${{ env.ORCA_VERSION }}-test \
+            -w /project/${{ matrix.example }} \
+            estampo/estampo:orca-${{ matrix.orca_version }}-test \
             run estampo.toml -v
 
       - name: Verify output
         run: |
           echo "Checking for slice output..."
-          ls -la examples/estampo_output/
-          echo "Slice test OK"
+          ls -la ${{ matrix.example }}/estampo_output/
+          echo "Slice test OK — ${{ matrix.example }} on orca-${{ matrix.orca_version }}"
 
       - uses: actions/upload-artifact@v7
         with:
-          name: slice-output
-          path: examples/estampo_output/
+          name: slice-output-${{ matrix.orca_version }}-${{ strategy.job-index }}
+          path: ${{ matrix.example }}/estampo_output/
           retention-days: 5

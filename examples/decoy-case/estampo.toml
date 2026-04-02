@@ -1,0 +1,30 @@
+# Decoy case — e2e smoke test for release-readiness CI
+# Single filament for now; will add multi-filament variant later.
+
+name = "decoy-case"
+
+[pipeline]
+stages = ["load", "arrange", "plate", "slice"]
+
+[plate]
+size = [256, 256]
+padding = 5.0
+
+[slicer]
+engine = "orca"
+printer = "Bambu Lab P1S 0.4 nozzle"
+process = "0.20mm Standard @BBL X1C"
+filaments = ["Generic PETG"]
+bed_type = "Textured PEI Plate"
+
+[slicer.overrides]
+sparse_infill_density = "30%"
+sparse_infill_pattern = "gyroid"
+
+[[parts]]
+file = "decoy_base.step"
+orient = "upright"
+
+[[parts]]
+file = "decoy_shell.step"
+orient = "upside-down"
