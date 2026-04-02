@@ -684,6 +684,7 @@ class TestWizard:
                 "",  # slicer version (skip)
                 "Generic PLA @base",  # Filament name
                 "",  # Bed type (skip)
+                "1",  # Nozzle type (stainless_steel)
                 "n",  # Add slicer overrides? -> no
                 "w",  # Write / Go back / Quit
             ],
@@ -725,6 +726,7 @@ class TestWizard:
                 "",  # slicer version (skip)
                 "My PLA",  # Filament name
                 "",  # Bed type (skip)
+                "1",  # Nozzle type (stainless_steel)
                 "n",  # Add slicer overrides? -> no
                 "q",  # Write / Go back / Quit
             ],

@@ -40,6 +40,10 @@ filaments = ["Generic PLA @base"]          # filament profiles (one per AMS slot
 # 1 = "Generic PLA @base"
 # 2 = "Generic PETG @base"
 
+# Machine profile overrides (e.g. if you upgraded your nozzle):
+# [slicer.machine_overrides]
+# nozzle_type = "hardened_steel"   # brass, stainless_steel, or hardened_steel
+
 # Slicer setting overrides:
 # [slicer.overrides]
 # sparse_infill_density = "25%"
@@ -70,6 +74,79 @@ orient = "flat"                # flat, upright, side, or upside-down
 def dump_template() -> str:
     """Return the commented TOML template string."""
     return _TEMPLATE
+
+
+# ---------------------------------------------------------------------------
+# Load existing config for pre-population
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class _ExistingConfig:
+    """Pre-populated values from an existing estampo.toml."""
+
+    project_name: str | None = None
+    printer: str | None = None
+    process: str | None = None
+    filaments: list[str] | None = None
+    bed_type: str | None = None
+    nozzle_type: str | None = None
+    slicer_version: str | None = None
+    plate_size: tuple[int, int] | None = None
+    overrides: dict[str, str] | None = None
+    parts: list[dict] | None = None
+    printer_name: str | None = None
+    stages: list[str] | None = None
+
+
+def _load_existing(path: Path) -> _ExistingConfig | None:
+    """Try to load an existing estampo.toml for pre-population."""
+    import tomllib
+
+    if not path.exists():
+        return None
+    try:
+        with open(path, "rb") as f:
+            raw = tomllib.load(f)
+    except Exception:
+        return None
+
+    slicer = raw.get("slicer", {})
+    plate = raw.get("plate", {})
+    pipeline = raw.get("pipeline", {})
+
+    parts = None
+    raw_parts = raw.get("parts", [])
+    if raw_parts:
+        parts = [{"file": p.get("file", ""), **p} for p in raw_parts]
+
+    nozzle_type = slicer.get("machine_overrides", {}).get("nozzle_type")
+
+    plate_raw = plate.get("size")
+    plate_size = None
+    if isinstance(plate_raw, list) and len(plate_raw) == 2:
+        plate_size = (int(plate_raw[0]), int(plate_raw[1]))
+
+    overrides = slicer.get("overrides")
+    if overrides:
+        overrides = {k: str(v) for k, v in overrides.items()}
+
+    return _ExistingConfig(
+        project_name=raw.get("name"),
+        printer=slicer.get("printer"),
+        process=slicer.get("process"),
+        filaments=slicer.get("filaments"),
+        bed_type=slicer.get("bed_type"),
+        nozzle_type=nozzle_type,
+        slicer_version=slicer.get("version"),
+        plate_size=plate_size,
+        overrides=overrides,
+        parts=parts,
+        printer_name=(
+            raw.get("printer", {}).get("name") if isinstance(raw.get("printer"), dict) else None
+        ),
+        stages=pipeline.get("stages"),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -830,7 +907,9 @@ def _wizard_pick_filaments(
     return filament_names
 
 
-def _wizard_pick_parts() -> list[dict]:
+def _wizard_pick_parts(
+    existing_parts: list[dict] | None = None,
+) -> list[dict]:
     """Discover CAD files and configure copies/orient.
 
     Returns a list of part config dicts (filament slot defaults to 1,
@@ -839,11 +918,26 @@ def _wizard_pick_parts() -> list[dict]:
     from estampo import ui
 
     ui.heading("CAD Files")
-    cwd = Path.cwd()
-    candidates = sorted(
-        p for ext in ("*.stl", "*.3mf", "*.step", "*.STL", "*.3MF", "*.STEP") for p in cwd.glob(ext)
-    )
+
+    # Show existing parts and ask to keep them
     parts_config: list[dict] = []
+    if existing_parts:
+        ui.info(f"Existing parts ({len(existing_parts)}):")
+        for p in existing_parts:
+            ui.info(f"  • {p.get('file')}")
+        if _prompt_yn("Keep existing parts?"):
+            parts_config = list(existing_parts)
+        ui.console.print()
+
+    cwd = Path.cwd()
+    # Exclude files already in parts_config
+    existing_files = {p.get("file") for p in parts_config}
+    candidates = sorted(
+        p
+        for ext in ("*.stl", "*.3mf", "*.step", "*.STL", "*.3MF", "*.STEP")
+        for p in cwd.glob(ext)
+        if p.name not in existing_files
+    )
     if candidates:
         ui.info(f"Found {len(candidates)} CAD file(s) in current directory")
         names = [p.name for p in candidates]
@@ -965,8 +1059,11 @@ def run_wizard(output: Path | None = None) -> str:
     """Run the interactive init wizard and return generated TOML.
 
     Flow: project name → CAD files → printer connection → plate size →
-    slicer version → profiles → filaments → filament slots → overrides →
-    preview.
+    slicer version → profiles → filaments → filament slots → bed type →
+    nozzle type → overrides → preview.
+
+    If an estampo.toml already exists, its values are used as defaults
+    so the user can keep existing settings and add/edit parts.
     """
     from estampo import ui
     from estampo.profiles import discover_profile_names
@@ -976,13 +1073,20 @@ def run_wizard(output: Path | None = None) -> str:
 
     engine = "orca"
 
+    # --- Load existing config for pre-population ---
+    dest = output or Path("estampo.toml")
+    existing = _load_existing(dest)
+    if existing:
+        ui.info(f"Found existing {dest.name} — values shown as defaults")
+        ui.console.print()
+
     # --- Step 1: Project name ---
-    default_name = Path.cwd().name
+    default_name = (existing and existing.project_name) or Path.cwd().name
     project_name = ui.prompt_str("Project name", default=default_name) or default_name
     ui.console.print()
 
     # --- Step 2: CAD files (copies, orient — filament slots assigned later) ---
-    parts_config = _wizard_pick_parts()
+    parts_config = _wizard_pick_parts(existing_parts=existing.parts if existing else None)
 
     # --- Step 3: Printer connection (optional) ---
     printer_name = _wizard_pick_printer()
@@ -1037,16 +1141,46 @@ def run_wizard(output: Path | None = None) -> str:
     ui.heading("Bed Type")
     BED_TYPES = ["Cool Plate", "Engineering Plate", "High Temp Plate", "Textured PEI Plate"]
     ui.info("Select bed/plate type (affects filament compatibility):")
+    existing_bed = existing.bed_type if existing else None
+    bed_default = ""
     for i, bt in enumerate(BED_TYPES, 1):
-        ui.info(f"  {i}. {bt}")
-    bed_pick = _prompt_str("Pick bed type (or Enter to skip)", "").strip()
+        marker = " ←" if bt == existing_bed else ""
+        ui.info(f"  {i}. {bt}{marker}")
+        if bt == existing_bed:
+            bed_default = str(i)
+    bed_pick = _prompt_str("Pick bed type (or Enter to skip)", bed_default).strip()
     bed_type: str | None = None
     if bed_pick.isdigit() and 1 <= int(bed_pick) <= len(BED_TYPES):
         bed_type = BED_TYPES[int(bed_pick) - 1]
         ui.info(f"  → {bed_type}")
     ui.console.print()
 
-    # --- Step 9: Slicer overrides ---
+    # --- Step 9: Nozzle type ---
+    ui.heading("Nozzle Type")
+    NOZZLE_TYPES = ["stainless_steel", "hardened_steel", "brass"]
+    existing_nozzle = (existing and existing.nozzle_type) or "stainless_steel"
+    nozzle_default = "1"
+    ui.info("Select your physical nozzle type:")
+    for i, nt in enumerate(NOZZLE_TYPES, 1):
+        marker = " ←" if nt == existing_nozzle else ""
+        ui.info(f"  {i}. {nt}{marker}")
+        if nt == existing_nozzle:
+            nozzle_default = str(i)
+    nozzle_prompt = f"Pick nozzle type (default: {existing_nozzle})"
+    nozzle_pick = _prompt_str(nozzle_prompt, nozzle_default).strip()
+    machine_overrides: dict[str, str] = {}
+    if nozzle_pick.isdigit() and 1 <= int(nozzle_pick) <= len(NOZZLE_TYPES):
+        picked_nozzle = NOZZLE_TYPES[int(nozzle_pick) - 1]
+    elif nozzle_pick in NOZZLE_TYPES:
+        picked_nozzle = nozzle_pick
+    else:
+        picked_nozzle = "stainless_steel"
+    if picked_nozzle != "stainless_steel":
+        machine_overrides["nozzle_type"] = picked_nozzle
+    ui.info(f"  → {picked_nozzle}")
+    ui.console.print()
+
+    # --- Step 10: Slicer overrides ---
     ui.heading("Slicer Overrides")
     overrides = _prompt_overrides()
     ui.console.print()
@@ -1065,6 +1199,7 @@ def run_wizard(output: Path | None = None) -> str:
         printer_name=printer_name,
         bed_type=bed_type,
         overrides=overrides,
+        machine_overrides=machine_overrides or None,
     )
 
     # --- Preview and confirm ---
@@ -1270,13 +1405,26 @@ def extract_from_3mf(path: Path) -> str:
 
     project_name = path.stem if path.stem != "estampo" else path.parent.name
 
+    # --- Discover CAD files in the working directory ---
+    cwd = Path.cwd()
+    cad_files = sorted(
+        p.name
+        for ext in ("*.stl", "*.3mf", "*.step", "*.STL", "*.3MF", "*.STEP")
+        for p in cwd.glob(ext)
+        if p != path  # exclude the source 3MF itself
+    )
+    if cad_files:
+        parts = [{"file": f} for f in cad_files]
+    else:
+        parts = [{"file": "# TODO: add your .stl/.step/.3mf files"}]
+
     toml = _build_toml(
         project_name=project_name,
         engine="orca",
         printer_profile=printer_profile,
         process_profile=process_profile,
         filament_names=filaments,
-        parts=[{"file": "# TODO: add your .stl/.step/.3mf files"}],
+        parts=parts,
         plate_size=plate_size,
         slicer_version=None,  # user should pin this
         stages=list(DEFAULT_STAGES),
