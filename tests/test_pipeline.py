@@ -185,7 +185,7 @@ def test_resolve_outputs_only():
 
     stages = ["load", "arrange", "plate", "slice", "print"]
     outputs = resolve_outputs(stages, only="slice")
-    assert outputs == ["sliced_output_dir", "gcode_stats"]
+    assert outputs == ["sliced_output_dir", "packaged_output", "gcode_stats"]
 
 
 def test_resolve_outputs_unknown_stage():
@@ -243,11 +243,11 @@ def test_resolve_overrides_slice_missing_plate(tmp_path):
 
 
 def test_resolve_overrides_gcode_info_finds_dir(tmp_path):
-    """--only gcode-info resolves sliced_output_dir from disk."""
+    """--only gcode-info resolves packaged_output from disk."""
     from estampo.pipeline import resolve_overrides
 
     overrides = resolve_overrides("gcode-info", tmp_path)
-    assert overrides["sliced_output_dir"] == tmp_path
+    assert overrides["packaged_output"] == tmp_path
 
 
 def test_resolve_overrides_print_finds_gcode(tmp_path):
@@ -386,7 +386,7 @@ class TestResolveOverridesArtifacts:
         from estampo.pipeline import resolve_overrides
 
         overrides = resolve_overrides("gcode-info", tmp_path)
-        assert overrides["sliced_output_dir"] == tmp_path
+        assert overrides["packaged_output"] == tmp_path
 
     def test_print_finds_first_gcode(self, tmp_path):
         """--only print picks a gcode file from the directory."""

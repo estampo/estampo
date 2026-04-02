@@ -42,7 +42,7 @@ STAGE_OUTPUTS: dict[str, list[str]] = {
     "load": ["loaded_parts", "part_summary"],
     "arrange": ["placements"],
     "plate": ["plate_3mf_path", "preview_path"],
-    "slice": ["sliced_output_dir", "gcode_stats"],
+    "slice": ["sliced_output_dir", "packaged_output", "gcode_stats"],
     "gcode-info": ["gcode_stats"],  # kept for backward compat
     "print": ["print_result"],
 }
@@ -51,7 +51,7 @@ STAGE_OUTPUTS: dict[str, list[str]] = {
 # be resolved from disk artifacts.  Each value is (node_name, description).
 STAGE_REQUIRES: dict[str, list[tuple[str, str]]] = {
     "slice": [("plate_3mf_path", "plate 3MF file")],
-    "gcode-info": [("sliced_output_dir", "slicer output directory")],
+    "gcode-info": [("packaged_output", "slicer output directory")],
     "print": [("gcode_path", "sliced gcode file")],
 }
 
@@ -110,7 +110,7 @@ def resolve_overrides(
             if not plate_files:
                 raise FileNotFoundError(f"--only {only}: requires {description} in {output_dir}")
             overrides[node_name] = plate_files[0]
-        elif node_name == "sliced_output_dir":
+        elif node_name in ("sliced_output_dir", "packaged_output"):
             if not output_dir.exists():
                 raise FileNotFoundError(f"--only {only}: requires {description} at {output_dir}")
             overrides[node_name] = output_dir
@@ -400,17 +400,43 @@ def sliced_output_dir(
     )
 
 
-def gcode_stats(sliced_output_dir: Path) -> dict:
+def packaged_output(
+    sliced_output_dir: Path,
+    plate_3mf_path: Path,
+    config: EstampoConfig,
+) -> Path:
+    """Printer-specific post-processing of slicer output.
+
+    For Bambu printers: patches the .gcode.3mf so Bambu Connect accepts it.
+    For other printers: no-op (returns the output directory unchanged).
+    """
+    from estampo.slicer import package_for_printer
+
+    printer_type: str | None = None
+    if config.printer:
+        from estampo.credentials import load_printer_credentials
+
+        try:
+            creds = load_printer_credentials(config.printer.name)
+            printer_type = creds.get("type")
+        except Exception:
+            log.debug("Could not load printer credentials for packaging", exc_info=True)
+
+    package_for_printer(sliced_output_dir, plate_3mf_path, printer_type)
+    return sliced_output_dir
+
+
+def gcode_stats(packaged_output: Path) -> dict:
     """Parse print time and filament usage from sliced gcode, write stats JSON."""
     import json
 
     from estampo.gcode import analyze_gcode
     from estampo.slicer import parse_gcode_stats
 
-    stats: dict = dict(parse_gcode_stats(sliced_output_dir))
+    stats: dict = dict(parse_gcode_stats(packaged_output))
 
     # Enrich with layer/filament analysis
-    gcode_files = list(sliced_output_dir.glob("*.gcode"))
+    gcode_files = list(packaged_output.glob("*.gcode"))
     if gcode_files:
         info = analyze_gcode(gcode_files[0])
         stats["layer_count"] = info.layer_count
@@ -420,18 +446,18 @@ def gcode_stats(sliced_output_dir: Path) -> dict:
             stats["filament_usage_g"] = info.filament_usage_g
 
     # Write to output dir for CI/action consumption
-    stats_path = sliced_output_dir / "stats.json"
+    stats_path = packaged_output / "stats.json"
     stats_path.write_text(json.dumps(stats, indent=2) + "\n")
     log.info("Wrote build stats to %s", stats_path)
 
     return stats
 
 
-def gcode_path(sliced_output_dir: Path) -> Path:
+def gcode_path(packaged_output: Path) -> Path:
     """Find the gcode file in the slicer output directory."""
-    gcode_files = list(sliced_output_dir.glob("*.gcode"))
+    gcode_files = list(packaged_output.glob("*.gcode"))
     if not gcode_files:
-        raise RuntimeError(f"No gcode files found in {sliced_output_dir}")
+        raise RuntimeError(f"No gcode files found in {packaged_output}")
     return gcode_files[0]
 
 

@@ -451,6 +451,41 @@ def _fix_sliced_3mf(path: Path, plate_3mf: Path | None = None) -> None:
     log.info("Patched sliced 3mf for Bambu Connect compatibility")
 
 
+def package_for_printer(
+    sliced_output_dir: Path,
+    plate_3mf: Path | None = None,
+    printer_type: str | None = None,
+) -> Path:
+    """Printer-specific post-processing of slicer output.
+
+    For Bambu printers: patches the .gcode.3mf so Bambu Connect accepts it
+    (missing keys, short filament arrays, thumbnails).
+
+    For other printers: returns the plain .gcode path unchanged.
+
+    Returns the path to the deliverable file.
+    """
+    is_bambu = printer_type in ("bambu-lan", "bambu-cloud")
+
+    if is_bambu:
+        sliced_3mfs = list(sliced_output_dir.glob("*_sliced.gcode.3mf"))
+        if sliced_3mfs:
+            _fix_sliced_3mf(sliced_3mfs[0], plate_3mf)
+            return sliced_3mfs[0]
+
+    # Non-Bambu or no 3MF found: return plain gcode
+    gcode_files = list(sliced_output_dir.glob("*.gcode"))
+    if gcode_files:
+        return gcode_files[0]
+
+    # Fallback: return whatever is available
+    sliced_3mfs = list(sliced_output_dir.glob("*_sliced.gcode.3mf"))
+    if sliced_3mfs:
+        return sliced_3mfs[0]
+
+    raise FileNotFoundError(f"No gcode or 3MF output found in {sliced_output_dir}")
+
+
 def slice_plate(
     input_3mf: Path,
     engine: str = "orca",
@@ -632,7 +667,6 @@ def slice_plate(
                 image,
                 allow_mix_temp,
             )
-            _fix_sliced_3mf(result_dir / (input_3mf.stem + "_sliced.gcode.3mf"), input_3mf)
             return result_dir
 
         # Local slicer path
@@ -683,7 +717,6 @@ def slice_plate(
             )
 
         log.info("Slicer stdout:\n%s", result.stdout)
-        _fix_sliced_3mf(output_dir / sliced_3mf_name, input_3mf)
         log.info("Slicing complete. Output in %s", output_dir)
         return output_dir
 
