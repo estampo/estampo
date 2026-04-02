@@ -15,6 +15,8 @@ jobs:
       id-token: write  # required for PyPI trusted publishing
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # full history needed for git rev-list --count
 
       - name: Skip if this is a release PR merge
         id: release
@@ -45,7 +47,12 @@ jobs:
         run: |
           pip install build
           VERSION=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
-          DEV_VERSION="${VERSION}.dev${GITHUB_RUN_NUMBER}"
+          # Use total commit count for a strictly increasing dev version.
+          # GITHUB_RUN_NUMBER can collide when PR and push events share
+          # the same counter space (e.g. PR run 249 uploads dev249, then
+          # the merge-push run 250 collides with a prior dev250).
+          COMMIT_COUNT=$(git rev-list --count HEAD)
+          DEV_VERSION="${VERSION}.dev${COMMIT_COUNT}"
           sed -i "s/version = \"$VERSION\"/version = \"$DEV_VERSION\"/" pyproject.toml
           python -m build
 
@@ -54,3 +61,4 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
