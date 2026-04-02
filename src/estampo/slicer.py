@@ -160,13 +160,14 @@ def _has_docker_image(image: str) -> bool:
         return False
 
 
-def _pull_docker_image(image: str) -> bool:
+def _pull_docker_image(image: str, *, cached: bool) -> bool:
     """Pull a Docker image from the registry. Returns True on success."""
     from estampo import ui
 
+    label = "Checking for updated image" if cached else "Pulling Docker image"
     log.info("Pulling Docker image %s ...", image)
     try:
-        with ui.status(f"Pulling Docker image [bold]{image}[/bold] (not cached locally)"):
+        with ui.status(f"{label} [bold]{image}[/bold]"):
             r = subprocess.run(
                 ["docker", "pull", image],
                 capture_output=True,
@@ -182,10 +183,21 @@ def _pull_docker_image(image: str) -> bool:
 
 
 def _ensure_docker_image(image: str) -> bool:
-    """Ensure a Docker image is available locally, pulling if needed."""
-    if _has_docker_image(image):
+    """Ensure an up-to-date Docker image is available locally.
+
+    Always attempts a pull so that image updates are picked up
+    automatically.  If the pull fails (no network, registry down)
+    the locally cached image is used instead.  Returns False only
+    when no usable image is available at all.
+    """
+    cached = _has_docker_image(image)
+    if _pull_docker_image(image, cached=cached):
         return True
-    return _pull_docker_image(image)
+    # Pull failed — fall back to local cache if available
+    if cached:
+        log.warning("Could not pull %s — using locally cached image", image)
+        return True
+    return False
 
 
 def _slice_via_docker(

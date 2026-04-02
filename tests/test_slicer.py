@@ -9,6 +9,7 @@ from estampo import EstampoError
 from estampo.slicer import (
     SLICER_PATHS,
     _apply_overrides,
+    _ensure_docker_image,
     _has_docker_image,
     _resolve_profiles,
     _slice_via_docker,
@@ -179,6 +180,37 @@ def test_has_docker_image_false_no_image():
 def test_has_docker_image_false_no_docker():
     with patch("estampo.slicer.subprocess.run", side_effect=FileNotFoundError):
         assert _has_docker_image("estampo:orca-2.3.1") is False
+
+
+# --- _ensure_docker_image ---
+
+
+def test_ensure_docker_image_pulls_even_when_cached():
+    """Always pulls to pick up updates, even when image is cached locally."""
+    with (
+        patch("estampo.slicer._has_docker_image", return_value=True),
+        patch("estampo.slicer._pull_docker_image", return_value=True) as mock_pull,
+    ):
+        assert _ensure_docker_image("estampo:orca-2.3.1") is True
+    mock_pull.assert_called_once_with("estampo:orca-2.3.1", cached=True)
+
+
+def test_ensure_docker_image_falls_back_to_cache_on_pull_failure():
+    """Uses cached image when pull fails (offline, registry down)."""
+    with (
+        patch("estampo.slicer._has_docker_image", return_value=True),
+        patch("estampo.slicer._pull_docker_image", return_value=False),
+    ):
+        assert _ensure_docker_image("estampo:orca-2.3.1") is True
+
+
+def test_ensure_docker_image_fails_when_no_cache_and_pull_fails():
+    """Returns False when no cached image and pull fails."""
+    with (
+        patch("estampo.slicer._has_docker_image", return_value=False),
+        patch("estampo.slicer._pull_docker_image", return_value=False),
+    ):
+        assert _ensure_docker_image("estampo:orca-2.3.1") is False
 
 
 # --- _slice_via_docker ---
