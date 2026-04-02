@@ -232,16 +232,31 @@ jobs:
           name: estampo-image-${{ matrix.orca_version }}
 
       - name: Load image
-        run: docker load -i estampo-image.tar
+        run: |
+          docker load -i estampo-image.tar
+          # Re-tag so estampo finds the image under its expected name
+          docker tag estampo/estampo:orca-${{ matrix.orca_version }}-test \
+                     estampo/estampo:orca-${{ matrix.orca_version }}
 
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install estampo
+        run: |
+          pip install uv
+          uv sync --frozen --no-dev
+
+      # Run estampo the same way a user does: from the host, letting
+      # estampo invoke Docker.  This exercises the real docker-run path
+      # (--entrypoint orca-slicer) instead of running inside the container
+      # which falls back to local slicer and can behave differently.
       - name: Run slice (${{ matrix.example.name }} on orca-${{ matrix.orca_version }})
         run: |
           SHORT=$(echo "${{ matrix.orca_version }}" | tr -d '.')
-          docker run --rm \
-            -v "${{ github.workspace }}:/project" \
-            -w /project/${{ matrix.example.workdir }} \
-            estampo/estampo:orca-${{ matrix.orca_version }}-test \
-            run "estampo-${SHORT}.toml" -v
+          cd ${{ matrix.example.workdir }}
+          uv run estampo run "estampo-${SHORT}.toml" -v
 
       - name: Verify output
         run: |
