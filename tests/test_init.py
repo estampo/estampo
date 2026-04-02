@@ -115,6 +115,103 @@ class TestTemplate:
         assert "[[parts]]" in out
 
 
+class TestExtractFrom3MF:
+    def test_extracts_profiles(self, tmp_path):
+        import json
+        import zipfile
+
+        from estampo.init import extract_from_3mf
+
+        threemf = tmp_path / "project.3mf"
+        with zipfile.ZipFile(threemf, "w") as zf:
+            zf.writestr(
+                "Metadata/project_settings.config",
+                json.dumps(
+                    {
+                        "printer_settings_id": "Bambu Lab P1S 0.4 nozzle",
+                        "print_settings_id": "0.20mm Standard @BBL X1C",
+                        "filament_settings_id": ["Generic PLA @base"],
+                        "curr_bed_type": "Textured PEI Plate",
+                        "nozzle_type": "stainless_steel",
+                        "printable_area": ["0x0", "256x0", "256x256", "0x256"],
+                    }
+                ),
+            )
+
+        toml = extract_from_3mf(threemf)
+        assert 'printer = "Bambu Lab P1S 0.4 nozzle"' in toml
+        assert 'process = "0.20mm Standard @BBL X1C"' in toml
+        assert '"Generic PLA @base"' in toml
+        assert 'bed_type = "Textured PEI Plate"' in toml
+        assert "machine_overrides" not in toml  # default nozzle, no override
+
+    def test_detects_hardened_steel_nozzle(self, tmp_path):
+        import json
+        import zipfile
+
+        from estampo.init import extract_from_3mf
+
+        threemf = tmp_path / "project.3mf"
+        with zipfile.ZipFile(threemf, "w") as zf:
+            zf.writestr(
+                "Metadata/project_settings.config",
+                json.dumps(
+                    {
+                        "printer_settings_id": "Bambu Lab P1S 0.4 nozzle",
+                        "print_settings_id": "0.20mm Standard @BBL X1C",
+                        "filament_settings_id": ["Generic PETG-CF @base"],
+                        "nozzle_type": "hardened_steel",
+                        "printable_area": ["0x0", "256x0", "256x256", "0x256"],
+                    }
+                ),
+            )
+
+        toml = extract_from_3mf(threemf)
+        assert "[slicer.machine_overrides]" in toml
+        assert 'nozzle_type = "hardened_steel"' in toml
+
+    def test_missing_settings_raises(self, tmp_path):
+        import zipfile
+
+        import pytest
+
+        from estampo import EstampoError
+        from estampo.init import extract_from_3mf
+
+        threemf = tmp_path / "empty.3mf"
+        with zipfile.ZipFile(threemf, "w") as zf:
+            zf.writestr("3D/3dmodel.model", "<model/>")
+
+        with pytest.raises(EstampoError, match="project_settings.config"):
+            extract_from_3mf(threemf)
+
+    def test_cli_from_3mf(self, tmp_path, capsys):
+        import json
+        import zipfile
+
+        threemf = tmp_path / "project.3mf"
+        with zipfile.ZipFile(threemf, "w") as zf:
+            zf.writestr(
+                "Metadata/project_settings.config",
+                json.dumps(
+                    {
+                        "printer_settings_id": "My Printer",
+                        "filament_settings_id": ["PLA"],
+                        "nozzle_type": "hardened_steel",
+                        "printable_area": ["0x0", "200x0", "200x200", "0x200"],
+                    }
+                ),
+            )
+
+        dest = tmp_path / "estampo.toml"
+        main(["init", "--from-3mf", str(threemf), "-o", str(dest)])
+        assert dest.exists()
+        content = dest.read_text()
+        assert 'printer = "My Printer"' in content
+        assert 'nozzle_type = "hardened_steel"' in content
+        assert "size = [200, 200]" in content
+
+
 # ---------------------------------------------------------------------------
 # Validate tests
 # ---------------------------------------------------------------------------
@@ -587,6 +684,7 @@ class TestWizard:
                 "",  # slicer version (skip)
                 "Generic PLA @base",  # Filament name
                 "",  # Bed type (skip)
+                "1",  # Nozzle type (stainless_steel)
                 "n",  # Add slicer overrides? -> no
                 "w",  # Write / Go back / Quit
             ],
@@ -628,6 +726,7 @@ class TestWizard:
                 "",  # slicer version (skip)
                 "My PLA",  # Filament name
                 "",  # Bed type (skip)
+                "1",  # Nozzle type (stainless_steel)
                 "n",  # Add slicer overrides? -> no
                 "q",  # Write / Go back / Quit
             ],

@@ -83,9 +83,13 @@ def _apply_overrides(data: dict, overrides: dict[str, object], name: str) -> dic
     applied = []
     for key, value in overrides.items():
         old = data.get(key, "<unset>")
-        # Slicer profiles store all values as strings
-        data[key] = str(value)
-        applied.append(f"  {key}: {old} → {value}")
+        # If the existing value is a list, broadcast the scalar to all elements
+        if isinstance(old, list) and not isinstance(value, list):
+            data[key] = [str(value)] * len(old)
+        else:
+            # Slicer profiles store all values as strings
+            data[key] = str(value)
+        applied.append(f"  {key}: {old} → {data[key]}")
 
     log.info(
         "Applied %d override(s) to %s:\n%s",
@@ -273,6 +277,7 @@ def _resolve_profiles(
     process: str | None,
     filaments: list[str] | None,
     overrides: dict[str, object] | None,
+    machine_overrides: dict[str, object] | None,
     project_dir: Path | None,
     tmp_dir: Path,
     profiles_dir: str = "profiles",
@@ -299,6 +304,8 @@ def _resolve_profiles(
         if bed_type:
             data["curr_bed_type"] = bed_type
             log.info("Set bed type to '%s' in machine profile", bed_type)
+        if machine_overrides:
+            data = _apply_overrides(data, machine_overrides, printer)
         path = _write_tmp_profile(data, tmp_dir, "machine")
         settings.append(str(path))
     if process:
@@ -507,6 +514,7 @@ def slice_plate(
     filaments: list[str] | None = None,
     filament_ids: list[int] | None = None,
     overrides: dict[str, object] | None = None,
+    machine_overrides: dict[str, object] | None = None,
     project_dir: Path | None = None,
     local: bool = False,
     docker_version: str | None = None,
@@ -518,6 +526,7 @@ def slice_plate(
 
     Profile names are resolved via profiles.resolve_profile_data().
     If overrides are provided, they are patched into the process profile.
+    If machine_overrides are provided, they are patched into the machine profile.
 
     Slicer selection:
       local=True           - force local slicer, fail if not installed
@@ -663,6 +672,7 @@ def slice_plate(
             process,
             filaments,
             overrides,
+            machine_overrides,
             project_dir,
             tmp_dir,
             profiles_dir,

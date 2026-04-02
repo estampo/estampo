@@ -383,6 +383,10 @@ def init(
     template: Annotated[
         bool, typer.Option("--template", help="Dump a commented template to stdout (no wizard)")
     ] = False,
+    from_3mf: Annotated[
+        Path | None,
+        typer.Option("--from-3mf", help="Generate config from an OrcaSlicer .3mf project file"),
+    ] = None,
     output: Annotated[
         Path | None,
         typer.Option("-o", "--output", help="Output file path (default: ./estampo.toml)"),
@@ -393,13 +397,29 @@ def init(
 
     The interactive wizard requires a Unix terminal (Linux, macOS, or WSL).
     On Windows, use --template to generate a config file manually.
+    Use --from-3mf to extract settings from an OrcaSlicer project.
     """
     _setup_logging(verbose)
-    from estampo.init import dump_template, run_wizard
 
-    if template:
+    if from_3mf:
+        from estampo.init import extract_from_3mf
+
+        toml = extract_from_3mf(from_3mf)
+        dest = output or Path("estampo.toml")
+        if dest.exists():
+            print(f"  \033[33m{dest} already exists — printing to stdout\033[0m")
+            print(toml, end="")
+        else:
+            dest.write_text(toml)
+            print(f"  Wrote {dest}")
+            print("  Review the file and add your [[parts]] entries.")
+    elif template:
+        from estampo.init import dump_template
+
         print(dump_template(), end="")
     else:
+        from estampo.init import run_wizard
+
         run_wizard(output=output)
 
 
