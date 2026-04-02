@@ -1107,6 +1107,7 @@ def _build_toml(
     printer_name: str | None,
     bed_type: str | None = None,
     overrides: dict[str, str] | None = None,
+    machine_overrides: dict[str, str] | None = None,
 ) -> str:
     """Build a TOML string from wizard answers."""
     lines: list[str] = []
@@ -1156,6 +1157,13 @@ def _build_toml(
                 lines.append(f'{key} = "{value}"')
         lines.append("")
 
+    # Machine overrides
+    if machine_overrides:
+        lines.append("[slicer.machine_overrides]")
+        for key, value in machine_overrides.items():
+            lines.append(f'{key} = "{value}"')
+        lines.append("")
+
     # Parts
     for p in parts:
         lines.append("[[parts]]")
@@ -1177,3 +1185,110 @@ def _build_toml(
         lines.append("")
 
     return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Extract config from OrcaSlicer 3MF
+# ---------------------------------------------------------------------------
+
+# Machine profile keys worth comparing for overrides.
+# Only keys the user is likely to customise on their physical printer.
+_MACHINE_OVERRIDE_KEYS = [
+    "nozzle_type",
+    "nozzle_hrc",
+]
+
+# Default nozzle_type values from OrcaSlicer base machine profiles.
+# If the 3MF declares a different value we emit a machine_override.
+_DEFAULT_NOZZLE_TYPES = {
+    "undefine",
+    "stainless_steel",
+    "brass",
+}
+
+
+def extract_from_3mf(path: Path) -> str:
+    """Read an OrcaSlicer 3MF and generate an estampo.toml.
+
+    The 3MF must contain ``Metadata/project_settings.config`` (present in
+    any project saved or sliced by OrcaSlicer).
+    """
+    import json
+    import zipfile
+
+    from estampo import EstampoError
+
+    if not path.exists():
+        raise EstampoError(f"File not found: {path}")
+
+    with zipfile.ZipFile(path) as zf:
+        if "Metadata/project_settings.config" not in zf.namelist():
+            raise EstampoError(
+                f"{path.name} does not contain Metadata/project_settings.config — "
+                "open it in OrcaSlicer and re-save the project"
+            )
+        settings = json.loads(zf.read("Metadata/project_settings.config"))
+
+    # --- Extract profile names ---
+    printer_profile = settings.get("printer_settings_id")
+    process_profile = settings.get("print_settings_id")
+    bed_type = settings.get("curr_bed_type")
+
+    # Filaments: deduplicate while preserving order
+    raw_filaments = settings.get("filament_settings_id", [])
+    if isinstance(raw_filaments, str):
+        raw_filaments = [raw_filaments]
+    seen: set[str] = set()
+    filaments: list[str] = []
+    for f in raw_filaments:
+        if f and f not in seen:
+            filaments.append(f)
+            seen.add(f)
+
+    # --- Detect machine overrides ---
+    machine_overrides: dict[str, str] = {}
+    nozzle_type = settings.get("nozzle_type")
+    if isinstance(nozzle_type, list):
+        nozzle_type = nozzle_type[0] if nozzle_type else None
+    if nozzle_type and nozzle_type not in _DEFAULT_NOZZLE_TYPES:
+        machine_overrides["nozzle_type"] = nozzle_type
+
+    # --- Detect slicer version from image if available ---
+    # The 3MF doesn't store the OrcaSlicer version directly, so we leave
+    # it for the user to fill in.  We add a comment hint.
+
+    # --- Plate size from printable_area ---
+    plate_size = (256, 256)  # fallback
+    printable_area = settings.get("printable_area")
+    if isinstance(printable_area, list) and len(printable_area) >= 3:
+        # printable_area is ["0x0", "256x0", "256x256", "0x256"]
+        try:
+            x, y = printable_area[2].split("x")
+            plate_size = (int(float(x)), int(float(y)))
+        except (ValueError, AttributeError):
+            pass
+
+    project_name = path.stem if path.stem != "estampo" else path.parent.name
+
+    toml = _build_toml(
+        project_name=project_name,
+        engine="orca",
+        printer_profile=printer_profile,
+        process_profile=process_profile,
+        filament_names=filaments,
+        parts=[{"file": "# TODO: add your .stl/.step/.3mf files"}],
+        plate_size=plate_size,
+        slicer_version=None,  # user should pin this
+        stages=list(DEFAULT_STAGES),
+        printer_name=None,
+        bed_type=bed_type,
+        machine_overrides=machine_overrides or None,
+    )
+
+    # Add a version comment hint
+    toml = toml.replace(
+        'engine = "orca"',
+        'engine = "orca"\n# version = "2.3.2"  # uncomment and set your OrcaSlicer version',
+    )
+
+    return toml
