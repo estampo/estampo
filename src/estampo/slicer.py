@@ -71,22 +71,6 @@ def find_slicer(engine: str) -> Path:
     raise FileNotFoundError(f"OrcaSlicer not found at {path} or on PATH. Is OrcaSlicer installed?")
 
 
-def _needs_xvfb() -> bool:
-    """Return True when the slicer should be wrapped with ``xvfb-run``.
-
-    OrcaSlicer links GL/EGL at startup even for CLI-only slicing.  On
-    headless Linux (Docker, CI) there is no X server, which can cause a
-    SIGSEGV during GL initialisation.  Wrapping with ``xvfb-run`` provides
-    a virtual framebuffer so the init succeeds.
-
-    Only applies on Linux when no DISPLAY is already connected to a real
-    server *and* ``xvfb-run`` is available on PATH.
-    """
-    if sys.platform != "linux":
-        return False
-    return shutil.which("xvfb-run") is not None
-
-
 def _write_tmp_profile(data: dict, tmp_dir: Path, name: str) -> Path:
     """Write a profile dict to a JSON file in the given temp directory."""
     path = tmp_dir / f"{name}.json"
@@ -234,9 +218,8 @@ def _slice_via_docker(
         "-v",
         f"{output_dir}:/work/output",
         "--entrypoint",
-        "xvfb-run",
-        image,
         "orca-slicer",
+        image,
     ]
 
     if settings_arg:
@@ -702,9 +685,8 @@ def slice_plate(
             )
             return result_dir
 
-        # Local slicer path — wrap with xvfb-run on headless Linux so
-        # OrcaSlicer's GL init doesn't segfault without a display server.
-        cmd = ["xvfb-run", str(slicer)] if _needs_xvfb() else [str(slicer)]
+        # Local slicer path
+        cmd = [str(slicer)]
         if settings_arg:
             cmd.extend(["--load-settings", settings_arg])
         if filament_arg:

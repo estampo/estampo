@@ -246,8 +246,7 @@ def test_slice_via_docker_command(tmp_path):
     assert "--platform" in cmd
     assert "linux/amd64" in cmd
     assert "estampo:orca-2.3.1" in cmd
-    entrypoint_idx = cmd.index("--entrypoint")
-    assert cmd[entrypoint_idx + 1] == "xvfb-run"
+    assert "--entrypoint" in cmd
     assert "orca-slicer" in cmd
     # Verify profile paths rewritten to container paths under /work/output/
     settings_idx = cmd.index("--load-settings") + 1
@@ -298,7 +297,6 @@ def test_slice_plate_local_command(tmp_path):
     slicer_path = Path("/usr/bin/orca-slicer")
 
     with (
-        patch("estampo.slicer._needs_xvfb", return_value=False),
         patch("estampo.slicer.find_slicer", return_value=slicer_path),
         patch("estampo.slicer.resolve_profile_data", side_effect=_mock_resolve),
         patch("estampo.slicer.subprocess.run", return_value=mock_result) as mock_run,
@@ -332,7 +330,6 @@ def test_slice_plate_local_fallback(tmp_path):
     slicer_path = Path("/usr/bin/orca-slicer")
 
     with (
-        patch("estampo.slicer._needs_xvfb", return_value=False),
         patch("estampo.slicer._ensure_docker_image", return_value=False),
         patch("estampo.slicer.find_slicer", return_value=slicer_path),
         patch("estampo.slicer.resolve_profile_data", side_effect=_mock_resolve),
@@ -427,7 +424,6 @@ def test_slice_plate_docker_fallback_to_local(tmp_path):
     slicer_path = Path("/usr/bin/orca-slicer")
 
     with (
-        patch("estampo.slicer._needs_xvfb", return_value=False),
         patch("estampo.slicer._ensure_docker_image", return_value=False),
         patch("estampo.slicer.find_slicer", return_value=slicer_path),
         patch("estampo.slicer.resolve_profile_data", side_effect=_mock_resolve),
@@ -443,34 +439,6 @@ def test_slice_plate_docker_fallback_to_local(tmp_path):
 
     cmd = mock_run.call_args[0][0]
     assert cmd[0] == str(slicer_path)
-
-
-def test_slice_plate_xvfb_wraps_local_slicer(tmp_path):
-    """xvfb-run is prepended on headless Linux to avoid GL segfaults."""
-    input_3mf = tmp_path / "plate.3mf"
-    input_3mf.write_text("fake")
-    output_dir = tmp_path / "output"
-
-    mock_result = MagicMock(returncode=0, stdout="", stderr="")
-    slicer_path = Path("/usr/bin/orca-slicer")
-
-    with (
-        patch("estampo.slicer._needs_xvfb", return_value=True),
-        patch("estampo.slicer.find_slicer", return_value=slicer_path),
-        patch("estampo.slicer.resolve_profile_data", side_effect=_mock_resolve),
-        patch("estampo.slicer.subprocess.run", return_value=mock_result) as mock_run,
-    ):
-        slice_plate(
-            input_3mf,
-            engine="orca",
-            output_dir=output_dir,
-            printer="My Printer",
-            local=True,
-        )
-
-    cmd = mock_run.call_args[0][0]
-    assert cmd[0] == "xvfb-run"
-    assert cmd[1] == str(slicer_path)
 
 
 # --- slice_plate: --allow-mix-temp version gating ---
