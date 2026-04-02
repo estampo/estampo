@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from rich.console import Console
+from rich.console import Console, ConsoleRenderable, RichCast
 from rich.markup import escape
 from rich.panel import Panel
 from rich.prompt import Confirm, IntPrompt, Prompt
+from rich.status import Status
 from rich.syntax import Syntax
 from rich.table import Table
 from rich.theme import Theme
@@ -50,15 +51,58 @@ def info(text: str) -> None:
     console.print(f"  [dim]{text}[/dim]")
 
 
-def status(message: str):  # noqa: ANN201 — returns rich.status.Status
-    """Return a Rich Status spinner context manager for slow operations.
+_active_status: Status | None = None
+
+
+class _StatusContext:
+    """Context manager that updates a running spinner or starts a new one.
+
+    Only one Rich Status spinner can render at a time.  If a spinner is
+    already active (e.g. the pipeline adapter) we update its message
+    instead of creating a competing spinner that causes flicker.
+    """
+
+    def __init__(self, message: str) -> None:
+        self._message = f"  {message}"
+        self._owned: Status | None = None
+        self._prev_renderable: ConsoleRenderable | RichCast | str | None = None
+
+    def __enter__(self):  # noqa: ANN204
+        global _active_status  # noqa: PLW0603
+
+        if _active_status is not None:
+            # Another spinner is running — update its label, restore later
+            self._prev_renderable = _active_status.status
+            _active_status.update(self._message)
+        else:
+            self._owned = console.status(self._message, spinner="dots")
+            self._owned.__enter__()
+            _active_status = self._owned
+        return self
+
+    def __exit__(self, *exc):  # noqa: ANN002
+        global _active_status  # noqa: PLW0603
+
+        if self._owned is not None:
+            self._owned.__exit__(*exc)
+            _active_status = None
+        elif self._prev_renderable is not None and _active_status is not None:
+            _active_status.update(self._prev_renderable)
+        return False
+
+
+def status(message: str) -> _StatusContext:
+    """Return a context manager that shows a Rich Status spinner.
+
+    If a spinner is already active, updates its message instead of
+    creating a second spinner (which causes flicker).
 
     Usage::
 
         with ui.status("Pulling Docker image"):
             do_slow_thing()
     """
-    return console.status(f"  {message}", spinner="dots")
+    return _StatusContext(message)
 
 
 def prompt_str(prompt: str, default: str | None = None) -> str:

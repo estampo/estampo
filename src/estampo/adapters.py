@@ -114,13 +114,21 @@ class ProgressAdapter(NodeExecutionHook):
     def _start_spinner(self, label: str) -> None:
         from rich.status import Status
 
+        from estampo import ui
+
         self._status = Status(label, console=self._console, spinner="dots")
         self._status.start()
+        # Register with ui module so nested ui.status() calls update
+        # this spinner instead of creating a competing one.
+        ui._active_status = self._status
 
     def _stop_spinner(self) -> None:
+        from estampo import ui
+
         if self._status is not None:
             self._status.stop()
             self._status = None
+            ui._active_status = None
 
     def _ok(self, msg: str, elapsed: float = 0, *, show_elapsed: bool = True) -> None:
         elapsed_str = ""

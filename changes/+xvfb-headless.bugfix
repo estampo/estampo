@@ -1,0 +1,1 @@
+Wrap OrcaSlicer with ``xvfb-run`` on headless Linux to fix SIGSEGV on 2.3.2.
