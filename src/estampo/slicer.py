@@ -641,7 +641,11 @@ def slice_plate(
     # AMS printers can have multiple filament types loaded.  OrcaSlicer 2.3.2+
     # rejects mixed-temperature filaments by default.  Pass --allow-mix-temp
     # when the config declares more than one distinct filament name.
-    allow_mix_temp = bool(filaments and len(set(f for f in filaments if f)) > 1)
+    # The flag was added in 2.3.2 — older versions reject it as unknown.
+    _has_allow_mix_temp = detected_version and detected_version >= "2.3.2"
+    allow_mix_temp = bool(
+        _has_allow_mix_temp and filaments and len(set(f for f in filaments if f)) > 1
+    )
 
     try:
         settings_arg, filament_arg = _resolve_profiles(

@@ -409,6 +409,87 @@ def test_slice_plate_docker_fallback_to_local(tmp_path):
     assert cmd[0] == str(slicer_path)
 
 
+# --- slice_plate: --allow-mix-temp version gating ---
+
+
+def test_slice_plate_allow_mix_temp_on_232(tmp_path):
+    """--allow-mix-temp is passed for OrcaSlicer 2.3.2+ with mixed filaments."""
+    input_3mf = tmp_path / "plate.3mf"
+    input_3mf.write_text("fake")
+    output_dir = tmp_path / "output"
+
+    mock_result = MagicMock(returncode=0, stdout="", stderr="")
+
+    with (
+        patch("estampo.slicer._ensure_docker_image", return_value=True),
+        patch("estampo.slicer.resolve_profile_data", side_effect=_mock_resolve),
+        patch("estampo.slicer.subprocess.run", return_value=mock_result) as mock_run,
+    ):
+        slice_plate(
+            input_3mf,
+            engine="orca",
+            output_dir=output_dir,
+            printer="My Printer",
+            filaments=["PLA", "PETG"],
+            docker_version="2.3.2",
+        )
+
+    cmd = mock_run.call_args[0][0]
+    assert "--allow-mix-temp" in cmd
+
+
+def test_slice_plate_no_allow_mix_temp_on_231(tmp_path):
+    """--allow-mix-temp is NOT passed for OrcaSlicer 2.3.1 (flag doesn't exist)."""
+    input_3mf = tmp_path / "plate.3mf"
+    input_3mf.write_text("fake")
+    output_dir = tmp_path / "output"
+
+    mock_result = MagicMock(returncode=0, stdout="", stderr="")
+
+    with (
+        patch("estampo.slicer._ensure_docker_image", return_value=True),
+        patch("estampo.slicer.resolve_profile_data", side_effect=_mock_resolve),
+        patch("estampo.slicer.subprocess.run", return_value=mock_result) as mock_run,
+    ):
+        slice_plate(
+            input_3mf,
+            engine="orca",
+            output_dir=output_dir,
+            printer="My Printer",
+            filaments=["PLA", "PETG"],
+            docker_version="2.3.1",
+        )
+
+    cmd = mock_run.call_args[0][0]
+    assert "--allow-mix-temp" not in cmd
+
+
+def test_slice_plate_no_allow_mix_temp_single_filament(tmp_path):
+    """--allow-mix-temp is NOT passed with only one filament type."""
+    input_3mf = tmp_path / "plate.3mf"
+    input_3mf.write_text("fake")
+    output_dir = tmp_path / "output"
+
+    mock_result = MagicMock(returncode=0, stdout="", stderr="")
+
+    with (
+        patch("estampo.slicer._ensure_docker_image", return_value=True),
+        patch("estampo.slicer.resolve_profile_data", side_effect=_mock_resolve),
+        patch("estampo.slicer.subprocess.run", return_value=mock_result) as mock_run,
+    ):
+        slice_plate(
+            input_3mf,
+            engine="orca",
+            output_dir=output_dir,
+            printer="My Printer",
+            filaments=["PLA"],
+            docker_version="2.3.2",
+        )
+
+    cmd = mock_run.call_args[0][0]
+    assert "--allow-mix-temp" not in cmd
+
+
 # --- slice_plate: stale pinned profiles ---
 
 
