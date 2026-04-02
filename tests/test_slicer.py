@@ -445,7 +445,7 @@ def test_slice_plate_docker_fallback_to_local(tmp_path):
 
 
 def test_slice_plate_allow_mix_temp_on_232(tmp_path):
-    """--allow-mix-temp is passed for OrcaSlicer 2.3.2+ with mixed filaments."""
+    """--allow-mix-temp is always passed for OrcaSlicer 2.3.2+."""
     input_3mf = tmp_path / "plate.3mf"
     input_3mf.write_text("fake")
     output_dir = tmp_path / "output"
@@ -496,8 +496,8 @@ def test_slice_plate_no_allow_mix_temp_on_231(tmp_path):
     assert "--allow-mix-temp" not in cmd
 
 
-def test_slice_plate_no_allow_mix_temp_single_filament(tmp_path):
-    """--allow-mix-temp is NOT passed with only one filament type."""
+def test_slice_plate_allow_mix_temp_single_filament_232(tmp_path):
+    """--allow-mix-temp is passed even with one filament on 2.3.2+."""
     input_3mf = tmp_path / "plate.3mf"
     input_3mf.write_text("fake")
     output_dir = tmp_path / "output"
@@ -519,7 +519,7 @@ def test_slice_plate_no_allow_mix_temp_single_filament(tmp_path):
         )
 
     cmd = mock_run.call_args[0][0]
-    assert "--allow-mix-temp" not in cmd
+    assert "--allow-mix-temp" in cmd
 
 
 # --- slice_plate: stale pinned profiles ---

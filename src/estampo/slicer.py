@@ -650,14 +650,11 @@ def slice_plate(
         docker_profile_dir = extract_docker_profiles(version=docker_version)
         log.info("Extracted Docker image profiles to %s", docker_profile_dir)
 
-    # AMS printers can have multiple filament types loaded.  OrcaSlicer 2.3.2+
-    # rejects mixed-temperature filaments by default.  Pass --allow-mix-temp
-    # when the config declares more than one distinct filament name.
+    # OrcaSlicer 2.3.2+ has stricter filament-grouping validation that
+    # rejects filaments even in single-filament configs.  Pass
+    # --allow-mix-temp unconditionally on 2.3.2+ to disable the check.
     # The flag was added in 2.3.2 — older versions reject it as unknown.
-    _has_allow_mix_temp = detected_version and detected_version >= "2.3.2"
-    allow_mix_temp = bool(
-        _has_allow_mix_temp and filaments and len(set(f for f in filaments if f)) > 1
-    )
+    allow_mix_temp = bool(detected_version and detected_version >= "2.3.2")
 
     try:
         settings_arg, filament_arg = _resolve_profiles(
