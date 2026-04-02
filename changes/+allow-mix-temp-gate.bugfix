@@ -1,0 +1,1 @@
+Only pass ``--allow-mix-temp`` to OrcaSlicer 2.3.2+; older versions reject the unknown flag.
