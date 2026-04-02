@@ -222,10 +222,8 @@ jobs:
         example:
           - name: generic
             workdir: examples
-            config: estampo.toml
           - name: decoy-case
             workdir: examples/decoy-case
-            # config resolved per-version in the step below
     steps:
       - uses: actions/checkout@v6
 
@@ -236,24 +234,14 @@ jobs:
       - name: Load image
         run: docker load -i estampo-image.tar
 
-      - name: Resolve config file
-        id: config
-        run: |
-          if [ "${{ matrix.example.name }}" = "decoy-case" ]; then
-            # Version-specific configs (e.g. estampo-231.toml)
-            SHORT=$(echo "${{ matrix.orca_version }}" | tr -d '.')
-            echo "file=estampo-${SHORT}.toml" >> "$GITHUB_OUTPUT"
-          else
-            echo "file=${{ matrix.example.config }}" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Run slice (${{ matrix.example.name }} on orca-${{ matrix.orca_version }})
         run: |
+          SHORT=$(echo "${{ matrix.orca_version }}" | tr -d '.')
           docker run --rm \
             -v "${{ github.workspace }}:/project" \
             -w /project/${{ matrix.example.workdir }} \
             estampo/estampo:orca-${{ matrix.orca_version }}-test \
-            run ${{ steps.config.outputs.file }} -v
+            run "estampo-${SHORT}.toml" -v
 
       - name: Verify output
         run: |
