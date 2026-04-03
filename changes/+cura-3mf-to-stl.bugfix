@@ -1,0 +1,1 @@
+Fix CuraEngine slicing by converting 3MF model data to STL before passing to the engine
