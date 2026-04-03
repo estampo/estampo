@@ -26,10 +26,9 @@ CuraEngine exists alongside OrcaSlicer.
   `_wizard_pick_slicer_version()` now handles both engines.
   CuraEngine prompts with `CURAENGINE_VERSION` default.
 
-- [ ] **3MF extraction OrcaSlicer-only** (`src/estampo/init.py:1326-1365`)
-  Reads `Metadata/project_settings.config` (OrcaSlicer format).
-  Error message: "open it in OrcaSlicer and re-save".
-  CuraEngine 3MFs have different internal structure.
+- [x] **3MF extraction OrcaSlicer-only** (`src/estampo/init.py:1326-1365`)
+  Won't fix — CuraEngine doesn't produce OrcaSlicer-style project 3MFs.
+  `--from-3mf` is an OrcaSlicer convenience feature (see "Won't fix").
 
 - [x] **TOML template hardcodes orca** (`src/estampo/init.py:31`)
   Template comment now documents both engines: `"orca" or "cura"`.
@@ -62,9 +61,9 @@ CuraEngine exists alongside OrcaSlicer.
 - [x] **3MF metadata** (`src/estampo/printer.py:61`)
   Changed from `OrcaSlicer` to `estampo` in Application metadata field.
 
-- [ ] **Bambu Cloud header** (`src/estampo/auth.py:17`)
-  `"X-BBL-Client-Name": "OrcaSlicer"` — may not matter in practice but is
-  technically wrong for CuraEngine slices.
+- [x] **Bambu Cloud header** (`src/estampo/auth.py:17`)
+  Won't fix — header is for Bambu Cloud API compatibility. Changing it
+  could break authentication (see "Won't fix").
 
 ## Won't fix (by design)
 
