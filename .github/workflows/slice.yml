@@ -20,6 +20,10 @@ on:
         required: true
         default: "2.3.1"
 
+concurrency:
+  group: slice-${{ inputs.engine }}-${{ inputs.version }}
+  cancel-in-progress: true
+
 jobs:
   slice-orca:
     if: inputs.engine == 'orca'
