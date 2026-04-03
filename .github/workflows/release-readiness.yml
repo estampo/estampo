@@ -59,7 +59,7 @@ jobs:
 
   build-estampo-image:
     needs: resolve-versions
-    if: needs.resolve-versions.result == 'success'
+    if: always() && needs.resolve-versions.result == 'success'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -100,7 +100,7 @@ jobs:
 
   build-cloud-bridge:
     needs: resolve-versions
-    if: needs.resolve-versions.result == 'success'
+    if: always() && needs.resolve-versions.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -117,7 +117,7 @@ jobs:
 
   smoke-test:
     needs: [resolve-versions, build-estampo-image]
-    if: needs.build-estampo-image.result == 'success'
+    if: always() && needs.build-estampo-image.result == 'success'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -142,7 +142,7 @@ jobs:
 
   profile-extraction:
     needs: [resolve-versions, build-estampo-image]
-    if: needs.build-estampo-image.result == 'success'
+    if: always() && needs.build-estampo-image.result == 'success'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -213,7 +213,7 @@ jobs:
 
   slice-test:
     needs: [resolve-versions, build-estampo-image]
-    if: needs.build-estampo-image.result == 'success'
+    if: always() && needs.build-estampo-image.result == 'success'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -274,7 +274,7 @@ jobs:
 
   build-cura-image:
     needs: resolve-versions
-    if: needs.resolve-versions.result == 'success'
+    if: always() && needs.resolve-versions.result == 'success'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -316,7 +316,7 @@ jobs:
 
   cura-smoke-test:
     needs: build-cura-image
-    if: needs.build-cura-image.result == 'success'
+    if: always() && needs.build-cura-image.result == 'success'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -341,7 +341,7 @@ jobs:
 
   cura-slice-test:
     needs: build-cura-image
-    if: needs.build-cura-image.result == 'success'
+    if: always() && needs.build-cura-image.result == 'success'
     runs-on: ubuntu-latest
     strategy:
       matrix:
