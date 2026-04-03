@@ -1,43 +1,43 @@
-# CuraEngine Docker image for estampo
+# Base image: CuraEngine + runtime deps
+#
+# Rebuild only when CuraEngine/Cura version changes. The main Dockerfile.cura
+# layers estampo on top of this for fast code-only rebuilds.
 #
 # Extracts CuraEngine and its dependencies from the UltiMaker Cura AppImage.
-# This produces a minimal (~95 MB) image with just the slicer engine and
+# Produces a minimal image with just the slicer engine, shared libs, and
 # printer definitions — no GUI, no Python, no Qt.
 #
-# Build:
-#   docker build -t estampo/curaengine:5.12.0 docker/curaengine/
-#
 # Usage:
-#   docker run --rm estampo/curaengine:5.12.0 help
-#   docker run --rm -v $(pwd):/work estampo/curaengine:5.12.0 \
-#     slice -j /opt/cura/definitions/fdmprinter.def.json \
-#     -o /work/output.gcode -s layer_height=0.2 -l /work/model.stl
+#   docker build -f Dockerfile.cura-base --build-arg CURA_VERSION=5.12.0 \
+#     -t estampo/cura-base:5.12.0 .
+
+# ---------------------------------------------------------------------------
+# Stage 1: Extract CuraEngine from AppImage (x86_64 only)
+# ---------------------------------------------------------------------------
+FROM --platform=linux/amd64 ubuntu:24.04 AS extract
 
 ARG CURA_VERSION=5.12.0
-ARG CURA_APPIMAGE_URL=https://github.com/Ultimaker/Cura/releases/download/${CURA_VERSION}/UltiMaker-Cura-${CURA_VERSION}-linux-X64.AppImage
-
-# --- Stage 1: Extract from AppImage ---
-FROM ubuntu:24.04 AS extract
-
-ARG CURA_APPIMAGE_URL
-
-RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends \
-    curl ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /extract
-RUN curl -fsSL -o cura.AppImage "${CURA_APPIMAGE_URL}" \
+RUN --mount=type=cache,id=apt-cura,target=/var/cache/apt \
+    --mount=type=cache,id=apt-cura,target=/var/lib/apt/lists \
+    apt-get update && apt-get install -y --no-install-recommends curl ca-certificates
+RUN curl -fSL -o cura.AppImage \
+        "https://github.com/Ultimaker/Cura/releases/download/${CURA_VERSION}/UltiMaker-Cura-${CURA_VERSION}-linux-X64.AppImage" \
     && chmod +x cura.AppImage \
     && ./cura.AppImage --appimage-extract \
     && rm cura.AppImage
 
-# --- Stage 2: Minimal runtime image ---
-FROM ubuntu:24.04
+# ---------------------------------------------------------------------------
+# Stage 2: Minimal runtime image with CuraEngine + deps
+# ---------------------------------------------------------------------------
+FROM --platform=linux/amd64 ubuntu:24.04
 
-LABEL org.opencontainers.image.title="CuraEngine for estampo"
-LABEL org.opencontainers.image.description="CuraEngine slicer extracted from UltiMaker Cura AppImage"
+ARG CURA_VERSION=5.12.0
+LABEL org.opencontainers.image.description="CuraEngine ${CURA_VERSION} base image for estampo"
 LABEL org.opencontainers.image.source="https://github.com/estampo/estampo"
 LABEL org.opencontainers.image.licenses="AGPL-3.0"
+LABEL estampo.cura-version="${CURA_VERSION}"
 
 # CuraEngine binary
 COPY --from=extract /extract/squashfs-root/CuraEngine /usr/local/bin/CuraEngine
@@ -51,7 +51,7 @@ COPY --from=extract /extract/squashfs-root/libtbbmalloc_proxy.so.2.16 /usr/local
 COPY --from=extract /extract/squashfs-root/libssl.so.3 /usr/local/lib/libssl.so.3.cura
 COPY --from=extract /extract/squashfs-root/libcrypto.so.3 /usr/local/lib/libcrypto.so.3.cura
 
-# Symlinks for versioned libraries
+# Symlinks for versioned libraries + ldconfig
 RUN cd /usr/local/lib \
     && ln -sf libpolyclipping.so.22.0.0 libpolyclipping.so.22 \
     && ln -sf libtbb.so.12.16 libtbb.so.12 \
@@ -67,5 +67,9 @@ COPY --from=extract /extract/squashfs-root/share/cura/resources/definitions/ /op
 COPY --from=extract /extract/squashfs-root/share/cura/resources/extruders/ /opt/cura/extruders/
 
 ENV CURA_ENGINE_SEARCH_PATH=/opt/cura/definitions:/opt/cura/extruders
+
+# Unprivileged user (matches orca-base convention)
+RUN useradd -m estampo
+USER estampo
 
 ENTRYPOINT ["CuraEngine"]

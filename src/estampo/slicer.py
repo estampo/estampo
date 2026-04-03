@@ -568,7 +568,11 @@ def slice_plate(
     # profiles or Docker images. Extracts the STL from the input 3MF and
     # slices it directly.
     if engine == "cura":
-        from estampo.cura import cura_profile_from_config, slice_stl
+        from estampo.cura import (
+            cura_docker_image,
+            cura_profile_from_config,
+            slice_stl,
+        )
 
         if output_dir is None:
             output_dir = input_3mf.parent / "output"
@@ -606,7 +610,8 @@ def slice_plate(
             bed_type=bed_type,
             filament_type=filament_type,
         )
-        return slice_stl(stl_path, output_dir, profile)
+        image = cura_docker_image(docker_version or required_version)
+        return slice_stl(stl_path, output_dir, profile, image=image)
 
     # If config specifies a version and no explicit docker_version was given,
     # use it as the docker_version for Docker-based slicing.

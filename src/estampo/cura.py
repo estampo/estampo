@@ -13,7 +13,6 @@ from __future__ import annotations
 import logging
 import shutil
 import subprocess
-import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -21,13 +20,18 @@ from estampo import EstampoError
 
 log = logging.getLogger(__name__)
 
-DOCKERHUB_REPO = "estampo/curaengine"
+DOCKERHUB_REPO = "estampo/estampo"
 CURAENGINE_VERSION = "5.12.0"
-DOCKER_IMAGE = f"{DOCKERHUB_REPO}:{CURAENGINE_VERSION}"
-CURAENGINE_BIN = "CuraEngine"  # on PATH inside the image
 
 # Definitions directory inside the Docker image (bundled from Cura AppImage).
 _DEFS_DIR = "/opt/cura/definitions"
+
+
+def cura_docker_image(version: str | None = None) -> str:
+    """Return the Docker image name for a given CuraEngine version."""
+    if version:
+        return f"{DOCKERHUB_REPO}:cura-{version}"
+    return f"{DOCKERHUB_REPO}:cura-{CURAENGINE_VERSION}"
 
 
 @dataclass
@@ -139,111 +143,99 @@ def slice_stl(
     stl_path: Path,
     output_dir: Path,
     profile: CuraProfile | None = None,
+    image: str | None = None,
 ) -> Path:
     """Slice an STL file with CuraEngine and return the output directory.
 
-    Uses the estampo/curaengine Docker image (CuraEngine 5.12.0 extracted
-    from the UltiMaker Cura AppImage). Injects BBL P1S start/end G-code
-    via Jinja2 templates.
+    Uses Docker with the estampo/estampo:cura-X.Y.Z image (same layered
+    pattern as OrcaSlicer). Injects BBL P1S start/end G-code via Jinja2
+    templates, written as files under output_dir and read inside the
+    container via volume mount.
 
     Args:
         stl_path: Path to the input STL file.
         output_dir: Directory for output G-code.
         profile: Slicer profile. Defaults to P1S / PETG-CF / 0.2mm.
+        image: Docker image override. Defaults to estampo/estampo:cura-5.12.0.
 
     Returns:
         The output directory (matching slicer.slice_plate contract).
     """
     if profile is None:
         profile = CuraProfile()
+    if image is None:
+        image = cura_docker_image()
 
     stl_path = stl_path.resolve()
     output_dir = output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    output_gcode = output_dir / (stl_path.stem + ".gcode")
-
-    # Render BBL start/end G-code and pass as -s overrides
+    # Render BBL start/end G-code to files under output_dir so they're
+    # accessible via the same volume mount as the output.
     start_gcode, end_gcode = _render_bbl_gcode(profile)
+    staging = output_dir / ".cura-staging"
+    staging.mkdir(exist_ok=True)
+    (staging / "start.gcode").write_text(start_gcode)
+    (staging / "end.gcode").write_text(end_gcode)
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmp = Path(tmpdir)
+    # Copy STL into staging so it's accessible via volume mount
+    stl_in_staging = staging / stl_path.name
+    shutil.copy2(stl_path, stl_in_staging)
 
-        # Copy STL into build context and build a thin layer on top of
-        # the base image (bind mounts don't work in all environments).
-        shutil.copy2(stl_path, tmp / stl_path.name)
+    # Container paths (output_dir mounted at /work/output)
+    c_staging = "/work/output/.cura-staging"
+    c_stl = f"{c_staging}/{stl_path.name}"
+    c_output = "/work/output/" + stl_path.stem + ".gcode"
 
-        # Write start/end gcode to files (they're too large for -s flags)
-        (tmp / "start.gcode").write_text(start_gcode)
-        (tmp / "end.gcode").write_text(end_gcode)
+    # Build the shell command that runs inside the container.
+    # Start/end gcode are loaded from files into shell vars because
+    # -s values can't contain newlines directly.
+    settings = _settings_flags(profile)
+    inner_cmd = (
+        f"START=$(cat {c_staging}/start.gcode) && "
+        f"END=$(cat {c_staging}/end.gcode) && "
+        f"CuraEngine slice "
+        f"-j {_DEFS_DIR}/fdmprinter.def.json "
+        f"-o {c_output} "
+        + " ".join(f'"{s}"' for s in settings)
+        + ' -s "machine_start_gcode=$START" '
+        + '-s "machine_end_gcode=$END" '
+        + f"-l {c_stl} 2>/dev/null"
+    )
 
-        dockerfile = tmp / "Dockerfile"
-        dockerfile.write_text(
-            f"FROM {DOCKER_IMAGE}\n"
-            f"COPY {stl_path.name} /tmp/input.stl\n"
-            f"COPY start.gcode /tmp/start.gcode\n"
-            f"COPY end.gcode /tmp/end.gcode\n"
-        )
+    cmd = [
+        "docker",
+        "run",
+        "--rm",
+        "--platform",
+        "linux/amd64",
+        "-v",
+        f"{output_dir}:/work/output",
+        "--entrypoint",
+        "/bin/bash",
+        image,
+        "-c",
+        inner_cmd,
+    ]
 
-        tag = "estampo-cura-tmp"
-        build_cmd = ["docker", "build", "-t", tag, str(tmp)]
-        log.info("Building CuraEngine Docker image")
-        build_result = subprocess.run(build_cmd, capture_output=True, text=True, timeout=120)
-        if build_result.returncode != 0:
-            raise EstampoError(f"Docker build failed:\n{build_result.stderr[:500]}")
+    from estampo import ui
 
-        # Build the slice command. Start/end gcode are read from files
-        # and passed via -s since CuraEngine doesn't support file references.
-        settings = _settings_flags(profile)
-        inner_cmd = (
-            "START=$(cat /tmp/start.gcode) && "
-            "END=$(cat /tmp/end.gcode) && "
-            f"{CURAENGINE_BIN} slice "
-            f"-j {_DEFS_DIR}/fdmprinter.def.json "
-            f"-o /tmp/output.gcode "
-            + " ".join(f'"{s}"' for s in settings)
-            + ' -s "machine_start_gcode=$START" '
-            + '-s "machine_end_gcode=$END" '
-            + "-l /tmp/input.stl 2>/dev/null "
-            + "&& cat /tmp/output.gcode"
-        )
+    log.info("Slicing via Docker (%s)", image)
+    with ui.status("Slicing (CuraEngine)"):
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
 
-        slice_cmd = [
-            "docker",
-            "run",
-            "--rm",
-            "--entrypoint",
-            "/bin/bash",
-            tag,
-            "-c",
-            inner_cmd,
-        ]
+    # Cleanup staging
+    shutil.rmtree(staging, ignore_errors=True)
 
-        from estampo import ui
+    if result.returncode != 0:
+        log.error("CuraEngine stderr:\n%s", result.stderr)
+        raise EstampoError(f"CuraEngine failed (exit {result.returncode}):\n{result.stderr[:500]}")
 
-        log.info("Slicing with CuraEngine %s", CURAENGINE_VERSION)
-        with ui.status("Slicing (CuraEngine)"):
-            slice_result = subprocess.run(slice_cmd, capture_output=True, timeout=300)
+    output_gcode = output_dir / (stl_path.stem + ".gcode")
+    if not output_gcode.exists() or output_gcode.stat().st_size < 100:
+        raise EstampoError(f"CuraEngine produced no output. stderr:\n{result.stderr[:500]}")
 
-        if slice_result.returncode != 0:
-            stderr = slice_result.stderr.decode(errors="replace") if slice_result.stderr else ""
-            stdout = slice_result.stdout.decode(errors="replace") if slice_result.stdout else ""
-            raise EstampoError(
-                f"CuraEngine failed (exit {slice_result.returncode}):\n{stderr[:500]}\n"
-                f"{stdout[:500]}"
-            )
-
-        gcode = slice_result.stdout
-        if not gcode or len(gcode) < 100:
-            stderr = slice_result.stderr.decode(errors="replace") if slice_result.stderr else ""
-            raise EstampoError(f"CuraEngine produced no output:\n{stderr[:500]}")
-
-        output_gcode.write_bytes(gcode)
-        log.info("CuraEngine output: %s (%d bytes)", output_gcode, len(gcode))
-
-        # Cleanup temp image
-        subprocess.run(["docker", "rmi", tag], capture_output=True, timeout=30)
-
+    log.info("CuraEngine output: %s (%d bytes)", output_gcode, output_gcode.stat().st_size)
     return output_dir
 
 
