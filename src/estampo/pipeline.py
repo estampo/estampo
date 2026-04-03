@@ -392,6 +392,7 @@ def sliced_output_dir(
         filament_ids=resolved_filaments.filament_ids,
         overrides=config.slicer.overrides or None,
         machine_overrides=config.slicer.machine_overrides or None,
+        filament_overrides=config.slicer.filament_overrides or None,
         project_dir=config.base_dir,
         local=slicer_local,
         docker_version=docker_version,

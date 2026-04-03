@@ -28,6 +28,7 @@ class SlicerConfig:
     bed_type: str | None = None  # e.g. "Textured PEI Plate", "Engineering Plate"
     overrides: dict[str, object] = field(default_factory=dict)
     machine_overrides: dict[str, object] = field(default_factory=dict)
+    filament_overrides: dict[str, object] = field(default_factory=dict)
     profiles_dir: str = "profiles"
 
 
@@ -214,6 +215,7 @@ def load_config(path: Path) -> EstampoConfig:
         bed_type=slicer_raw.get("bed_type"),
         overrides=slicer_raw.get("overrides", {}),
         machine_overrides=slicer_raw.get("machine_overrides", {}),
+        filament_overrides=slicer_raw.get("filament_overrides", {}),
         profiles_dir=slicer_raw.get("profiles_dir", "profiles"),
     )
     if slicer.engine != "orca":
