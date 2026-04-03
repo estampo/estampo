@@ -250,15 +250,15 @@ def test_slice_stl_no_output(tmp_path):
 
 def test_slice_plate_cura_dispatch(tmp_path):
     """slice_plate with engine='cura' dispatches to cura.slice_stl."""
-    import zipfile
+    import trimesh
 
     from estampo.slicer import slice_plate
 
-    # Create a minimal 3MF (zip) with an STL inside
+    # Create a valid 3MF from a simple mesh
     input_3mf = tmp_path / "plate.3mf"
-    stl_content = b"solid cube\nendsolid cube"
-    with zipfile.ZipFile(input_3mf, "w") as zf:
-        zf.writestr("3D/model.stl", stl_content)
+    mesh = trimesh.creation.box(extents=[10, 10, 10])
+    scene = trimesh.Scene(mesh)
+    scene.export(str(input_3mf))
 
     output_dir = tmp_path / "output"
 

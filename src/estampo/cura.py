@@ -199,7 +199,6 @@ def slice_stl(
     # -s values can't contain newlines directly.
     settings = _settings_flags(profile)
     inner_cmd = (
-        f"set -ex && "
         f"START=$(cat {c_staging}/start.gcode) && "
         f"END=$(cat {c_staging}/end.gcode) && "
         f"CuraEngine slice "
