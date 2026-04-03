@@ -199,6 +199,7 @@ def slice_stl(
     # -s values can't contain newlines directly.
     settings = _settings_flags(profile)
     inner_cmd = (
+        f"set -ex && "
         f"START=$(cat {c_staging}/start.gcode) && "
         f"END=$(cat {c_staging}/end.gcode) && "
         f"CuraEngine slice "
@@ -235,12 +236,14 @@ def slice_stl(
     shutil.rmtree(staging, ignore_errors=True)
 
     if result.returncode != 0:
-        log.error("CuraEngine stderr:\n%s", result.stderr)
-        raise EstampoError(f"CuraEngine failed (exit {result.returncode}):\n{result.stderr[:500]}")
+        combined = (result.stdout + "\n" + result.stderr).strip()
+        log.error("CuraEngine output:\n%s", combined)
+        raise EstampoError(f"CuraEngine failed (exit {result.returncode}):\n{combined[:500]}")
 
     output_gcode = output_dir / (stl_path.stem + ".gcode")
     if not output_gcode.exists() or output_gcode.stat().st_size < 100:
-        raise EstampoError(f"CuraEngine produced no output. stderr:\n{result.stderr[:500]}")
+        combined = (result.stdout + "\n" + result.stderr).strip()
+        raise EstampoError(f"CuraEngine produced no output:\n{combined[:500]}")
 
     log.info("CuraEngine output: %s (%d bytes)", output_gcode, output_gcode.stat().st_size)
     return output_dir
