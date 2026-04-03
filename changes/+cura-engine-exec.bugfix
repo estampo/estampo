@@ -1,0 +1,1 @@
+Fix CuraEngine binary "not found" by patching ELF interpreter and replace missing ``bambu_3mf`` dependency with inline G-code generation

@@ -152,55 +152,24 @@ def test_settings_flags_custom_overrides():
 
 
 def test_render_bbl_gcode_contains_temps():
-    """Rendered gcode contains M190 (bed) and M109 (nozzle) temperature commands."""
+    """Rendered gcode contains bed and nozzle temperature commands."""
     profile = CuraProfile(material_bed_temperature=65, material_print_temperature=245)
-
-    # bambu_3mf may not be installed in the test environment — mock the import.
-    def fake_render(template_name, context):
-        if "start" in template_name:
-            bed = context["bed_temperature_initial_layer_single"]
-            nozzle = context["nozzle_temperature_initial_layer"][0]
-            return f"M190 S{bed}\nM109 S{nozzle}\nG28\n"
-        return "M400\nM104 S0\n"
-
-    mock_templates = MagicMock()
-    mock_templates.render_template.side_effect = fake_render
-
-    with patch.dict(
-        "sys.modules",
-        {
-            "bambu_3mf": MagicMock(),
-            "bambu_3mf.templates": mock_templates,
-        },
-    ):
-        start, end = _render_bbl_gcode(profile)
+    start, end = _render_bbl_gcode(profile)
 
     assert "M190 S65" in start
     assert "M109 S245" in start
+    assert "M140 S65" in start
+    assert "M104 S245" in start
 
 
-def test_render_bbl_gcode_contains_bed_type():
-    """Rendered gcode contains the bed type string."""
-    profile = CuraProfile(bed_type="Engineering Plate")
+def test_render_bbl_gcode_end():
+    """End gcode contains cooldown and stepper disable."""
+    profile = CuraProfile()
+    _start, end = _render_bbl_gcode(profile)
 
-    def fake_render(template_name, context):
-        if "start" in template_name:
-            return f"; bed_type={context['curr_bed_type']}\nG28\n"
-        return "M400\n"
-
-    mock_templates = MagicMock()
-    mock_templates.render_template.side_effect = fake_render
-
-    with patch.dict(
-        "sys.modules",
-        {
-            "bambu_3mf": MagicMock(),
-            "bambu_3mf.templates": mock_templates,
-        },
-    ):
-        start, _end = _render_bbl_gcode(profile)
-
-    assert "Engineering Plate" in start
+    assert "M104 S0" in end
+    assert "M140 S0" in end
+    assert "M84" in end
 
 
 # --- slice_stl Docker execution ---

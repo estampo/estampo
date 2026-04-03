@@ -1,8 +1,8 @@
 """CuraEngine slicer backend.
 
 Slices STL files using CuraEngine via Docker, with BBL-specific start/end
-G-code injected from the Jinja2 templates in bambu-3mf. Produces plain
-G-code that can be packaged into .gcode.3mf.
+G-code for Bambu Lab printers. Produces plain G-code that can be packaged
+into .gcode.3mf.
 
 Uses CuraEngine 5.12.0 extracted from the UltiMaker Cura AppImage,
 packaged in a minimal Docker image (~95 MB) with bundled definitions.
@@ -72,33 +72,40 @@ class CuraProfile:
 
 
 def _render_bbl_gcode(profile: CuraProfile) -> tuple[str, str]:
-    """Render P1S start/end G-code from Jinja2 templates.
+    """Render P1S start/end G-code for Bambu Lab printers.
 
     Returns (start_gcode, end_gcode) as rendered strings.
     """
-    from bambu_3mf.templates import render_template
+    bed = profile.material_bed_temperature
+    nozzle = profile.material_print_temperature
 
-    bed_temp = profile.material_bed_temperature
-    nozzle_temp = profile.material_print_temperature
-    # The templates index into arrays like nozzle_temperature_initial_layer[0]
-    context = {
-        "bed_temperature_initial_layer_single": bed_temp,
-        "nozzle_temperature_initial_layer": [nozzle_temp],
-        "initial_extruder": 0,
-        "filament_type": [profile.filament_type],
-        "bed_temperature": [bed_temp],
-        "bed_temperature_initial_layer": [bed_temp],
-        "nozzle_temperature_range_high": [min(nozzle_temp + 15, 300)],
-        "filament_max_volumetric_speed": [15.0],
-        "outer_wall_volumetric_speed": 8.0,
-        "curr_bed_type": profile.bed_type,
-        "first_layer_print_min": [0, 0],
-        "first_layer_print_size": [profile.machine_width, profile.machine_depth],
-        "max_layer_z": 10.0,
-    }
+    start = f"""\
+M140 S{bed}  ; set bed temp
+M104 S{nozzle}  ; set nozzle temp
+G28  ; home all axes
+M190 S{bed}  ; wait for bed temp
+M109 S{nozzle}  ; wait for nozzle temp
+G92 E0  ; reset extruder
+G1 Z2.0 F3000  ; move Z up
+G1 X5 Y5 F5000  ; move to start
+G1 Z0.28 F1500  ; lower to first layer
+G1 X60 E9 F1000  ; prime line
+G1 X100 E12.5 F1000  ; prime line
+G92 E0  ; reset extruder
+G1 Z2.0 F3000  ; lift nozzle
+"""
 
-    start = render_template("p1s_start.gcode.j2", context)
-    end = render_template("p1s_end.gcode.j2", context)
+    end = """\
+G91  ; relative positioning
+G1 E-2 F2700  ; retract
+G1 Z5 F3000  ; lift nozzle
+G90  ; absolute positioning
+G1 X0 Y250 F5000  ; present print
+M104 S0  ; turn off nozzle
+M140 S0  ; turn off bed
+M107  ; turn off fan
+M84  ; disable steppers
+"""
     return start, end
 
 

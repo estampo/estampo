@@ -21,12 +21,17 @@ ARG CURA_VERSION=5.12.0
 WORKDIR /extract
 RUN --mount=type=cache,id=apt-cura,target=/var/cache/apt \
     --mount=type=cache,id=apt-cura,target=/var/lib/apt/lists \
-    apt-get update && apt-get install -y --no-install-recommends curl ca-certificates
+    apt-get update && apt-get install -y --no-install-recommends curl ca-certificates patchelf
 RUN curl -fSL -o cura.AppImage \
         "https://github.com/Ultimaker/Cura/releases/download/${CURA_VERSION}/UltiMaker-Cura-${CURA_VERSION}-linux-X64.AppImage" \
     && chmod +x cura.AppImage \
     && ./cura.AppImage --appimage-extract \
     && rm cura.AppImage
+
+# Fix ELF interpreter — AppImage may patch binaries to use a bundled ld-linux
+# that doesn't exist outside the squashfs, causing "exec: not found" errors.
+RUN patchelf --set-interpreter /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 \
+    /extract/squashfs-root/CuraEngine
 
 # ---------------------------------------------------------------------------
 # Stage 2: Minimal runtime image with CuraEngine + deps
@@ -71,6 +76,9 @@ COPY --from=extract /extract/squashfs-root/share/cura/resources/definitions/ /op
 COPY --from=extract /extract/squashfs-root/share/cura/resources/extruders/ /opt/cura/extruders/
 
 ENV CURA_ENGINE_SEARCH_PATH=/opt/cura/definitions:/opt/cura/extruders
+
+# Verify CuraEngine runs before finalising the image
+RUN /usr/local/bin/CuraEngine help
 
 # Unprivileged user (matches orca-base convention)
 RUN useradd -m estampo
