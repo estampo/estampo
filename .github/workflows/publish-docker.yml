@@ -9,6 +9,10 @@ on:
         description: "Rebuild orca-base images (normally only on release tags)"
         type: boolean
         default: false
+      rebuild-cura-base:
+        description: "Rebuild cura-base images"
+        type: boolean
+        default: false
 
 jobs:
   detect-changes:
@@ -16,6 +20,7 @@ jobs:
     outputs:
       bridge: ${{ steps.check.outputs.bridge }}
       estampo: ${{ steps.check.outputs.estampo }}
+      cura: ${{ steps.check.outputs.cura }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -48,6 +53,8 @@ jobs:
             && echo "bridge=true" >> "$GITHUB_OUTPUT" || echo "bridge=false" >> "$GITHUB_OUTPUT"
           echo "$CHANGED" | grep -qE '^Dockerfile$|^src/estampo/|^pyproject\.toml$|^uv\.lock$' \
             && echo "estampo=true" >> "$GITHUB_OUTPUT" || echo "estampo=false" >> "$GITHUB_OUTPUT"
+          echo "$CHANGED" | grep -qE '^Dockerfile\.cura|^src/estampo/cura\.py' \
+            && echo "cura=true" >> "$GITHUB_OUTPUT" || echo "cura=false" >> "$GITHUB_OUTPUT"
 
   cloud-bridge:
     needs: detect-changes
@@ -152,5 +159,78 @@ jobs:
             estampo/estampo:orca-${{ matrix.orca-version }}
             ghcr.io/${{ github.repository }}:orca-${{ matrix.orca-version }}
           build-args: ORCA_VERSION=${{ matrix.orca-version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # --- CuraEngine images ---
+
+  # Rebuild cura-base only when explicitly requested via workflow_dispatch.
+  # These images are immutable per CuraEngine version to ensure reproducible builds.
+  cura-base:
+    if: github.event_name == 'workflow_dispatch' && inputs.rebuild-cura-base
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    strategy:
+      matrix:
+        cura-version: ["5.12.0"]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.cura-base
+          platforms: linux/amd64
+          push: true
+          no-cache: true
+          tags: |
+            estampo/cura-base:${{ matrix.cura-version }}
+            ghcr.io/${{ github.repository }}/cura-base:${{ matrix.cura-version }}
+          build-args: CURA_VERSION=${{ matrix.cura-version }}
+
+  # Rebuild the CuraEngine estampo layer on relevant changes or manual dispatch.
+  cura-images:
+    needs: [detect-changes, cura-base]
+    if: always() && !failure() && (needs.detect-changes.outputs.cura == 'true' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    strategy:
+      matrix:
+        cura-version: ["5.12.0"]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build and push estampo CuraEngine image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.cura
+          platforms: linux/amd64
+          push: true
+          tags: |
+            estampo/estampo:cura-${{ matrix.cura-version }}
+            ghcr.io/${{ github.repository }}:cura-${{ matrix.cura-version }}
+          build-args: CURA_VERSION=${{ matrix.cura-version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

@@ -199,6 +199,17 @@ class TestProgressAdapterBefore:
         mock.assert_called_once_with("Slicing with OrcaSlicer 2.1.0")
         assert adapter._slice_version == "2.1.0"
 
+    def test_sliced_output_dir_cura_engine(self):
+        adapter = self._make_adapter()
+        cfg = SimpleNamespace(slicer=SimpleNamespace(version="5.12.0", engine="cura"))
+        with patch.object(adapter, "_start_spinner") as mock:
+            adapter.run_before_node_execution(
+                node_name="sliced_output_dir",
+                **_kw(node_kwargs={"config": cfg}),
+            )
+        mock.assert_called_once_with("Slicing with CuraEngine 5.12.0")
+        assert adapter._slice_engine == "CuraEngine"
+
     def test_sliced_output_dir_with_docker_version(self):
         adapter = self._make_adapter()
         with patch.object(adapter, "_start_spinner") as mock:

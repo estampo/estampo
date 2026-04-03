@@ -564,6 +564,62 @@ def slice_plate(
 
     Returns the output directory containing the sliced gcode.
     """
+    # CuraEngine backend — separate execution path, does not use OrcaSlicer
+    # profiles or Docker images. Extracts the STL from the input 3MF and
+    # slices it directly.
+    if engine == "cura":
+        from estampo.cura import (
+            cura_docker_image,
+            cura_profile_from_config,
+            slice_stl,
+        )
+
+        if output_dir is None:
+            output_dir = input_3mf.parent / "output"
+        output_dir = output_dir.resolve()
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Extract STL from the 3MF (it's a zip with model files inside)
+        import zipfile
+
+        stl_path: Path | None = None
+        with zipfile.ZipFile(input_3mf) as zf:
+            for name in zf.namelist():
+                if name.endswith(".stl"):
+                    stl_path = output_dir / Path(name).name
+                    stl_path.write_bytes(zf.read(name))
+                    break
+            if stl_path is None:
+                # Try .model files (3MF native format)
+                for name in zf.namelist():
+                    if name.endswith(".model"):
+                        stl_path = output_dir / Path(name).name
+                        stl_path.write_bytes(zf.read(name))
+                        break
+
+        if stl_path is None:
+            raise EstampoError(
+                f"No STL or model file found in {input_3mf}. CuraEngine requires an STL input."
+            )
+
+        # Determine filament type from first filament profile name.
+        # filaments may be a list ["PETG-CF"] or a dict {"default": "PETG-CF"}
+        # depending on the TOML format used.
+        if isinstance(filaments, dict):
+            filament_type = next(iter(filaments.values()), None)
+        elif filaments:
+            filament_type = filaments[0]
+        else:
+            filament_type = None
+
+        profile = cura_profile_from_config(
+            overrides=overrides,
+            bed_type=bed_type,
+            filament_type=filament_type,
+        )
+        image = cura_docker_image(docker_version or required_version)
+        return slice_stl(stl_path, output_dir, profile, image=image)
+
     # If config specifies a version and no explicit docker_version was given,
     # use it as the docker_version for Docker-based slicing.
     if required_version and not docker_version:
@@ -630,7 +686,8 @@ def slice_plate(
         )
 
     docker_str = " (Docker)" if use_docker else ""
-    log.debug("Slicer: OrcaSlicer %s%s", detected_version or "unknown", docker_str)
+    engine_label = "CuraEngine" if engine == "cura" else "OrcaSlicer"
+    log.debug("Slicer: %s %s%s", engine_label, detected_version or "unknown", docker_str)
 
     input_3mf = input_3mf.resolve()
     require_file(input_3mf, "Input 3MF file")

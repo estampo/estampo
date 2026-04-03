@@ -7,36 +7,45 @@ on:
         description: "Path to estampo.toml"
         required: true
         default: "estampo.toml"
-      orca_version:
-        description: "OrcaSlicer version"
+      engine:
+        description: "Slicer engine"
+        required: true
+        default: "orca"
+        type: choice
+        options:
+          - orca
+          - cura
+      version:
+        description: "Slicer version (OrcaSlicer: 2.3.1, CuraEngine: 5.12.0)"
         required: true
         default: "2.3.1"
 
 jobs:
-  slice:
+  slice-orca:
+    if: inputs.engine == 'orca'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
 
       - name: Pull or build orca-base image
         run: |
-          docker pull estampo/orca-base:${{ inputs.orca_version }} 2>/dev/null \
+          docker pull estampo/orca-base:${{ inputs.version }} 2>/dev/null \
             || docker build --platform linux/amd64 \
               -f Dockerfile.orca-base \
-              --build-arg ORCA_VERSION=${{ inputs.orca_version }} \
-              -t estampo/orca-base:${{ inputs.orca_version }} .
+              --build-arg ORCA_VERSION=${{ inputs.version }} \
+              -t estampo/orca-base:${{ inputs.version }} .
 
       - name: Build estampo image
         run: |
           docker build \
-            --build-arg ORCA_VERSION=${{ inputs.orca_version }} \
-            -t estampo:orca-${{ inputs.orca_version }} .
+            --build-arg ORCA_VERSION=${{ inputs.version }} \
+            -t estampo/estampo:orca-${{ inputs.version }} .
 
       - name: Generate plate and slice
         run: |
           docker run --rm \
             -v "${{ github.workspace }}:/project" \
-            estampo:orca-${{ inputs.orca_version }} \
+            estampo/estampo:orca-${{ inputs.version }} \
             run "${{ inputs.config }}" -v
 
       - name: Upload gcode
@@ -46,3 +55,45 @@ jobs:
           path: |
             output/*.gcode
             plate.3mf
+
+  slice-cura:
+    if: inputs.engine == 'cura'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Pull or build cura-base image
+        run: |
+          docker pull estampo/cura-base:${{ inputs.version }} 2>/dev/null \
+            || docker build --platform linux/amd64 \
+              -f Dockerfile.cura-base \
+              --build-arg CURA_VERSION=${{ inputs.version }} \
+              -t estampo/cura-base:${{ inputs.version }} .
+
+      - name: Build estampo CuraEngine image
+        run: |
+          docker build --platform linux/amd64 \
+            -f Dockerfile.cura \
+            --build-arg CURA_VERSION=${{ inputs.version }} \
+            -t estampo/estampo:cura-${{ inputs.version }} .
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install estampo
+        run: |
+          pip install uv
+          uv sync --frozen --no-dev
+
+      - name: Generate plate and slice
+        run: uv run estampo run "${{ inputs.config }}" -v
+
+      - name: Upload gcode
+        uses: actions/upload-artifact@v7
+        with:
+          name: gcode
+          path: |
+            output/*.gcode
+            estampo_output/

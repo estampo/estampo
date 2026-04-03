@@ -269,3 +269,120 @@ jobs:
           name: slice-output-${{ matrix.example.name }}-${{ matrix.orca_version }}
           path: ${{ matrix.example.workdir }}/estampo_output/
           retention-days: 5
+
+  # --- CuraEngine ---
+
+  build-cura-image:
+    needs: resolve-versions
+    if: needs.resolve-versions.result == 'success'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        cura_version: ["5.12.0"]
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Pull or build cura-base image
+        run: |
+          docker pull estampo/cura-base:${{ matrix.cura_version }} 2>/dev/null \
+            || docker build --platform linux/amd64 \
+              -f Dockerfile.cura-base \
+              --build-arg CURA_VERSION=${{ matrix.cura_version }} \
+              -t estampo/cura-base:${{ matrix.cura_version }} .
+
+      - name: Build estampo CuraEngine image
+        run: |
+          docker build --platform linux/amd64 \
+            -f Dockerfile.cura \
+            --build-arg CURA_VERSION=${{ matrix.cura_version }} \
+            -t estampo/estampo:cura-${{ matrix.cura_version }}-test .
+
+      - name: Save image as artifact
+        run: |
+          docker save estampo/estampo:cura-${{ matrix.cura_version }}-test \
+            -o cura-image.tar
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: cura-image-${{ matrix.cura_version }}
+          path: cura-image.tar
+          retention-days: 1
+
+  cura-smoke-test:
+    needs: build-cura-image
+    if: needs.build-cura-image.result == 'success'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        cura_version: ["5.12.0"]
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: cura-image-${{ matrix.cura_version }}
+
+      - name: Load image
+        run: docker load -i cura-image.tar
+
+      - name: Test estampo CLI
+        run: |
+          docker run --rm estampo/estampo:cura-${{ matrix.cura_version }}-test --help
+          docker run --rm estampo/estampo:cura-${{ matrix.cura_version }}-test run --help
+
+      - name: Test CuraEngine accessible
+        run: |
+          docker run --rm --entrypoint CuraEngine \
+            estampo/estampo:cura-${{ matrix.cura_version }}-test help
+
+  cura-slice-test:
+    needs: build-cura-image
+    if: needs.build-cura-image.result == 'success'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        cura_version: ["5.12.0"]
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: cura-image-${{ matrix.cura_version }}
+
+      - name: Load image
+        run: |
+          docker load -i cura-image.tar
+          # Re-tag so estampo finds the image under its expected name
+          docker tag estampo/estampo:cura-${{ matrix.cura_version }}-test \
+                     estampo/estampo:cura-${{ matrix.cura_version }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install estampo
+        run: |
+          pip install uv
+          uv sync --frozen --no-dev
+
+      - name: Run slice (CuraEngine ${{ matrix.cura_version }})
+        run: |
+          cd examples
+          uv run estampo run estampo-cura.toml -v
+
+      - name: Verify output
+        run: |
+          echo "Checking for slice output..."
+          ls -la examples/estampo_output/
+          echo "Slice test OK — CuraEngine ${{ matrix.cura_version }}"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: slice-output-cura-${{ matrix.cura_version }}
+          path: examples/estampo_output/
+          retention-days: 5
