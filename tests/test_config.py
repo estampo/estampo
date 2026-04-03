@@ -181,7 +181,7 @@ def test_bad_engine(tmp_path):
         tmp_path,
         """
 [slicer]
-engine = "cura"
+engine = "prusa"
 
 [[parts]]
 file = "cube.stl"
@@ -190,6 +190,22 @@ file = "cube.stl"
     )
     with pytest.raises(EstampoError, match="engine"):
         load_config(path)
+
+
+def test_cura_engine_accepted(tmp_path):
+    path = _write_toml(
+        tmp_path,
+        """
+[slicer]
+engine = "cura"
+
+[[parts]]
+file = "cube.stl"
+""",
+        create_files=["cube.stl"],
+    )
+    cfg = load_config(path)
+    assert cfg.slicer.engine == "cura"
 
 
 def test_scale(tmp_path):

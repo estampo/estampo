@@ -218,8 +218,8 @@ def load_config(path: Path) -> EstampoConfig:
         filament_overrides=slicer_raw.get("filament_overrides", {}),
         profiles_dir=slicer_raw.get("profiles_dir", "profiles"),
     )
-    if slicer.engine != "orca":
-        raise EstampoError(f"slicer.engine must be 'orca', got '{slicer.engine}'")
+    if slicer.engine not in ("orca", "cura"):
+        raise EstampoError(f"slicer.engine must be 'orca' or 'cura', got '{slicer.engine}'")
 
     # Parts — first pass: parse everything except filament resolution
     parts_raw = raw.get("parts", [])

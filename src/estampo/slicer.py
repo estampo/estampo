@@ -564,6 +564,50 @@ def slice_plate(
 
     Returns the output directory containing the sliced gcode.
     """
+    # CuraEngine backend — separate execution path, does not use OrcaSlicer
+    # profiles or Docker images. Extracts the STL from the input 3MF and
+    # slices it directly.
+    if engine == "cura":
+        from estampo.cura import cura_profile_from_config, slice_stl
+
+        if output_dir is None:
+            output_dir = input_3mf.parent / "output"
+        output_dir = output_dir.resolve()
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Extract STL from the 3MF (it's a zip with model files inside)
+        import zipfile
+
+        stl_path: Path | None = None
+        with zipfile.ZipFile(input_3mf) as zf:
+            for name in zf.namelist():
+                if name.endswith(".stl"):
+                    stl_path = output_dir / Path(name).name
+                    stl_path.write_bytes(zf.read(name))
+                    break
+            if stl_path is None:
+                # Try .model files (3MF native format)
+                for name in zf.namelist():
+                    if name.endswith(".model"):
+                        stl_path = output_dir / Path(name).name
+                        stl_path.write_bytes(zf.read(name))
+                        break
+
+        if stl_path is None:
+            raise EstampoError(
+                f"No STL or model file found in {input_3mf}. CuraEngine requires an STL input."
+            )
+
+        # Determine filament type from first filament profile name
+        filament_type = filaments[0] if filaments else None
+
+        profile = cura_profile_from_config(
+            overrides=overrides,
+            bed_type=bed_type,
+            filament_type=filament_type,
+        )
+        return slice_stl(stl_path, output_dir, profile)
+
     # If config specifies a version and no explicit docker_version was given,
     # use it as the docker_version for Docker-based slicing.
     if required_version and not docker_version:
