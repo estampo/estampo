@@ -26,12 +26,17 @@ COPY pyproject.toml uv.lock README.md LICENSE ./
 RUN mkdir -p src/estampo && touch src/estampo/__init__.py
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv python install 3.12 \
-    && uv sync --frozen --no-dev --no-editable --python 3.12
+    && uv sync --frozen --no-dev --no-editable --python 3.12 \
+    && chmod -R a+rX /root/.local/share/uv/python
 
 # Copy source and re-link (fast — deps already installed)
 COPY src/ ./src/
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-editable --python 3.12
+
+# Ensure the uv-managed Python and venv are readable by the estampo user
+RUN chmod a+rx /root /root/.local /root/.local/share /root/.local/share/uv \
+    /root/.local/share/uv/python
 
 ENV PATH="/opt/estampo/.venv/bin:$PATH"
 
