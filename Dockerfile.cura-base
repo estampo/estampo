@@ -40,27 +40,31 @@ LABEL org.opencontainers.image.licenses="AGPL-3.0"
 LABEL estampo.cura-version="${CURA_VERSION}"
 
 # CuraEngine binary
-COPY --from=extract /extract/squashfs-root/CuraEngine /usr/local/bin/CuraEngine
+COPY --from=extract /extract/squashfs-root/CuraEngine /opt/cura/bin/CuraEngine
+RUN chmod +x /opt/cura/bin/CuraEngine
 
-# Bundled shared libraries (not available in ubuntu:24.04)
-COPY --from=extract /extract/squashfs-root/libArcus.so /usr/local/lib/
-COPY --from=extract /extract/squashfs-root/libpolyclipping.so.22.0.0 /usr/local/lib/
-COPY --from=extract /extract/squashfs-root/libtbb.so.12.16 /usr/local/lib/
-COPY --from=extract /extract/squashfs-root/libtbbmalloc.so.2.16 /usr/local/lib/
-COPY --from=extract /extract/squashfs-root/libtbbmalloc_proxy.so.2.16 /usr/local/lib/
-COPY --from=extract /extract/squashfs-root/libssl.so.3 /usr/local/lib/libssl.so.3.cura
-COPY --from=extract /extract/squashfs-root/libcrypto.so.3 /usr/local/lib/libcrypto.so.3.cura
+# Bundled shared libraries that CuraEngine needs but Ubuntu 24.04 doesn't have.
+# Kept in /opt/cura/lib/ to avoid overriding system libs (e.g. libssl/libcrypto)
+# which would break Python and other system tools.
+COPY --from=extract /extract/squashfs-root/libArcus.so /opt/cura/lib/
+COPY --from=extract /extract/squashfs-root/libpolyclipping.so.22.0.0 /opt/cura/lib/
+COPY --from=extract /extract/squashfs-root/libtbb.so.12.16 /opt/cura/lib/
+COPY --from=extract /extract/squashfs-root/libtbbmalloc.so.2.16 /opt/cura/lib/
+COPY --from=extract /extract/squashfs-root/libtbbmalloc_proxy.so.2.16 /opt/cura/lib/
+COPY --from=extract /extract/squashfs-root/libssl.so.3 /opt/cura/lib/
+COPY --from=extract /extract/squashfs-root/libcrypto.so.3 /opt/cura/lib/
 
-# Symlinks for versioned libraries + ldconfig
-RUN cd /usr/local/lib \
+# Symlinks for versioned libraries
+RUN cd /opt/cura/lib \
     && ln -sf libpolyclipping.so.22.0.0 libpolyclipping.so.22 \
     && ln -sf libtbb.so.12.16 libtbb.so.12 \
     && ln -sf libtbbmalloc.so.2.16 libtbbmalloc.so.2 \
-    && ln -sf libtbbmalloc_proxy.so.2.16 libtbbmalloc_proxy.so.2 \
-    && ln -sf libssl.so.3.cura libssl.so.3 \
-    && ln -sf libcrypto.so.3.cura libcrypto.so.3 \
-    && ldconfig \
-    && chmod +x /usr/local/bin/CuraEngine
+    && ln -sf libtbbmalloc_proxy.so.2.16 libtbbmalloc_proxy.so.2
+
+# Wrapper script so CuraEngine finds its libs without polluting system paths.
+# The wrapper sets LD_LIBRARY_PATH only for the CuraEngine process.
+RUN printf '#!/bin/sh\nLD_LIBRARY_PATH=/opt/cura/lib exec /opt/cura/bin/CuraEngine "$@"\n' \
+    > /usr/local/bin/CuraEngine && chmod +x /usr/local/bin/CuraEngine
 
 # Printer definitions (fdmprinter.def.json, fdmextruder.def.json, etc.)
 COPY --from=extract /extract/squashfs-root/share/cura/resources/definitions/ /opt/cura/definitions/
