@@ -195,7 +195,7 @@ def extract_docker_profiles(
     if not _ensure_docker_image(image):
         raise EstampoError(
             f"Docker image {image} is not available and could not be pulled. "
-            "Install OrcaSlicer locally or check your Docker setup."
+            "Check your Docker setup or install the slicer locally."
         )
 
     from estampo import ui

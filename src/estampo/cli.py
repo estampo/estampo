@@ -186,7 +186,7 @@ def run(
     ] = False,
     docker_version: Annotated[
         str | None,
-        typer.Option(help="Use a specific OrcaSlicer Docker image version (e.g. 2.3.1)"),
+        typer.Option(help="Use a specific slicer Docker image version (e.g. 2.3.1)"),
     ] = None,
     filament_type: Annotated[
         str | None,
@@ -250,7 +250,7 @@ def watch(
     ] = False,
     docker_version: Annotated[
         str | None,
-        typer.Option(help="Use a specific OrcaSlicer Docker image version"),
+        typer.Option(help="Use a specific slicer Docker image version"),
     ] = None,
     verbose: Annotated[bool, typer.Option("-v", "--verbose", help="Enable debug logging")] = False,
 ) -> None:
@@ -385,7 +385,7 @@ def init(
     ] = False,
     from_3mf: Annotated[
         Path | None,
-        typer.Option("--from-3mf", help="Generate config from an OrcaSlicer .3mf project file"),
+        typer.Option("--from-3mf", help="Generate config from a slicer .3mf project file"),
     ] = None,
     output: Annotated[
         Path | None,

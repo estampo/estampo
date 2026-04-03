@@ -68,7 +68,7 @@ def find_slicer(engine: str) -> Path:
         if found:
             return Path(found)
 
-    raise FileNotFoundError(f"OrcaSlicer not found at {path} or on PATH. Is OrcaSlicer installed?")
+    raise FileNotFoundError(f"Slicer ({engine}) not found at {path} or on PATH. Is it installed?")
 
 
 def _write_tmp_profile(data: dict, tmp_dir: Path, name: str) -> Path:
@@ -643,7 +643,7 @@ def slice_plate(
                     f"Docker image '{image}' not found locally or on Docker Hub, "
                     f"and no local slicer installed. Either:\n"
                     f"  docker pull {image}\n"
-                    f"  or install OrcaSlicer locally"
+                    f"  or install the slicer locally"
                 )
     else:
         # Default: try Docker first, fall back to local
@@ -659,8 +659,7 @@ def slice_plate(
                 )
             except FileNotFoundError:
                 raise FileNotFoundError(
-                    "No slicer available. Install OrcaSlicer locally or "
-                    "pull a Docker image: docker pull estampo/estampo:orca-2.3.1"
+                    f"No slicer available. Pull the Docker image:\n  docker pull {image}"
                 )
 
     # Detect and verify slicer version
