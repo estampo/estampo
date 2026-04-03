@@ -74,7 +74,13 @@ def test_resolve_path_traversal_rejected():
 
 def test_discover_unknown_engine():
     with pytest.raises(ValueError, match="Unknown engine"):
-        discover_profiles("cura")
+        discover_profiles("nonexistent")
+
+
+def test_discover_cura_returns_empty():
+    """CuraEngine uses inline settings — discover_profiles returns empty dicts."""
+    result = discover_profiles("cura")
+    assert all(v == {} for v in result.values())
 
 
 @pytest.mark.skipif(not _has_orca(), reason="OrcaSlicer not installed")
