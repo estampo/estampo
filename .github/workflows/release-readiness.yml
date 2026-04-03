@@ -54,7 +54,7 @@ jobs:
           if [ -n "${{ inputs.orca_version }}" ]; then
             echo 'versions=["${{ inputs.orca_version }}"]' >> "$GITHUB_OUTPUT"
           else
-            echo 'versions=["2.3.1","2.3.2"]' >> "$GITHUB_OUTPUT"
+            echo 'versions=["2.3.1"]' >> "$GITHUB_OUTPUT"  # 2.3.2 disabled: segfaults on slice
           fi
 
   build-estampo-image:

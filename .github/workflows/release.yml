@@ -120,7 +120,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        orca-version: ["2.3.1", "2.3.2"]
+        orca-version: ["2.3.1"]  # 2.3.2 disabled: segfaults on slice (exit 139)
     steps:
       - uses: actions/checkout@v6
         with:
@@ -361,7 +361,7 @@ jobs:
       packages: write
     strategy:
       matrix:
-        orca-version: ["2.3.1", "2.3.2"]
+        orca-version: ["2.3.1"]  # 2.3.2 disabled: segfaults on slice (exit 139)
     steps:
       - uses: actions/download-artifact@v7
         with:
