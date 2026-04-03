@@ -141,6 +141,40 @@ def test_resolve_profiles_machine_overrides(tmp_path: Path):
     assert data["nozzle_type"] == ["hardened_steel", "hardened_steel"]
 
 
+def test_resolve_profiles_machine_overrides_scalar_broadcast(tmp_path: Path):
+    """Scalar nozzle_type in profile is broadcast to array based on sibling fields."""
+    machine_dir = tmp_path / "profiles" / "machine"
+    machine_dir.mkdir(parents=True)
+    # nozzle_type is scalar (as happens after inheritance resolution on some
+    # pinned profiles), but other fields are 2-element arrays.
+    (machine_dir / "My Printer.json").write_text(
+        '{"name": "My Printer", "type": "machine", '
+        '"nozzle_type": "stainless_steel", '
+        '"retraction_length": ["0.8", "0.8"]}'
+    )
+
+    out = tmp_path / "out"
+    out.mkdir()
+
+    settings_arg, _ = _resolve_profiles(
+        engine="orca",
+        printer="My Printer",
+        process=None,
+        filaments=None,
+        overrides=None,
+        machine_overrides={"nozzle_type": "hardened_steel"},
+        project_dir=tmp_path,
+        tmp_dir=out,
+        profiles_dir="profiles",
+    )
+
+    assert settings_arg is not None
+    import json
+
+    data = json.loads(Path(settings_arg).read_text())
+    assert data["nozzle_type"] == ["hardened_steel", "hardened_steel"]
+
+
 # --- docker_image ---
 
 
