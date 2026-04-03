@@ -58,7 +58,7 @@ def wrap_gcode_3mf(gcode_path: Path, output_path: Path | None = None) -> Path:
         ' xmlns:BambuStudio="http://schemas.bambulab.com/package/2021"'
         ' xmlns:p="http://schemas.microsoft.com/3dmanufacturing/production/2015/06"'
         ' requiredextensions="p">\n'
-        ' <metadata name="Application">OrcaSlicer</metadata>\n'
+        ' <metadata name="Application">estampo</metadata>\n'
         ' <metadata name="BambuStudio:3mfVersion">1</metadata>\n'
         " <resources/>\n"
         " <build/>\n"
