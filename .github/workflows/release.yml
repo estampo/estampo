@@ -39,22 +39,14 @@ jobs:
             | head -1 || true)
 
           if [[ -n "$VERSION" ]]; then
-            # Verify no existing tag (404 = no tag, which is what we want)
+            # Verify no existing tag (gh exits 0 if ref exists, non-zero if not)
             if gh api "repos/${{ github.repository }}/git/refs/tags/v${VERSION}" >/dev/null 2>&1; then
-              HTTP_CODE="200"
-            else
-              HTTP_CODE="404"
-            fi
-            if [[ "$HTTP_CODE" == "200" ]]; then
               echo "::warning::Tag v${VERSION} already exists — skipping"
               echo "is_release=false" >> "$GITHUB_OUTPUT"
-            elif [[ "$HTTP_CODE" == "404" ]]; then
+            else
               echo "is_release=true" >> "$GITHUB_OUTPUT"
               echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
               echo "::notice::Detected release PR merge for v${VERSION}"
-            else
-              echo "::error::Unexpected API response ($HTTP_CODE) checking tag v${VERSION}"
-              exit 1
             fi
           else
             echo "is_release=false" >> "$GITHUB_OUTPUT"
