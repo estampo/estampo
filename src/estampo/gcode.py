@@ -14,12 +14,26 @@ GCODE_HEADER_LINES = 300
 GCODE_TAIL_LINES = 50
 
 
+def _format_seconds(secs: int) -> str:
+    """Format seconds as a human-readable time string like '1h 7m 32s'."""
+    parts = []
+    if secs >= 3600:
+        parts.append(f"{secs // 3600}h")
+        secs %= 3600
+    if secs >= 60:
+        parts.append(f"{secs // 60}m")
+        secs %= 60
+    if secs > 0 or not parts:
+        parts.append(f"{secs}s")
+    return " ".join(parts)
+
+
 def parse_gcode_metadata(gcode_path: Path) -> dict[str, str | float | int]:
     """Extract print time and filament stats from gcode comments.
 
     Scans header (first GCODE_HEADER_LINES lines) for print time, and tail
-    (last GCODE_TAIL_LINES lines) for filament usage. Handles multiple
-    OrcaSlicer/BambuStudio formats.
+    (last GCODE_TAIL_LINES lines) for filament usage. Handles both
+    OrcaSlicer/BambuStudio and CuraEngine formats.
 
     Returns dict with keys like 'print_time', 'print_time_secs',
     'filament_g', and/or 'filament_cm3'.
@@ -27,15 +41,34 @@ def parse_gcode_metadata(gcode_path: Path) -> dict[str, str | float | int]:
     lines = gcode_path.read_text().splitlines()
     stats: dict[str, str | float | int] = {}
 
-    # Scan header for print time
+    # Scan header for print time and CuraEngine metadata
     for line in lines[:GCODE_HEADER_LINES]:
+        # OrcaSlicer / BambuStudio formats
         if m := re.search(r"total estimated time:\s*(.+?)(?:;|$)", line):
             stats["print_time"] = m.group(1).strip()
         elif m := re.match(r";\s*estimated printing time.*?=\s*(.+)", line):
             stats["print_time"] = m.group(1).strip()
+        # CuraEngine: ;TIME:1234 (seconds)
+        elif m := re.match(r";TIME:(\d+)", line):
+            secs = int(m.group(1))
+            stats["print_time"] = _format_seconds(secs)
+            stats["print_time_secs"] = secs
+        # CuraEngine: ;Filament used: 1.23456m
+        elif m := re.match(r";Filament used:\s*([\d.]+)m", line):
+            meters = float(m.group(1))
+            # Convert meters of 1.75mm filament to cm³ and grams
+            # Volume = length * pi * (d/2)^2; density ~1.24 g/cm³ (PLA/PETG avg)
+            diameter_cm = 0.175
+            import math
 
-    # Scan tail for filament stats. OrcaSlicer emits one line per slot
-    # (including 0.00 for unused slots) and sometimes a separate total line.
+            cm3 = meters * 100 * math.pi * (diameter_cm / 2) ** 2
+            stats["filament_cm3"] = round(cm3, 2)
+            # Approximate grams (density varies by material, ~1.24 is reasonable)
+            stats["filament_g"] = round(cm3 * 1.24, 2)
+
+    # Scan tail for OrcaSlicer filament stats (CuraEngine puts them in header).
+    # OrcaSlicer emits one line per slot (including 0.00 for unused slots)
+    # and sometimes a separate total line.
     # Prefer explicit "total" lines; fall back to summing per-slot lines.
     filament_g_slots: list[float] = []
     filament_g_total: float | None = None
@@ -50,6 +83,7 @@ def parse_gcode_metadata(gcode_path: Path) -> dict[str, str | float | int]:
             filament_cm3_total = float(m.group(1))
         elif m := re.match(r";\s*filament used \[cm3\]\s*=\s*([\d.]+)", line):
             filament_cm3_slots.append(float(m.group(1)))
+    # Only override CuraEngine stats if OrcaSlicer stats were found
     g = filament_g_total if filament_g_total is not None else sum(filament_g_slots)
     cm3 = filament_cm3_total if filament_cm3_total is not None else sum(filament_cm3_slots)
     if g > 0:
@@ -57,8 +91,8 @@ def parse_gcode_metadata(gcode_path: Path) -> dict[str, str | float | int]:
     if cm3 > 0:
         stats["filament_cm3"] = cm3
 
-    # Convert time string like "1h 7m 32s" to seconds
-    if "print_time" in stats:
+    # Convert time string like "1h 7m 32s" to seconds (if not already set)
+    if "print_time" in stats and "print_time_secs" not in stats:
         t = str(stats["print_time"])
         secs = 0
         if hm := re.search(r"(\d+)h", t):
@@ -114,30 +148,48 @@ def read_gcode(path: Path) -> str:
 def analyze_gcode(path: Path) -> GcodeInfo:
     """Analyze gcode for extruder usage per layer.
 
-    Parses layer boundaries (CHANGE_LAYER), tool changes (T{n}),
-    filament types, and per-slot usage from OrcaSlicer/BambuStudio gcode.
+    Parses layer boundaries, tool changes (T{n}), filament types, and
+    per-slot usage from OrcaSlicer/BambuStudio and CuraEngine gcode.
+
+    OrcaSlicer uses ``; CHANGE_LAYER`` / ``; Z_HEIGHT:`` markers.
+    CuraEngine uses ``;LAYER:N`` / ``G0 ... Z{height}`` patterns.
     """
     text = read_gcode(path)
     lines = text.splitlines()
     info = GcodeInfo()
 
-    # Parse filament types from header
+    # Parse filament types and print time from header
     for line in lines[:GCODE_HEADER_LINES]:
+        # OrcaSlicer
         if m := re.match(r";\s*filament_type\s*=\s*(.+)", line):
             info.filament_types = [t.strip() for t in m.group(1).split(";")]
         elif m := re.search(r"total estimated time:\s*(.+?)(?:;|$)", line):
             info.print_time = m.group(1).strip()
         elif m := re.match(r";\s*estimated printing time.*?=\s*(.+)", line):
             info.print_time = m.group(1).strip()
+        # CuraEngine
+        elif m := re.match(r";TIME:(\d+)", line):
+            info.print_time = _format_seconds(int(m.group(1)))
+        elif m := re.match(r";MATERIAL:(\d+)", line):
+            # CuraEngine material index (single extruder)
+            pass  # filament type not encoded here
+        elif m := re.match(r";Filament used:\s*([\d.]+)m", line):
+            # Convert meters to approximate grams for single-extruder
+            import math
 
-    # Parse per-slot filament usage from tail
+            meters = float(m.group(1))
+            diameter_cm = 0.175
+            cm3 = meters * 100 * math.pi * (diameter_cm / 2) ** 2
+            info.filament_usage_g = [round(cm3 * 1.24, 2)]
+
+    # Parse per-slot filament usage from tail (OrcaSlicer)
     for line in lines[-GCODE_TAIL_LINES:]:
         if m := re.match(r";\s*filament used \[g\]\s*=\s*(.+)", line):
             info.filament_usage_g = [float(v.strip()) for v in m.group(1).split(",")]
 
     # Walk gcode for layers and tool changes.
-    # Z_HEIGHT appears immediately after CHANGE_LAYER, so we track
-    # per-layer z values and resolve spans at the end.
+    # OrcaSlicer: Z_HEIGHT appears immediately after CHANGE_LAYER.
+    # CuraEngine: ;LAYER:N marks layer boundaries, Z from G0/G1 moves.
     current_layer = 0
     current_z = 0.0
     current_extruder = 0  # 0-indexed
@@ -147,11 +199,21 @@ def analyze_gcode(path: Path) -> GcodeInfo:
     tool_events: list[tuple[int, int]] = []  # (layer_at_change, new_extruder)
 
     for line in lines:
+        # OrcaSlicer layer marker
         if line.startswith("; CHANGE_LAYER"):
             current_layer += 1
         elif m := re.match(r"; Z_HEIGHT:\s*([\d.]+)", line):
             current_z = float(m.group(1))
             layer_z[current_layer] = current_z
+        # CuraEngine layer marker: ;LAYER:0, ;LAYER:1, etc.
+        elif m := re.match(r";LAYER:(\d+)", line):
+            current_layer = int(m.group(1)) + 1  # normalize to 1-indexed
+            layer_z[current_layer] = current_z
+        # CuraEngine Z moves (G0/G1 with Z parameter)
+        elif m := re.match(r"G[01]\s.*Z([\d.]+)", line):
+            current_z = float(m.group(1))
+            if current_layer in layer_z:
+                layer_z[current_layer] = current_z
         elif m := re.match(r"T(\d+)$", line):
             tool = int(m.group(1))
             # Skip special tool numbers (T1000 = initial load, T255 = unload)

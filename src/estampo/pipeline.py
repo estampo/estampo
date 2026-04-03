@@ -379,7 +379,7 @@ def sliced_output_dir(
     slicer_local: bool,
     docker_version: str | None,
 ) -> Path:
-    """Slice the plate 3MF via OrcaSlicer/BambuStudio."""
+    """Slice the plate 3MF via the configured slicer engine."""
     from estampo.slicer import slice_plate
 
     return slice_plate(

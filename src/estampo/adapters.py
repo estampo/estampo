@@ -106,6 +106,7 @@ class ProgressAdapter(NodeExecutionHook):
         self._starts: dict[str, float] = {}
         self._status: Status | None = None
         self._slice_version: str | None = None
+        self._slice_engine: str = "OrcaSlicer"
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -165,8 +166,11 @@ class ProgressAdapter(NodeExecutionHook):
             ver = node_kwargs.get("docker_version")
             if not ver and cfg and cfg.slicer.version:
                 ver = cfg.slicer.version
+            engine = getattr(cfg.slicer, "engine", "orca") if cfg else "orca"
+            engine_name = "CuraEngine" if engine == "cura" else "OrcaSlicer"
+            self._slice_engine = engine_name
             if ver:
-                label = f"Slicing with OrcaSlicer {ver}"
+                label = f"Slicing with {engine_name} {ver}"
                 self._slice_version = ver
 
         elif node_name == "print_result":
@@ -229,7 +233,8 @@ class ProgressAdapter(NodeExecutionHook):
 
         elif node_name == "sliced_output_dir":
             ver = self._slice_version
-            ver_str = f"with OrcaSlicer {ver}" if ver else ""
+            engine_name = getattr(self, "_slice_engine", "OrcaSlicer")
+            ver_str = f"with {engine_name} {ver}" if ver else ""
             time_str = f" in {elapsed:.0f}s" if elapsed >= 2 else ""
             self._ok(f"Sliced {ver_str}{time_str}".rstrip(), show_elapsed=False)
             # Show gcode filename if available

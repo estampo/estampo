@@ -602,8 +602,15 @@ def slice_plate(
                 f"No STL or model file found in {input_3mf}. CuraEngine requires an STL input."
             )
 
-        # Determine filament type from first filament profile name
-        filament_type = filaments[0] if filaments else None
+        # Determine filament type from first filament profile name.
+        # filaments may be a list ["PETG-CF"] or a dict {"default": "PETG-CF"}
+        # depending on the TOML format used.
+        if isinstance(filaments, dict):
+            filament_type = next(iter(filaments.values()), None)
+        elif filaments:
+            filament_type = filaments[0]
+        else:
+            filament_type = None
 
         profile = cura_profile_from_config(
             overrides=overrides,
@@ -679,7 +686,8 @@ def slice_plate(
         )
 
     docker_str = " (Docker)" if use_docker else ""
-    log.debug("Slicer: OrcaSlicer %s%s", detected_version or "unknown", docker_str)
+    engine_label = "CuraEngine" if engine == "cura" else "OrcaSlicer"
+    log.debug("Slicer: %s %s%s", engine_label, detected_version or "unknown", docker_str)
 
     input_3mf = input_3mf.resolve()
     require_file(input_3mf, "Input 3MF file")

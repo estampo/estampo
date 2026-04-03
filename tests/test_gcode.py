@@ -48,6 +48,52 @@ def test_parse_minutes_only(tmp_path):
     assert stats["print_time_secs"] == 45 * 60 + 10
 
 
+# --- CuraEngine format ---
+
+
+def test_parse_cura_time(tmp_path):
+    gcode = tmp_path / "test.gcode"
+    gcode.write_text(";Generated with Cura_SteamEngine 5.12.0\n;TIME:4052\nG28\n")
+    stats = parse_gcode_metadata(gcode)
+    assert stats["print_time_secs"] == 4052
+    assert stats["print_time"] == "1h 7m 32s"
+
+
+def test_parse_cura_filament(tmp_path):
+    gcode = tmp_path / "test.gcode"
+    gcode.write_text(";Generated with Cura_SteamEngine 5.12.0\n;Filament used: 1.23456m\nG28\n")
+    stats = parse_gcode_metadata(gcode)
+    assert stats["filament_cm3"] > 0
+    assert stats["filament_g"] > 0
+
+
+def test_analyze_cura_layers(tmp_path):
+    """CuraEngine uses ;LAYER:N markers."""
+    lines = [
+        ";Generated with Cura_SteamEngine 5.12.0",
+        ";TIME:600",
+        ";Filament used: 0.5m",
+        "G28",
+        ";LAYER_COUNT:3",
+        ";LAYER:0",
+        "G0 Z0.2",
+        "G1 X10 Y10 E1",
+        ";LAYER:1",
+        "G0 Z0.4",
+        "G1 X20 Y20 E2",
+        ";LAYER:2",
+        "G0 Z0.6",
+        "G1 X30 Y30 E3",
+    ]
+    gcode = tmp_path / "test.gcode"
+    gcode.write_text("\n".join(lines))
+    info = analyze_gcode(gcode)
+    assert info.layer_count == 3
+    assert info.print_time == "10m"
+    assert len(info.spans) == 1
+    assert info.spans[0].extruder == 0
+
+
 # --- analyze_gcode ---
 
 
