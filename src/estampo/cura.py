@@ -207,7 +207,7 @@ def slice_stl(
         + " ".join(f'"{s}"' for s in settings)
         + ' -s "machine_start_gcode=$START" '
         + '-s "machine_end_gcode=$END" '
-        + f"-l {c_stl} 2>/dev/null"
+        + f"-l {c_stl}"
     )
 
     cmd = [
