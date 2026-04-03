@@ -4,13 +4,12 @@ Slices STL files using CuraEngine via Docker, with BBL-specific start/end
 G-code injected from the Jinja2 templates in bambu-3mf. Produces plain
 G-code that can be packaged into .gcode.3mf.
 
-Prototype: uses rkneills/curaengine Docker image (CuraEngine ~3.6 era)
-with fdmprinter.def.json from Cura 3.6.
+Uses CuraEngine 5.12.0 extracted from the UltiMaker Cura AppImage,
+packaged in a minimal Docker image (~95 MB) with bundled definitions.
 """
 
 from __future__ import annotations
 
-import json
 import logging
 import shutil
 import subprocess
@@ -22,14 +21,13 @@ from estampo import EstampoError
 
 log = logging.getLogger(__name__)
 
-DOCKER_IMAGE = "rkneills/curaengine:latest"
-CURAENGINE_BIN = "/CuraEngine/build/CuraEngine"
-FDMPRINTER_URL = (
-    "https://raw.githubusercontent.com/Ultimaker/Cura/3.6/resources/definitions/fdmprinter.def.json"
-)
+DOCKERHUB_REPO = "estampo/curaengine"
+CURAENGINE_VERSION = "5.12.0"
+DOCKER_IMAGE = f"{DOCKERHUB_REPO}:{CURAENGINE_VERSION}"
+CURAENGINE_BIN = "CuraEngine"  # on PATH inside the image
 
-# Base definitions directory inside the Docker image.
-_DEFS_DIR = "/opt/defs"
+# Definitions directory inside the Docker image (bundled from Cura AppImage).
+_DEFS_DIR = "/opt/cura/definitions"
 
 
 @dataclass
@@ -100,151 +98,6 @@ def _render_bbl_gcode(profile: CuraProfile) -> tuple[str, str]:
     return start, end
 
 
-def _build_printer_def(
-    profile: CuraProfile,
-    start_gcode: str,
-    end_gcode: str,
-    extruder_def_path: str,
-) -> dict:
-    """Build a CuraEngine printer definition JSON."""
-    return {
-        "id": "bambu_p1s",
-        "version": 2,
-        "name": profile.machine_name,
-        "inherits": "fdmprinter",
-        "metadata": {
-            "visible": True,
-            "author": "estampo",
-            "manufacturer": "Bambu Lab",
-            "machine_extruder_trains": {"0": extruder_def_path},
-        },
-        "overrides": {
-            "machine_name": {"default_value": profile.machine_name},
-            "machine_width": {"default_value": profile.machine_width},
-            "machine_depth": {"default_value": profile.machine_depth},
-            "machine_height": {"default_value": profile.machine_height},
-            "machine_heated_bed": {"default_value": profile.machine_heated_bed},
-            "machine_center_is_zero": {"default_value": False},
-            "machine_gcode_flavor": {"default_value": "RepRap (Marlin/Sprinter)"},
-            "machine_start_gcode": {"default_value": start_gcode},
-            "machine_end_gcode": {"default_value": end_gcode},
-            "material_print_temp_prepend": {"default_value": False},
-            "material_bed_temp_prepend": {"default_value": False},
-        },
-    }
-
-
-def _build_extruder_def(profile: CuraProfile) -> dict:
-    """Build a CuraEngine extruder definition JSON."""
-    return {
-        "id": "bambu_p1s_extruder_0",
-        "version": 2,
-        "name": "Extruder 0",
-        "metadata": {
-            "type": "extruder",
-            "author": "estampo",
-            "manufacturer": "Bambu Lab",
-            "position": "0",
-        },
-        "settings": {
-            "machine_settings": {
-                "children": {
-                    "extruder_nr": {
-                        "label": "Extruder",
-                        "description": "Extruder number.",
-                        "type": "int",
-                        "default_value": 0,
-                    },
-                    "machine_nozzle_offset_x": {
-                        "label": "Nozzle X Offset",
-                        "description": "X offset.",
-                        "type": "float",
-                        "default_value": 0,
-                    },
-                    "machine_nozzle_offset_y": {
-                        "label": "Nozzle Y Offset",
-                        "description": "Y offset.",
-                        "type": "float",
-                        "default_value": 0,
-                    },
-                    "machine_nozzle_size": {
-                        "label": "Nozzle Diameter",
-                        "description": "Nozzle diameter.",
-                        "type": "float",
-                        "default_value": profile.nozzle_diameter,
-                    },
-                    "material_diameter": {
-                        "label": "Material Diameter",
-                        "description": "Filament diameter.",
-                        "type": "float",
-                        "default_value": profile.material_diameter,
-                    },
-                    "machine_nozzle_id": {
-                        "label": "Nozzle ID",
-                        "description": "Nozzle ID.",
-                        "type": "str",
-                        "default_value": "unknown",
-                    },
-                    "machine_extruder_start_code": {
-                        "label": "Extruder Start G-Code",
-                        "description": "Start code.",
-                        "type": "str",
-                        "default_value": "",
-                    },
-                    "machine_extruder_end_code": {
-                        "label": "Extruder End G-Code",
-                        "description": "End code.",
-                        "type": "str",
-                        "default_value": "",
-                    },
-                    "machine_extruder_start_pos_abs": {
-                        "label": "Start Pos Absolute",
-                        "description": "Absolute.",
-                        "type": "bool",
-                        "default_value": False,
-                    },
-                    "machine_extruder_start_pos_x": {
-                        "label": "Start Pos X",
-                        "description": "X.",
-                        "type": "float",
-                        "default_value": 0,
-                    },
-                    "machine_extruder_start_pos_y": {
-                        "label": "Start Pos Y",
-                        "description": "Y.",
-                        "type": "float",
-                        "default_value": 0,
-                    },
-                    "machine_extruder_end_pos_abs": {
-                        "label": "End Pos Absolute",
-                        "description": "Absolute.",
-                        "type": "bool",
-                        "default_value": False,
-                    },
-                    "machine_extruder_end_pos_x": {
-                        "label": "End Pos X",
-                        "description": "X.",
-                        "type": "float",
-                        "default_value": 0,
-                    },
-                    "machine_extruder_end_pos_y": {
-                        "label": "End Pos Y",
-                        "description": "Y.",
-                        "type": "float",
-                        "default_value": 0,
-                    },
-                    "machine_extruder_cooling_fan_number": {
-                        "label": "Fan Number",
-                        "description": "Fan.",
-                        "type": "int",
-                        "default_value": 0,
-                    },
-                },
-            },
-        },
-    }
-
-
 def _settings_flags(profile: CuraProfile) -> list[str]:
     """Build -s key=value flags from profile."""
     pairs: dict[str, object] = {
@@ -263,10 +116,16 @@ def _settings_flags(profile: CuraProfile) -> list[str]:
         "speed_travel": profile.speed_travel,
         "speed_wall_0": profile.speed_wall_0,
         "speed_infill": profile.speed_infill,
+        "machine_width": profile.machine_width,
+        "machine_depth": profile.machine_depth,
+        "machine_height": profile.machine_height,
         "machine_heated_bed": "true" if profile.machine_heated_bed else "false",
         "material_print_temp_prepend": "false",
         "material_bed_temp_prepend": "false",
         "adhesion_type": "none",
+        # CuraEngine 5.12 requires these explicitly (not resolved from def)
+        "roofing_layer_count": 0,
+        "flooring_layer_count": 0,
     }
     pairs.update(profile.overrides)
 
@@ -276,19 +135,6 @@ def _settings_flags(profile: CuraProfile) -> list[str]:
     return flags
 
 
-def _ensure_fdmprinter(dest: Path) -> None:
-    """Download fdmprinter.def.json from GitHub if not present."""
-    if dest.exists() and dest.stat().st_size > 100_000:
-        return
-
-    import urllib.request
-
-    log.info("Downloading fdmprinter.def.json from Cura 3.6...")
-    urllib.request.urlretrieve(FDMPRINTER_URL, str(dest))
-    if not dest.exists() or dest.stat().st_size < 100_000:
-        raise EstampoError(f"Failed to download fdmprinter.def.json to {dest}")
-
-
 def slice_stl(
     stl_path: Path,
     output_dir: Path,
@@ -296,8 +142,9 @@ def slice_stl(
 ) -> Path:
     """Slice an STL file with CuraEngine and return the output directory.
 
-    Uses Docker with the rkneills/curaengine image. Injects BBL P1S
-    start/end G-code via Jinja2 templates.
+    Uses the estampo/curaengine Docker image (CuraEngine 5.12.0 extracted
+    from the UltiMaker Cura AppImage). Injects BBL P1S start/end G-code
+    via Jinja2 templates.
 
     Args:
         stl_path: Path to the input STL file.
@@ -316,35 +163,28 @@ def slice_stl(
 
     output_gcode = output_dir / (stl_path.stem + ".gcode")
 
-    # Render BBL start/end G-code
+    # Render BBL start/end G-code and pass as -s overrides
     start_gcode, end_gcode = _render_bbl_gcode(profile)
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = Path(tmpdir)
 
-        # Write definitions
-        extruder_def = _build_extruder_def(profile)
-        extruder_path = tmp / "bambu_p1s_extruder_0.def.json"
-        extruder_path.write_text(json.dumps(extruder_def, indent=2))
-
-        printer_def = _build_printer_def(profile, start_gcode, end_gcode, "bambu_p1s_extruder_0")
-        printer_path = tmp / "bambu_p1s.def.json"
-        printer_path.write_text(json.dumps(printer_def, indent=2))
-
-        # Download fdmprinter.def.json
-        fdm_path = tmp / "fdmprinter.def.json"
-        _ensure_fdmprinter(fdm_path)
-
-        # Build baked Docker image (bind mounts don't work in all envs)
-        dockerfile = tmp / "Dockerfile"
-        dockerfile.write_text(
-            f"FROM {DOCKER_IMAGE}\nCOPY . /opt/defs/\nCOPY {stl_path.name} /tmp/input.stl\n"
-        )
-
-        # Copy STL into build context
+        # Copy STL into build context and build a thin layer on top of
+        # the base image (bind mounts don't work in all environments).
         shutil.copy2(stl_path, tmp / stl_path.name)
 
-        # Build
+        # Write start/end gcode to files (they're too large for -s flags)
+        (tmp / "start.gcode").write_text(start_gcode)
+        (tmp / "end.gcode").write_text(end_gcode)
+
+        dockerfile = tmp / "Dockerfile"
+        dockerfile.write_text(
+            f"FROM {DOCKER_IMAGE}\n"
+            f"COPY {stl_path.name} /tmp/input.stl\n"
+            f"COPY start.gcode /tmp/start.gcode\n"
+            f"COPY end.gcode /tmp/end.gcode\n"
+        )
+
         tag = "estampo-cura-tmp"
         build_cmd = ["docker", "build", "-t", tag, str(tmp)]
         log.info("Building CuraEngine Docker image")
@@ -352,7 +192,22 @@ def slice_stl(
         if build_result.returncode != 0:
             raise EstampoError(f"Docker build failed:\n{build_result.stderr[:500]}")
 
-        # Slice — redirect stderr to /dev/null to keep only gcode on stdout
+        # Build the slice command. Start/end gcode are read from files
+        # and passed via -s since CuraEngine doesn't support file references.
+        settings = _settings_flags(profile)
+        inner_cmd = (
+            "START=$(cat /tmp/start.gcode) && "
+            "END=$(cat /tmp/end.gcode) && "
+            f"{CURAENGINE_BIN} slice "
+            f"-j {_DEFS_DIR}/fdmprinter.def.json "
+            f"-o /tmp/output.gcode "
+            + " ".join(f'"{s}"' for s in settings)
+            + ' -s "machine_start_gcode=$START" '
+            + '-s "machine_end_gcode=$END" '
+            + "-l /tmp/input.stl 2>/dev/null "
+            + "&& cat /tmp/output.gcode"
+        )
+
         slice_cmd = [
             "docker",
             "run",
@@ -361,26 +216,12 @@ def slice_stl(
             "/bin/bash",
             tag,
             "-c",
-            " ".join(
-                [
-                    CURAENGINE_BIN,
-                    "slice",
-                    "-j",
-                    f"{_DEFS_DIR}/bambu_p1s.def.json",
-                    "-o",
-                    "/tmp/output.gcode",
-                    *_settings_flags(profile),
-                    "-l",
-                    "/tmp/input.stl",
-                    "2>/dev/null",
-                    "&& cat /tmp/output.gcode",
-                ]
-            ),
+            inner_cmd,
         ]
 
         from estampo import ui
 
-        log.info("Slicing with CuraEngine")
+        log.info("Slicing with CuraEngine %s", CURAENGINE_VERSION)
         with ui.status("Slicing (CuraEngine)"):
             slice_result = subprocess.run(slice_cmd, capture_output=True, timeout=300)
 
