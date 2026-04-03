@@ -18,20 +18,22 @@ CuraEngine exists alongside OrcaSlicer.
 
 ## High — init is OrcaSlicer-only
 
-- [ ] **Wizard hardcodes engine** (`src/estampo/init.py:1074`)
-  `engine = "orca"` — no engine choice offered in interactive wizard.
+- [x] **Wizard hardcodes engine** (`src/estampo/init.py:1074`)
+  Wizard now prompts user to choose OrcaSlicer or CuraEngine.
+  CuraEngine path skips OrcaSlicer-specific profile discovery.
 
-- [ ] **Version detection OrcaSlicer-only** (`src/estampo/init.py:513-591`)
-  `_detect_orca_version()` with no CuraEngine equivalent.
-  `_prompt_slicer_version()` only mentions OrcaSlicer.
+- [x] **Version detection OrcaSlicer-only** (`src/estampo/init.py:513-591`)
+  `_wizard_pick_slicer_version()` now handles both engines.
+  CuraEngine prompts with `CURAENGINE_VERSION` default.
 
 - [ ] **3MF extraction OrcaSlicer-only** (`src/estampo/init.py:1326-1365`)
   Reads `Metadata/project_settings.config` (OrcaSlicer format).
   Error message: "open it in OrcaSlicer and re-save".
   CuraEngine 3MFs have different internal structure.
 
-- [ ] **TOML template hardcodes orca** (`src/estampo/init.py:31`)
-  Generated config always writes `engine = "orca"`.
+- [x] **TOML template hardcodes orca** (`src/estampo/init.py:31`)
+  Template comment now documents both engines: `"orca" or "cura"`.
+  Engine value set from wizard choice.
 
 ## Medium — profile system is OrcaSlicer-only
 
