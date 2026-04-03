@@ -30,7 +30,7 @@ def test_find_orca():
 
 def test_find_unknown():
     with pytest.raises(ValueError, match="Unknown slicer"):
-        find_slicer("cura")
+        find_slicer("nonexistent")
 
 
 def test_find_slicer_path_fallback():

@@ -27,15 +27,18 @@ def _slicer_paths() -> dict[str, Path]:
     if sys.platform == "darwin":
         return {
             "orca": Path("/Applications/OrcaSlicer.app/Contents/MacOS/OrcaSlicer"),
+            "cura": Path("/Applications/UltiMaker Cura.app/Contents/MacOS/CuraEngine"),
         }
     elif sys.platform == "win32":
         pf = Path("C:/Program Files")
         return {
             "orca": pf / "OrcaSlicer/orca-slicer.exe",
+            "cura": pf / "UltiMaker Cura/CuraEngine.exe",
         }
     else:  # Linux and other Unix
         return {
             "orca": Path("/usr/bin/orca-slicer"),
+            "cura": Path("/usr/local/bin/CuraEngine"),
         }
 
 
@@ -63,7 +66,11 @@ def find_slicer(engine: str) -> Path:
         return path
 
     # Fall back to PATH lookup (handles AppImage, Flatpak, AUR, custom installs)
-    for name in ("orca-slicer", "OrcaSlicer", "OrcaSlicer.AppImage"):
+    path_names = {
+        "orca": ("orca-slicer", "OrcaSlicer", "OrcaSlicer.AppImage"),
+        "cura": ("CuraEngine", "curaengine"),
+    }
+    for name in path_names.get(engine, ()):
         found = shutil.which(name)
         if found:
             return Path(found)

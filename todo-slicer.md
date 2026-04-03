@@ -50,10 +50,8 @@ CuraEngine exists alongside OrcaSlicer.
 
 ## Medium — local fallback won't work
 
-- [ ] **`find_slicer()` OrcaSlicer-only** (`src/estampo/slicer.py:29-71`)
-  `SLICER_PATHS` only has `"orca"` entries. Executable names only include
-  `orca-slicer`, `OrcaSlicer`, `OrcaSlicer.AppImage`.
-  CuraEngine local fallback (when Docker is unavailable) doesn't exist.
+- [x] **`find_slicer()` OrcaSlicer-only** (`src/estampo/slicer.py:29-71`)
+  Now includes CuraEngine paths and PATH lookup names for all platforms.
 
 - [x] **Docker fallback messages** (`src/estampo/slicer.py`)
   Error messages now reference the engine being used and the specific
