@@ -188,11 +188,14 @@ def test_docker_image_versioned():
 
 
 def test_docker_image_tag_consistency():
-    """All hardcoded Docker image tags in the repo must match docker_image()."""
+    """All hardcoded Docker image tags must match docker_image() / cura_docker_image()."""
     import re
 
+    from estampo.cura import cura_docker_image
+
     repo_root = Path(__file__).parent.parent
-    tag_pattern = re.compile(r"estampo/estampo:orca-(\S+)")
+    orca_pattern = re.compile(r"estampo/estampo:orca-(\S+)")
+    cura_pattern = re.compile(r"estampo/estampo:cura-(\S+)")
     # Files that construct the tag dynamically (variable interpolation) — skip them
     skip = {
         "scripts/build-docker.sh",
@@ -212,12 +215,20 @@ def test_docker_image_tag_consistency():
             text = path.read_text(errors="ignore")
         except Exception:
             continue
-        for match in tag_pattern.finditer(text):
+        for match in orca_pattern.finditer(text):
             version = match.group(1)
             # Skip template/variable patterns
             if "$" in version or "{" in version or "<" in version:
                 continue
             expected = docker_image(version)
+            actual = match.group(0)
+            if actual != expected:
+                errors.append(f"{rel}: found '{actual}', expected '{expected}'")
+        for match in cura_pattern.finditer(text):
+            version = match.group(1)
+            if "$" in version or "{" in version or "<" in version:
+                continue
+            expected = cura_docker_image(version)
             actual = match.group(0)
             if actual != expected:
                 errors.append(f"{rel}: found '{actual}', expected '{expected}'")
