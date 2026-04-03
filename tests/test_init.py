@@ -672,6 +672,7 @@ class TestWizard:
         _mock_ui_inputs(
             monkeypatch,
             [
+                "1",  # Engine choice (OrcaSlicer)
                 "my-project",  # Project name
                 "1",  # Select files
                 "1",  # copies
@@ -716,6 +717,7 @@ class TestWizard:
         _mock_ui_inputs(
             monkeypatch,
             [
+                "1",  # Engine choice (OrcaSlicer)
                 "",  # Project name (use default)
                 "my-part.stl",  # Part file path
                 "n",  # Connect a printer? -> no

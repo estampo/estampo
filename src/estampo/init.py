@@ -28,8 +28,8 @@ size = [256, 256]       # bed size in mm [x, y]
 padding = 5.0           # gap between parts in mm
 
 [slicer]
-engine = "orca"
-# version = "2.3.1"                        # pin OrcaSlicer version for reproducibility
+engine = "orca"                            # "orca" (OrcaSlicer) or "cura" (CuraEngine)
+# version = "2.3.1"                        # pin slicer version for reproducibility
 printer = "Bambu Lab P1S 0.4 nozzle"       # machine profile name
 process = "0.20mm Standard @BBL X1C"       # process/quality profile
 filaments = ["Generic PLA @base"]          # filament profiles (one per AMS slot)
@@ -579,7 +579,7 @@ def _prompt_slicer_version() -> str | None:
         idx = pick - 1
         if 0 <= idx < len(available):
             version = available[idx]
-            ui.success(f"OrcaSlicer {version}")
+            ui.success(f"OrcaSlicer v{version}")
             return version
         return None
 
@@ -1015,7 +1015,7 @@ def _wizard_pick_plate(machine_info: _MachineInfo) -> tuple[int, int]:
     return plate_x, plate_y
 
 
-def _wizard_pick_slicer_version() -> str | None:
+def _wizard_pick_slicer_version(engine: str = "orca") -> str | None:
     """Pick slicer version to pin.
 
     Returns the version string, or ``None`` if skipped.
@@ -1023,6 +1023,16 @@ def _wizard_pick_slicer_version() -> str | None:
     from estampo import ui
 
     ui.heading("Slicer Version")
+    if engine == "cura":
+        from estampo.cura import CURAENGINE_VERSION
+
+        version = _prompt_str(
+            f"CuraEngine version to pin (default: {CURAENGINE_VERSION})",
+            CURAENGINE_VERSION,
+        )
+        ui.console.print()
+        return version or None
+
     slicer_version = _prompt_slicer_version()
     ui.console.print()
 
@@ -1071,11 +1081,33 @@ def run_wizard(output: Path | None = None) -> str:
     ui.heading("estampo init")
     ui.console.print()
 
-    engine = "orca"
+    # --- Engine choice ---
+    existing_engine = None
+    dest = output or Path("estampo.toml")
+    existing_pre = _load_existing(dest)
+    if existing_pre and hasattr(existing_pre, "engine"):
+        existing_engine = existing_pre.engine
+
+    engines = ["orca", "cura"]
+    engine_labels = {"orca": "OrcaSlicer", "cura": "CuraEngine"}
+    default_engine = existing_engine or "orca"
+    default_idx = engines.index(default_engine) + 1 if default_engine in engines else 1
+    ui.info("Select slicer engine:")
+    for i, eng in enumerate(engines, 1):
+        marker = " ←" if eng == existing_engine else ""
+        ui.info(f"  {i}. {engine_labels[eng]}{marker}")
+    engine_pick = _prompt_str(
+        f"Pick engine (default: {engine_labels[default_engine]})", str(default_idx)
+    ).strip()
+    if engine_pick.isdigit() and 1 <= int(engine_pick) <= len(engines):
+        engine = engines[int(engine_pick) - 1]
+    else:
+        engine = default_engine
+    ui.info(f"  → {engine_labels[engine]}")
+    ui.console.print()
 
     # --- Load existing config for pre-population ---
-    dest = output or Path("estampo.toml")
-    existing = _load_existing(dest)
+    existing = existing_pre
     if existing:
         ui.info(f"Found existing {dest.name} — values shown as defaults")
         ui.console.print()
@@ -1106,21 +1138,29 @@ def run_wizard(output: Path | None = None) -> str:
         ams_future = _ams_pool.submit(_query_ams_trays, configured)
 
     # --- Discover profiles (needed for picker and machine info) ---
-    profiles, profile_source = discover_profile_names(engine)
-    if profile_source == "bundled":
-        ui.info("Using bundled profile list — install OrcaSlicer locally for full access")
-        ui.console.print()
-    elif profile_source == "none":
-        ui.warn("No profiles found — profile names will need to be entered manually")
-        ui.console.print()
+    if engine == "cura":
+        # CuraEngine uses inline CuraProfile defaults — no profile chain
+        profiles: dict[str, list[str]] = {}
+        printer_profile = None
+        process_profile = None
+        machine_info = _MachineInfo()
+        plate_x, plate_y = _wizard_pick_plate(machine_info)
+    else:
+        profiles, profile_source = discover_profile_names(engine)
+        if profile_source == "bundled":
+            ui.info("Using bundled profile list — install the slicer locally for full access")
+            ui.console.print()
+        elif profile_source == "none":
+            ui.warn("No profiles found — profile names will need to be entered manually")
+            ui.console.print()
 
-    # --- Step 4: Plate size ---
-    # Pick printer profile first to auto-detect plate size from machine info
-    printer_profile, process_profile, machine_info = _wizard_pick_profiles(engine, profiles)
-    plate_x, plate_y = _wizard_pick_plate(machine_info)
+        # --- Step 4: Plate size ---
+        # Pick printer profile first to auto-detect plate size from machine info
+        printer_profile, process_profile, machine_info = _wizard_pick_profiles(engine, profiles)
+        plate_x, plate_y = _wizard_pick_plate(machine_info)
 
     # --- Step 5: Slicer version ---
-    slicer_version = _wizard_pick_slicer_version()
+    slicer_version = _wizard_pick_slicer_version(engine)
 
     # --- Step 6: Filaments (AMS auto-detect or manual) ---
     ams_trays: list[dict] = []
