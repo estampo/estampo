@@ -304,6 +304,7 @@ def _resolve_profiles(
     profiles_dir: str = "profiles",
     docker_profile_dir: Path | None = None,
     bed_type: str | None = None,
+    filament_overrides: dict[str, object] | None = None,
 ) -> tuple[str | None, str | None]:
     """Resolve and flatten all profiles into tmp_dir.
 
@@ -347,6 +348,8 @@ def _resolve_profiles(
                 data = resolve_profile_data(
                     f, engine, "filament", project_dir, profiles_dir, docker_profile_dir
                 )
+                if filament_overrides:
+                    data = _apply_overrides(data, filament_overrides, f)
                 path = _write_tmp_profile(data, tmp_dir, f"filament_{i}")
                 resolved.append(str(path))
                 if first_path is None:
@@ -536,6 +539,7 @@ def slice_plate(
     filament_ids: list[int] | None = None,
     overrides: dict[str, object] | None = None,
     machine_overrides: dict[str, object] | None = None,
+    filament_overrides: dict[str, object] | None = None,
     project_dir: Path | None = None,
     local: bool = False,
     docker_version: str | None = None,
@@ -548,6 +552,7 @@ def slice_plate(
     Profile names are resolved via profiles.resolve_profile_data().
     If overrides are provided, they are patched into the process profile.
     If machine_overrides are provided, they are patched into the machine profile.
+    If filament_overrides are provided, they are patched into every filament profile.
 
     Slicer selection:
       local=True           - force local slicer, fail if not installed
@@ -699,6 +704,7 @@ def slice_plate(
             profiles_dir,
             docker_profile_dir,
             bed_type,
+            filament_overrides,
         )
 
         if use_docker:
