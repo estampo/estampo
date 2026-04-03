@@ -37,15 +37,13 @@ CuraEngine exists alongside OrcaSlicer.
 
 ## Medium — profile system is OrcaSlicer-only
 
-- [ ] **Profile system paths** (`src/estampo/profiles.py:25-35,166`)
-  System directories (macOS/Windows/Linux) and Docker path
-  (`/opt/orca-slicer/resources/profiles/BBL`) only defined for OrcaSlicer.
-  CuraEngine uses inline `CuraProfile` defaults — no equivalent profile
-  discovery needed today, but error messages should not suggest installing
-  OrcaSlicer.
+- [x] **Profile system paths** (`src/estampo/profiles.py:25-35,166`)
+  `discover_profiles("cura")` now returns empty dicts instead of raising.
+  Error messages no longer suggest installing OrcaSlicer specifically.
 
-- [ ] **`profiles list` defaults to orca** (`src/estampo/cli.py:780`)
-  Should be engine-aware or require explicit engine flag.
+- [x] **`profiles list` defaults to orca** (`src/estampo/cli.py:780`)
+  `profiles list --engine cura` now prints a clear message that CuraEngine
+  uses inline settings and has no extractable profiles.
 
 - [x] **Profile error messages** (`src/estampo/profiles.py:198`)
   Now says "Check your Docker setup or install the slicer locally."

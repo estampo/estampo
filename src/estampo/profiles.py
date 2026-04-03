@@ -44,14 +44,22 @@ def _is_path(value: str) -> bool:
     return "/" in value or "\\" in value
 
 
+# Engines that use inline settings and have no extractable profile chain.
+_INLINE_ENGINES = frozenset({"cura"})
+
+
 def discover_profiles(engine: str) -> dict[str, dict[str, Path]]:
     """Scan system directories for available profiles.
 
     Returns {"machine": {"Name": Path, ...}, "process": {...}, "filament": {...}}
     """
+    if engine in _INLINE_ENGINES:
+        return {cat: {} for cat in CATEGORIES}
+
     base = SYSTEM_DIRS.get(engine)
     if base is None:
-        raise ValueError(f"Unknown engine: '{engine}'. Supported: {list(SYSTEM_DIRS)}")
+        supported = sorted({*SYSTEM_DIRS, *_INLINE_ENGINES})
+        raise ValueError(f"Unknown engine: '{engine}'. Supported: {supported}")
 
     # Expected JSON "type" field for each category.
     # machine_model profiles (e.g. "Bambu Lab P1S") define the printer
@@ -524,7 +532,7 @@ def pin_profiles(
                 if not docker_version:
                     raise EstampoError(
                         f"Profile '{name}' not found locally. Set slicer.version in "
-                        "your config or install OrcaSlicer to access profiles."
+                        "your config or install the slicer locally to access profiles."
                     )
                 raise
 

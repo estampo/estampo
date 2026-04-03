@@ -785,7 +785,15 @@ def profiles_list(
 ) -> None:
     """List available profiles."""
     _setup_logging(verbose)
-    from estampo.profiles import CATEGORIES, discover_profiles
+    from estampo.profiles import (
+        _INLINE_ENGINES,
+        CATEGORIES,
+        discover_profiles,
+    )
+
+    if engine in _INLINE_ENGINES:
+        print(f"Engine '{engine}' uses inline settings — no extractable profiles.")
+        raise typer.Exit(0)
 
     profiles = discover_profiles(engine)
     categories = [category] if category else list(CATEGORIES)
@@ -803,7 +811,7 @@ def profiles_pin(
 ) -> None:
     """Pin profiles from config into local profiles/ dir.
 
-    Extracts profiles from Docker if OrcaSlicer is not installed locally.
+    Extracts profiles from Docker if the slicer is not installed locally.
     """
     _setup_logging(verbose)
     import tomllib
