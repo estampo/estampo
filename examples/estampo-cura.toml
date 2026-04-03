@@ -1,0 +1,20 @@
+[pipeline]
+stages = ["load", "arrange", "plate", "slice"]
+
+[plate]
+size = [256, 256]
+padding = 5.0
+
+[slicer]
+engine = "cura"
+version = "5.12.0"
+bed_type = "Textured PEI Plate"
+
+[slicer.filaments]
+default = "PETG-CF"
+
+[[parts]]
+file = "../tests/fixtures/cube_10mm.stl"
+copies = 2
+orient = "flat"
+filament = "default"
