@@ -78,14 +78,35 @@ def _write_tmp_profile(data: dict, tmp_dir: Path, name: str) -> Path:
     return path
 
 
+def _extruder_count(data: dict) -> int | None:
+    """Infer the number of extruders from existing array-valued fields.
+
+    OrcaSlicer machine profiles store per-extruder settings as JSON arrays
+    (e.g. ``nozzle_type``, ``retraction_length``).  When the profile was
+    resolved through inheritance the target field might still be a scalar
+    even though the slicer expects an array.  We look at *other* fields to
+    detect the expected array length so overrides can be broadcast correctly.
+    """
+    for v in data.values():
+        if isinstance(v, list) and len(v) == 2:
+            return 2
+    return None
+
+
 def _apply_overrides(data: dict, overrides: dict[str, object], name: str) -> dict:
     """Apply overrides to resolved profile data, returning the modified dict."""
+    n_extruders = _extruder_count(data)
     applied = []
     for key, value in overrides.items():
         old = data.get(key, "<unset>")
         # If the existing value is a list, broadcast the scalar to all elements
         if isinstance(old, list) and not isinstance(value, list):
             data[key] = [str(value)] * len(old)
+        elif n_extruders and not isinstance(value, list):
+            # The profile contains per-extruder arrays (e.g. 2-element) but
+            # this field is still a scalar (from inheritance).  Broadcast the
+            # override to match the expected array length.
+            data[key] = [str(value)] * n_extruders
         else:
             # Slicer profiles store all values as strings
             data[key] = str(value)
