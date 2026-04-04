@@ -595,6 +595,8 @@ def slice_plate(
 
         # Convert plate 3MF to STL for CuraEngine (which only accepts STL).
         # The 3MF contains geometry in XML format (3D/3dmodel.model), not STL.
+        # Ensure mesh sits on the bed (Z≥0) — CuraEngine discards geometry
+        # below Z=0, which would silently slice only part of the model.
         import trimesh
 
         scene = trimesh.load(str(input_3mf))
@@ -602,6 +604,9 @@ def slice_plate(
             mesh = scene.to_geometry()
         else:
             mesh = scene
+        z_min = float(mesh.bounds[0][2])  # type: ignore[attr-defined]
+        if z_min < 0:
+            mesh.vertices[:, 2] -= z_min  # type: ignore[attr-defined]
         stl_path = output_dir / (input_3mf.stem + ".stl")
         mesh.export(str(stl_path), file_type="stl")
 

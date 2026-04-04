@@ -127,7 +127,7 @@ def _patch_gcode_header(gcode_path: Path, stderr: str) -> None:
     not be needed, but we keep it as a fallback.
     """
     m = re.search(
-        r"Gcode header after slicing:\s*(;FLAVOR:.*?;TARGET_MACHINE\.NAME:\S+)",
+        r"Gcode header after slicing:\s*(;FLAVOR:.*?;TARGET_MACHINE\.NAME:.+)",
         stderr,
         re.DOTALL,
     )
@@ -139,7 +139,7 @@ def _patch_gcode_header(gcode_path: Path, stderr: str) -> None:
 
     text = gcode_path.read_text()
     patched = re.sub(
-        r";FLAVOR:.*?;TARGET_MACHINE\.NAME:\S+\n",
+        r";FLAVOR:.*?;TARGET_MACHINE\.NAME:[^\n]+\n",
         real_header,
         text,
         count=1,
@@ -150,6 +150,94 @@ def _patch_gcode_header(gcode_path: Path, stderr: str) -> None:
         log.info("Patched G-code header with real values from CuraEngine stderr")
     else:
         log.debug("G-code header patch had no effect")
+
+
+def _place_on_bed(stl_path: Path, staging_dir: Path) -> Path:
+    """Copy STL into staging, ensuring the mesh sits on the bed (Z≥0).
+
+    CuraEngine only slices geometry above Z=0.  If the mesh minimum Z
+    is negative (common for origin-centered models), shift it up so
+    the lowest vertex touches Z=0.
+    """
+    import trimesh
+
+    mesh: trimesh.Trimesh = trimesh.load(str(stl_path), force="mesh")  # type: ignore[assignment]
+    z_min = float(mesh.bounds[0][2])
+    if z_min < 0:
+        mesh.vertices[:, 2] -= z_min
+        log.info("Shifted mesh up by %.2fmm to place on bed", -z_min)
+    out = staging_dir / stl_path.name
+    mesh.export(str(out), file_type="stl")
+    return out
+
+
+def _substitute_gcode_templates(gcode_path: Path, profile: CuraProfile) -> None:
+    """Replace OrcaSlicer-style ``{variable}`` placeholders in G-code.
+
+    CuraEngine emits start/end G-code verbatim from the machine
+    definition — it does not resolve ``{material_bed_temperature_layer_0}``
+    and similar template variables.  This function substitutes them with
+    values from the profile.
+    """
+    text = gcode_path.read_text()
+
+    replacements = {
+        "material_bed_temperature_layer_0": str(profile.material_bed_temperature),
+        "material_bed_temperature": str(profile.material_bed_temperature),
+        "material_print_temperature_layer_0": str(profile.material_print_temperature),
+        "material_print_temperature": str(profile.material_print_temperature),
+    }
+
+    changed = False
+    for key, value in replacements.items():
+        # Simple {key} replacement
+        placeholder = "{" + key + "}"
+        if placeholder in text:
+            text = text.replace(placeholder, value)
+            changed = True
+
+    # Handle expressions like {material_print_temperature_layer_0 - 20}
+    def _eval_expr(m: re.Match[str]) -> str:
+        expr = m.group(1).strip()
+        for k, v in replacements.items():
+            expr = expr.replace(k, v)
+        try:
+            return str(int(eval(expr)))  # noqa: S307
+        except Exception:
+            return m.group(0)
+
+    text, n = re.subn(r"\{([^}]*\b(?:material_\w+)\b[^}]*)\}", _eval_expr, text)
+    if n > 0:
+        changed = True
+
+    # Handle conditionals: {if condition}...{endif}
+    # Simple approach: evaluate the condition and keep/remove the block
+    def _eval_conditional(m: re.Match[str]) -> str:
+        condition = m.group(1).strip()
+        body = m.group(2)
+        # Replace known variables in condition
+        cond_eval = condition
+        cond_eval = cond_eval.replace(
+            "machine_buildplate_type",
+            repr(profile.bed_type.lower().replace(" ", "_")),
+        )
+        try:
+            if eval(cond_eval):  # noqa: S307
+                return body
+        except Exception:
+            pass
+        return ""
+
+    text, n_cond = re.subn(
+        r"\{if\s+([^}]+)\}(.*?)\{endif\}",
+        _eval_conditional,
+        text,
+        flags=re.DOTALL,
+    )
+
+    if changed or n > 0 or n_cond > 0:
+        gcode_path.write_text(text)
+        log.info("Substituted template variables in G-code")
 
 
 def slice_stl(
@@ -190,12 +278,14 @@ def slice_stl(
     for def_name in _BBL_DEFS:
         shutil.copy2(_bundled_def_path(def_name), staging / def_name)
 
-    # Copy STL into staging so it's accessible via volume mount
-    shutil.copy2(stl_path, staging / stl_path.name)
+    # Place mesh on the build plate (Z≥0) before slicing.  STL files
+    # centered at origin (e.g. Z from -5 to +5) would lose the bottom
+    # half because CuraEngine only slices above Z=0.
+    staged_stl = _place_on_bed(stl_path, staging)
 
     # Container paths (output_dir mounted at /work/output)
     c_staging = "/work/output/.cura-staging"
-    c_stl = f"{c_staging}/{stl_path.name}"
+    c_stl = f"{c_staging}/{staged_stl.name}"
     c_output = "/work/output/" + stl_path.stem + ".gcode"
 
     # Build the CuraEngine command.
@@ -250,6 +340,7 @@ def slice_stl(
         raise EstampoError(f"CuraEngine produced no output:\n{combined[:500]}")
 
     _patch_gcode_header(output_gcode, result.stderr)
+    _substitute_gcode_templates(output_gcode, profile)
 
     log.info("CuraEngine output: %s (%d bytes)", output_gcode, output_gcode.stat().st_size)
     return output_dir

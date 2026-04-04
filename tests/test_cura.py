@@ -8,7 +8,9 @@ from estampo import EstampoError
 from estampo.cura import (
     CuraProfile,
     _patch_gcode_header,
+    _place_on_bed,
     _settings_flags,
+    _substitute_gcode_templates,
     cura_docker_image,
     cura_profile_from_config,
     slice_stl,
@@ -196,8 +198,11 @@ def test_bundled_definitions_exist():
 
 def test_slice_stl_docker_command(tmp_path):
     """Verify Docker command is built correctly."""
+    import trimesh
+
+    mesh = trimesh.creation.box(extents=[10, 10, 10])
     stl = tmp_path / "model.stl"
-    stl.write_text("solid cube")
+    mesh.export(str(stl))
     output_dir = tmp_path / "output"
     output_dir.mkdir()
 
@@ -233,8 +238,11 @@ def test_slice_stl_docker_command(tmp_path):
 
 def test_slice_stl_docker_failure(tmp_path):
     """Docker failure raises EstampoError."""
+    import trimesh
+
+    mesh = trimesh.creation.box(extents=[10, 10, 10])
     stl = tmp_path / "model.stl"
-    stl.write_text("solid cube")
+    mesh.export(str(stl))
     output_dir = tmp_path / "output"
     output_dir.mkdir()
 
@@ -250,8 +258,11 @@ def test_slice_stl_docker_failure(tmp_path):
 
 def test_slice_stl_no_output(tmp_path):
     """Success but empty/missing gcode file raises EstampoError."""
+    import trimesh
+
+    mesh = trimesh.creation.box(extents=[10, 10, 10])
     stl = tmp_path / "model.stl"
-    stl.write_text("solid cube")
+    mesh.export(str(stl))
     output_dir = tmp_path / "output"
     output_dir.mkdir()
 
@@ -345,4 +356,106 @@ def test_patch_gcode_header_no_match(tmp_path):
     original = ";FLAVOR:Marlin\n;TIME:6666\n;Filament used: 0m\n;TARGET_MACHINE.NAME:X\nG28\n"
     gcode.write_text(original)
     _patch_gcode_header(gcode, "some random stderr output")
+    assert gcode.read_text() == original
+
+
+# --- _place_on_bed ---
+
+
+def test_place_on_bed_shifts_negative_z(tmp_path):
+    """Mesh centered at origin (Z from -5 to +5) is shifted to Z≥0."""
+    import trimesh
+
+    mesh = trimesh.creation.box(extents=[10, 10, 10])
+    assert mesh.bounds[0][2] == pytest.approx(-5.0)
+
+    stl = tmp_path / "centered.stl"
+    mesh.export(str(stl))
+
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    result = _place_on_bed(stl, staging)
+
+    placed = trimesh.load(str(result), force="mesh")
+    assert placed.bounds[0][2] == pytest.approx(0.0)
+    assert placed.bounds[1][2] == pytest.approx(10.0)
+
+
+def test_place_on_bed_already_on_bed(tmp_path):
+    """Mesh already on the bed (Z≥0) is not shifted."""
+    import trimesh
+
+    mesh = trimesh.creation.box(extents=[10, 10, 10])
+    mesh.vertices[:, 2] += 5  # shift so Z goes from 0 to 10
+
+    stl = tmp_path / "on_bed.stl"
+    mesh.export(str(stl))
+
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    result = _place_on_bed(stl, staging)
+
+    placed = trimesh.load(str(result), force="mesh")
+    assert placed.bounds[0][2] == pytest.approx(0.0)
+    assert placed.bounds[1][2] == pytest.approx(10.0)
+
+
+# --- _substitute_gcode_templates ---
+
+
+def test_substitute_simple_variables(tmp_path):
+    """Simple {variable} placeholders are replaced with profile values."""
+    gcode = tmp_path / "test.gcode"
+    gcode.write_text(
+        "M140 S{material_bed_temperature_layer_0}\n"
+        "M190 S{material_bed_temperature_layer_0}\n"
+        "M104 S{material_print_temperature_layer_0}\n"
+        "M109 S{material_print_temperature_layer_0}\n"
+        "G1 X0 Y0\n"
+    )
+    profile = CuraProfile(material_print_temperature=260, material_bed_temperature=70)
+    _substitute_gcode_templates(gcode, profile)
+    text = gcode.read_text()
+    assert "M140 S70" in text
+    assert "M190 S70" in text
+    assert "M104 S260" in text
+    assert "M109 S260" in text
+    assert "{material_" not in text
+
+
+def test_substitute_expression(tmp_path):
+    """Expressions like {temp - 20} are evaluated."""
+    gcode = tmp_path / "test.gcode"
+    gcode.write_text("M109 S{material_print_temperature_layer_0 - 20}\n")
+    profile = CuraProfile(material_print_temperature=260)
+    _substitute_gcode_templates(gcode, profile)
+    text = gcode.read_text()
+    assert "M109 S240" in text
+
+
+def test_substitute_conditional(tmp_path):
+    """Conditionals like {if condition}...{endif} are evaluated."""
+    gcode = tmp_path / "test.gcode"
+    gcode.write_text(
+        "G28\n"
+        "{if machine_buildplate_type=='textured_pei_plate'}"
+        "M1002 set_flag bed_type textured\n"
+        "{endif}"
+        "G29\n"
+    )
+    profile = CuraProfile(bed_type="Textured PEI Plate")
+    _substitute_gcode_templates(gcode, profile)
+    text = gcode.read_text()
+    assert "M1002 set_flag bed_type textured" in text
+    assert "{if" not in text
+    assert "{endif}" not in text
+
+
+def test_substitute_no_change(tmp_path):
+    """G-code without template variables is unchanged."""
+    gcode = tmp_path / "test.gcode"
+    original = "G28\nG1 X0 Y0 Z0.2\nG1 E5 F300\n"
+    gcode.write_text(original)
+    profile = CuraProfile()
+    _substitute_gcode_templates(gcode, profile)
     assert gcode.read_text() == original
