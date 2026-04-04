@@ -23,32 +23,37 @@ _E_VALUE_RE = re.compile(r"E([\d.]+)")
 
 
 def _max_e_value(lines: list[str]) -> float:
-    """Find the maximum E value in G-code (absolute extrusion mode).
+    """Compute total filament extruded in mm from G-code E moves.
 
-    Scans for ``G1 ... E<value>`` moves, tracking ``G92 E0`` resets.
-    Returns total mm of filament extruded.  Falls back to 0 if the
-    gcode uses relative extrusion (``M83``).
+    Handles both absolute (M82) and relative (M83) extrusion modes.
+    For absolute mode, tracks the running max E, accumulating across G92 resets.
+    For relative mode, sums all positive E values (ignores retracts).
     """
     total = 0.0
     max_e = 0.0
     relative = False
     for line in lines:
         stripped = line.strip()
-        if stripped == "M83":
+        if stripped.startswith("M83"):
             relative = True
-        elif stripped == "M82":
+        elif stripped.startswith("M82"):
             relative = False
         elif stripped.startswith("G92"):
-            if m := _E_VALUE_RE.search(stripped):
-                # E reset — accumulate what we had and restart
+            if not relative and (m := _E_VALUE_RE.search(stripped)):
+                # Absolute mode E reset — accumulate what we had and restart
                 total += max_e
                 max_e = float(m.group(1))
-        elif not relative and stripped.startswith("G1"):
+        elif stripped.startswith("G1"):
             if m := _E_VALUE_RE.search(stripped):
                 e = float(m.group(1))
-                if e > max_e:
-                    max_e = e
-    total += max_e
+                if relative:
+                    if e > 0:
+                        total += e
+                else:
+                    if e > max_e:
+                        max_e = e
+    if not relative:
+        total += max_e
     return total
 
 
@@ -109,12 +114,12 @@ def parse_gcode_metadata(gcode_path: Path) -> dict[str, str | float | int]:
     for line in lines[-GCODE_TAIL_LINES:]:
         if m := re.match(r";\s*total filament used \[g\]\s*=\s*([\d.]+)", line):
             filament_g_total = float(m.group(1))
-        elif m := re.match(r";\s*filament used \[g\]\s*=\s*([\d.]+)", line):
-            filament_g_slots.append(float(m.group(1)))
+        elif m := re.match(r";\s*filament used \[g\]\s*=\s*(.+)", line):
+            filament_g_slots.extend(float(v) for v in m.group(1).split(","))
         elif m := re.match(r";\s*total filament used \[cm3\]\s*=\s*([\d.]+)", line):
             filament_cm3_total = float(m.group(1))
-        elif m := re.match(r";\s*filament used \[cm3\]\s*=\s*([\d.]+)", line):
-            filament_cm3_slots.append(float(m.group(1)))
+        elif m := re.match(r";\s*filament used \[cm3\]\s*=\s*(.+)", line):
+            filament_cm3_slots.extend(float(v) for v in m.group(1).split(","))
     # Only override CuraEngine stats if OrcaSlicer stats were found
     g = filament_g_total if filament_g_total is not None else sum(filament_g_slots)
     cm3 = filament_cm3_total if filament_cm3_total is not None else sum(filament_cm3_slots)

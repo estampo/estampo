@@ -853,7 +853,7 @@ def parse_gcode_stats(output_dir: Path) -> dict[str, str | float | int]:
     Finds the first .gcode file and delegates to gcode.parse_gcode_metadata().
     Returns dict with 'filament_g' and/or 'filament_cm3' and/or 'print_time'.
     """
-    gcode_files = list(output_dir.glob("*.gcode"))
+    gcode_files = sorted(output_dir.glob("*.gcode"), key=lambda p: p.stat().st_mtime, reverse=True)
     if not gcode_files:
         return {}
 

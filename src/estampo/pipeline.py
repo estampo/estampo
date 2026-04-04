@@ -438,7 +438,9 @@ def gcode_stats(packaged_output: Path) -> dict:
     stats: dict = dict(parse_gcode_stats(packaged_output))
 
     # Enrich with layer/filament analysis
-    gcode_files = list(packaged_output.glob("*.gcode"))
+    gcode_files = sorted(
+        packaged_output.glob("*.gcode"), key=lambda p: p.stat().st_mtime, reverse=True
+    )
     if gcode_files:
         info = analyze_gcode(gcode_files[0])
         stats["layer_count"] = info.layer_count
