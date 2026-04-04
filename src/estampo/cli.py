@@ -107,7 +107,7 @@ def _build_driver(verbose: bool = False):
 
     builder = driver.Builder().with_modules(pipeline)
     if verbose:
-        builder = builder.with_adapters(adapters.TimingAdapter())
+        builder = builder.with_adapters(adapters.ProgressAdapter(), adapters.TimingAdapter())
     else:
         builder = builder.with_adapters(adapters.ProgressAdapter())
     return builder.build()
