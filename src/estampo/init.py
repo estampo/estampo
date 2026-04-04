@@ -1164,11 +1164,51 @@ def run_wizard(output: Path | None = None) -> str:
 
     # --- Discover profiles (needed for picker and machine info) ---
     if engine == "cura":
-        # CuraEngine uses inline CuraProfile defaults — no profile chain
+        from estampo.cura import list_cura_machine_profiles, load_cura_machine_profile
+
         profiles: dict[str, list[str]] = {}
-        printer_profile = None
         process_profile = None
+
+        # Pick a machine profile JSON (project-local or bundled)
+        cura_machines = list_cura_machine_profiles(dest.parent)
+        default_machine = (existing and existing.printer) or (
+            cura_machines[0] if cura_machines else ""
+        )
+        ui.heading("CuraEngine Machine Profile")
+        if cura_machines:
+            ui.info("Available machine profiles:")
+            for i, m in enumerate(cura_machines, 1):
+                marker = " ←" if m == default_machine else ""
+                ui.info(f"  {i}. {m}{marker}")
+            default_pick = "1" if not default_machine else ""
+            machine_pick = _prompt_str(
+                f"Pick machine (or enter name, default: {default_machine})", default_pick
+            ).strip()
+            if machine_pick.isdigit() and 1 <= int(machine_pick) <= len(cura_machines):
+                printer_profile = cura_machines[int(machine_pick) - 1]
+            elif machine_pick:
+                printer_profile = machine_pick
+            else:
+                printer_profile = default_machine
+        else:
+            ui.warn("No CuraEngine machine profiles found.")
+            ui.info("Add a JSON file to profiles/cura/machine/ or use a bundled name.")
+            printer_profile = (
+                _prompt_str("Machine profile name", default_machine).strip() or default_machine
+            )
+        ui.info(f"  → {printer_profile}")
+        ui.console.print()
+
+        # Derive machine_info from the JSON for plate size detection
         machine_info = _MachineInfo()
+        try:
+            machine_data = load_cura_machine_profile(printer_profile, dest.parent)
+            w = machine_data.get("machine_width")
+            d = machine_data.get("machine_depth")
+            if w is not None and d is not None:
+                machine_info.plate_size = (int(float(str(w))), int(float(str(d))))
+        except FileNotFoundError:
+            pass
         plate_x, plate_y = _wizard_pick_plate(machine_info)
     else:
         profiles, profile_source = discover_profile_names(engine)

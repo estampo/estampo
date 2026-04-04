@@ -816,11 +816,15 @@ def profiles_pin(
     _setup_logging(verbose)
     import tomllib
 
-    from estampo.profiles import pin_profiles
+    from estampo.profiles import _INLINE_ENGINES, pin_profiles
 
     resolved_config = _resolve_config_path(config)
     cfg = load_config(resolved_config)
     profiles_dir = cfg.slicer.profiles_dir
+
+    if cfg.slicer.engine in _INLINE_ENGINES:
+        print(f"Engine '{cfg.slicer.engine}' uses inline settings — no profiles to pin.")
+        raise typer.Exit(0)
 
     # If profiles directory already exists, ask what to do
     target = cfg.base_dir / profiles_dir
@@ -902,10 +906,19 @@ def profiles_add(
 ) -> None:
     """Import a profile JSON file into the project's profiles/ directory."""
     _setup_logging(verbose)
+    import tomllib
+
     from estampo.profiles import add_profile
 
     project_dir = Path.cwd()
-    dest = add_profile(source, project_dir, category=category, name=name)
+    engine = "orca"
+    try:
+        config_path = _resolve_config_path(None)
+        raw = tomllib.loads(config_path.read_text())
+        engine = raw.get("slicer", {}).get("engine", "orca")
+    except Exception:
+        pass
+    dest = add_profile(source, project_dir, category=category, name=name, engine=engine)
     print(f"Added profile: {dest}")
 
 
