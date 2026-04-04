@@ -8,7 +8,6 @@ from estampo import EstampoError
 from estampo.cura import (
     CuraProfile,
     _patch_gcode_header,
-    _render_bbl_gcode,
     _settings_flags,
     cura_docker_image,
     cura_profile_from_config,
@@ -35,9 +34,6 @@ def test_cura_docker_image_custom_version():
 
 def test_cura_profile_defaults():
     profile = CuraProfile()
-    assert profile.machine_width == 256.0
-    assert profile.machine_depth == 256.0
-    assert profile.machine_height == 256.0
     assert profile.nozzle_diameter == 0.4
     assert profile.material_print_temperature == 260
     assert profile.material_bed_temperature == 70
@@ -107,8 +103,6 @@ def test_settings_flags_defaults():
     # Flags are -s key=value pairs
     assert len(flags) % 2 == 0
     # Convert to dict for easy inspection
-    pairs = dict(zip(flags[0::2], flags[1::2]))
-    assert all(k == "-s" for k in pairs)
     values = flags[1::2]
     value_dict = {}
     for v in values:
@@ -133,7 +127,18 @@ def test_settings_flags_includes_required():
     assert value_dict["flooring_layer_count"] == "0"
     assert value_dict["material_print_temp_prepend"] == "false"
     assert value_dict["material_bed_temp_prepend"] == "false"
-    assert value_dict["adhesion_type"] == "none"
+
+
+def test_settings_flags_no_machine_settings():
+    """Machine settings (bed size, etc.) are NOT in flags — they come from the definition."""
+    profile = CuraProfile()
+    flags = _settings_flags(profile)
+    values = flags[1::2]
+    keys = {v.split("=", 1)[0] for v in values}
+    assert "machine_width" not in keys
+    assert "machine_depth" not in keys
+    assert "machine_height" not in keys
+    assert "machine_heated_bed" not in keys
 
 
 def test_settings_flags_custom_overrides():
@@ -149,28 +154,24 @@ def test_settings_flags_custom_overrides():
     assert value_dict["retraction_amount"] == "0.8"
 
 
-# --- _render_bbl_gcode ---
+# --- bundled definition files ---
 
 
-def test_render_bbl_gcode_contains_temps():
-    """Rendered gcode contains bed and nozzle temperature commands."""
-    profile = CuraProfile(material_bed_temperature=65, material_print_temperature=245)
-    start, end = _render_bbl_gcode(profile)
+def test_bundled_definitions_exist():
+    """BBL definition files are bundled with the package."""
+    from estampo.cura import _BBL_DEFS, _bundled_def_path
 
-    assert "M190 S65" in start
-    assert "M109 S245" in start
-    assert "M140 S65" in start
-    assert "M104 S245" in start
+    for def_name in _BBL_DEFS:
+        path = _bundled_def_path(def_name)
+        assert path.exists(), f"Missing bundled definition: {def_name}"
 
+    import json
 
-def test_render_bbl_gcode_end():
-    """End gcode contains cooldown and stepper disable."""
-    profile = CuraProfile()
-    _start, end = _render_bbl_gcode(profile)
-
-    assert "M104 S0" in end
-    assert "M140 S0" in end
-    assert "M84" in end
+    p1s = json.loads(_bundled_def_path("bambulab_p1s.def.json").read_text())
+    assert p1s["name"] == "BambuLab P1S"
+    assert p1s["inherits"] == "bambulab_base"
+    assert "machine_start_gcode" in p1s["overrides"]
+    assert "machine_end_gcode" in p1s["overrides"]
 
 
 # --- slice_stl Docker execution ---
@@ -192,7 +193,6 @@ def test_slice_stl_docker_command(tmp_path):
 
     with (
         patch("estampo.cura.subprocess.run", return_value=mock_result) as mock_run,
-        patch("estampo.cura._render_bbl_gcode", return_value=("START", "END")),
         patch("estampo.ui.status"),
     ):
         slice_stl(stl, output_dir, profile, image="estampo/estampo:cura-5.12.0")
@@ -208,6 +208,10 @@ def test_slice_stl_docker_command(tmp_path):
     # Volume mount for output directory
     vol_idx = cmd.index("-v") + 1
     assert ":/work/output" in cmd[vol_idx]
+    # Inner command uses P1S definition
+    inner_cmd = cmd[-1]
+    assert "bambulab_p1s.def.json" in inner_cmd
+    assert "-g -e0" in inner_cmd
 
 
 def test_slice_stl_docker_failure(tmp_path):
@@ -221,7 +225,6 @@ def test_slice_stl_docker_failure(tmp_path):
 
     with (
         patch("estampo.cura.subprocess.run", return_value=mock_result),
-        patch("estampo.cura._render_bbl_gcode", return_value=("START", "END")),
         patch("estampo.ui.status"),
         pytest.raises(EstampoError, match="CuraEngine failed"),
     ):
@@ -239,7 +242,6 @@ def test_slice_stl_no_output(tmp_path):
 
     with (
         patch("estampo.cura.subprocess.run", return_value=mock_result),
-        patch("estampo.cura._render_bbl_gcode", return_value=("START", "END")),
         patch("estampo.ui.status"),
         pytest.raises(EstampoError, match="produced no output"),
     ):
