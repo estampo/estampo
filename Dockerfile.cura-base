@@ -1,84 +1,143 @@
-# Base image: CuraEngine + runtime deps
+# Base image: CuraEngine built from source + printer definitions
 #
 # Rebuild only when CuraEngine/Cura version changes. The main Dockerfile.cura
 # layers estampo on top of this for fast code-only rebuilds.
 #
-# Extracts CuraEngine and its dependencies from the UltiMaker Cura AppImage.
-# Produces a minimal image with just the slicer engine, shared libs, and
-# printer definitions — no GUI, no Python, no Qt.
+# Builds CuraEngine from source using Conan 2 + CMake, producing a clean
+# binary without the AppImage extraction + patchelf workarounds that cause
+# the placeholder G-code header issue.
 #
 # Usage:
 #   docker build -f Dockerfile.cura-base --build-arg CURA_VERSION=5.12.0 \
 #     -t estampo/cura-base:5.12.0 .
 
 # ---------------------------------------------------------------------------
-# Stage 1: Extract CuraEngine from AppImage (x86_64 only)
+# Stage 1: Build CuraEngine from source
 # ---------------------------------------------------------------------------
-FROM --platform=linux/amd64 ubuntu:24.04 AS extract
+FROM --platform=linux/amd64 ubuntu:24.04 AS build
+
+ARG CURA_VERSION=5.12.0
+
+# Build essentials + Conan/CMake deps
+RUN --mount=type=cache,id=apt-cura-build,target=/var/cache/apt \
+    --mount=type=cache,id=apt-cura-build,target=/var/lib/apt/lists \
+    apt-get update && apt-get install -y --no-install-recommends \
+        build-essential gcc-13 g++-13 \
+        cmake ninja-build \
+        python3 python3-pip python3-venv \
+        git ca-certificates curl pkg-config \
+        zlib1g-dev libssl-dev
+
+# Use GCC 13 as default
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100 \
+    && update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100 \
+    && update-alternatives --install /usr/bin/cc cc /usr/bin/gcc-13 100
+
+# Install Conan 2
+RUN pip3 install --break-system-packages "conan>=2.7.0,<3"
+
+# Configure Conan with Ultimaker remote
+RUN conan profile detect --force \
+    && conan config install https://github.com/ultimaker/conan-config.git
+
+WORKDIR /src
+
+# Clone CuraEngine source
+RUN git clone --depth 1 --branch ${CURA_VERSION} \
+        https://github.com/Ultimaker/CuraEngine.git .
+
+# Build CuraEngine with Arcus and plugins disabled (headless CLI only).
+# --build=missing compiles any deps not available as prebuilt binaries.
+RUN conan install . \
+        --build=missing \
+        --update \
+        -o "curaengine/*:enable_arcus=False" \
+        -o "curaengine/*:enable_plugins=False" \
+    && cmake --preset conan-release \
+    && cmake --build --preset conan-release
+
+# Collect Conan-built shared libraries needed at runtime, then verify
+# the binary works with only those libs (no conanrun.sh).
+COPY <<'COLLECT' /tmp/collect-libs.sh
+#!/bin/bash
+set -e
+source /src/build/Release/generators/conanrun.sh
+# Verify binary works with Conan env
+/src/build/Release/CuraEngine help || true
+
+mkdir -p /opt/cura/lib
+# Collect non-system shared libs (from Conan cache) — binary + transitive
+collect() {
+    ldd "$1" 2>/dev/null | grep '=> /' | awk '{print $3}' | sort -u | while read lib; do
+        case "$lib" in /usr/lib/*|/lib/*) continue ;; esac
+        bn=$(basename "$lib")
+        if [ ! -f "/opt/cura/lib/$bn" ]; then
+            cp -L "$lib" "/opt/cura/lib/$bn"
+            collect "$lib"
+        fi
+    done
+}
+collect /src/build/Release/CuraEngine
+
+echo "Collected libs:"
+ls -la /opt/cura/lib/
+
+# Final verify: binary works with only collected libs (no Conan env)
+unset LD_LIBRARY_PATH
+LD_LIBRARY_PATH=/opt/cura/lib /src/build/Release/CuraEngine help || true
+COLLECT
+RUN bash /tmp/collect-libs.sh
+
+# ---------------------------------------------------------------------------
+# Stage 2: Get printer definitions from the Cura release AppImage
+# ---------------------------------------------------------------------------
+FROM --platform=linux/amd64 ubuntu:24.04 AS defs
 
 ARG CURA_VERSION=5.12.0
 
 WORKDIR /extract
-RUN --mount=type=cache,id=apt-cura,target=/var/cache/apt \
-    --mount=type=cache,id=apt-cura,target=/var/lib/apt/lists \
-    apt-get update && apt-get install -y --no-install-recommends curl ca-certificates patchelf
+RUN --mount=type=cache,id=apt-cura-defs,target=/var/cache/apt \
+    --mount=type=cache,id=apt-cura-defs,target=/var/lib/apt/lists \
+    apt-get update && apt-get install -y --no-install-recommends curl ca-certificates
 RUN curl -fSL -o cura.AppImage \
         "https://github.com/Ultimaker/Cura/releases/download/${CURA_VERSION}/UltiMaker-Cura-${CURA_VERSION}-linux-X64.AppImage" \
     && chmod +x cura.AppImage \
     && ./cura.AppImage --appimage-extract \
     && rm cura.AppImage
 
-# Fix ELF interpreter — AppImage may patch binaries to use a bundled ld-linux
-# that doesn't exist outside the squashfs, causing "exec: not found" errors.
-RUN patchelf --set-interpreter /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 \
-    /extract/squashfs-root/CuraEngine
-
 # ---------------------------------------------------------------------------
-# Stage 2: Minimal runtime image with CuraEngine + deps
+# Stage 3: Minimal runtime image
 # ---------------------------------------------------------------------------
 FROM --platform=linux/amd64 ubuntu:24.04
 
 ARG CURA_VERSION=5.12.0
-LABEL org.opencontainers.image.description="CuraEngine ${CURA_VERSION} base image for estampo"
+LABEL org.opencontainers.image.description="CuraEngine ${CURA_VERSION} base image for estampo (built from source)"
 LABEL org.opencontainers.image.source="https://github.com/estampo/estampo"
 LABEL org.opencontainers.image.licenses="AGPL-3.0"
 LABEL estampo.cura-version="${CURA_VERSION}"
 
-# CuraEngine binary
-COPY --from=extract /extract/squashfs-root/CuraEngine /opt/cura/bin/CuraEngine
+# Runtime deps (libgomp for OpenMP)
+RUN --mount=type=cache,id=apt-cura-rt,target=/var/cache/apt \
+    --mount=type=cache,id=apt-cura-rt,target=/var/lib/apt/lists \
+    apt-get update && apt-get install -y --no-install-recommends libgomp1
+
+# CuraEngine binary + Conan-built shared libraries
+COPY --from=build /src/build/Release/CuraEngine /opt/cura/bin/CuraEngine
+COPY --from=build /opt/cura/lib/ /opt/cura/lib/
 RUN chmod +x /opt/cura/bin/CuraEngine
 
-# Bundled shared libraries that CuraEngine needs but Ubuntu 24.04 doesn't have.
-# Kept in /opt/cura/lib/ to avoid overriding system libs (e.g. libssl/libcrypto)
-# which would break Python and other system tools.
-COPY --from=extract /extract/squashfs-root/libArcus.so /opt/cura/lib/
-COPY --from=extract /extract/squashfs-root/libpolyclipping.so.22.0.0 /opt/cura/lib/
-COPY --from=extract /extract/squashfs-root/libtbb.so.12.16 /opt/cura/lib/
-COPY --from=extract /extract/squashfs-root/libtbbmalloc.so.2.16 /opt/cura/lib/
-COPY --from=extract /extract/squashfs-root/libtbbmalloc_proxy.so.2.16 /opt/cura/lib/
-COPY --from=extract /extract/squashfs-root/libssl.so.3 /opt/cura/lib/
-COPY --from=extract /extract/squashfs-root/libcrypto.so.3 /opt/cura/lib/
-
-# Symlinks for versioned libraries
-RUN cd /opt/cura/lib \
-    && ln -sf libpolyclipping.so.22.0.0 libpolyclipping.so.22 \
-    && ln -sf libtbb.so.12.16 libtbb.so.12 \
-    && ln -sf libtbbmalloc.so.2.16 libtbbmalloc.so.2 \
-    && ln -sf libtbbmalloc_proxy.so.2.16 libtbbmalloc_proxy.so.2
-
 # Wrapper script so CuraEngine finds its libs without polluting system paths.
-# The wrapper sets LD_LIBRARY_PATH only for the CuraEngine process.
 RUN printf '#!/bin/sh\nLD_LIBRARY_PATH=/opt/cura/lib exec /opt/cura/bin/CuraEngine "$@"\n' \
     > /usr/local/bin/CuraEngine && chmod +x /usr/local/bin/CuraEngine
 
 # Printer definitions (fdmprinter.def.json, fdmextruder.def.json, etc.)
-COPY --from=extract /extract/squashfs-root/share/cura/resources/definitions/ /opt/cura/definitions/
-COPY --from=extract /extract/squashfs-root/share/cura/resources/extruders/ /opt/cura/extruders/
+COPY --from=defs /extract/squashfs-root/share/cura/resources/definitions/ /opt/cura/definitions/
+COPY --from=defs /extract/squashfs-root/share/cura/resources/extruders/ /opt/cura/extruders/
 
 ENV CURA_ENGINE_SEARCH_PATH=/opt/cura/definitions:/opt/cura/extruders
 
 # Verify CuraEngine runs before finalising the image
-RUN /usr/local/bin/CuraEngine help
+RUN CuraEngine help
 
 # Unprivileged user (matches orca-base convention)
 RUN useradd -m estampo
