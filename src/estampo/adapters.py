@@ -254,8 +254,15 @@ class ProgressAdapter(NodeExecutionHook):
             parts: list[str] = []
             if "print_time" in result:
                 parts.append(f"Print time: {result['print_time']}")
-            if "filament_g" in result:
-                parts.append(f"{result['filament_g']:.1f}g filament")
+            if "layer_count" in result:
+                parts.append(f"{result['layer_count']} layers")
+            filament_g = (
+                sum(result["filament_usage_g"])
+                if result.get("filament_usage_g")
+                else result.get("filament_g")
+            )
+            if filament_g:
+                parts.append(f"{filament_g:.1f}g filament")
             elif "filament_cm3" in result:
                 parts.append(f"{result['filament_cm3']:.1f}cm³ filament")
             if parts:
