@@ -262,9 +262,11 @@ size = [256, 256]
 
 [slicer]
 engine = "orca"
+
+[slicer.orca]
 process = "MyProcess"
 
-[slicer.overrides]
+[slicer.orca.overrides]
 bogus_key = "42"
 
 [[parts]]

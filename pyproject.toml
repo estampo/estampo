@@ -89,3 +89,7 @@ issue_format = "[#{issue}](https://github.com/estampo/estampo/pull/{issue})"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+filterwarnings = [
+    "default",
+    "ignore:Flat .slicer. config is deprecated:DeprecationWarning:estampo.config",
+]

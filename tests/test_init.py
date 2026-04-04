@@ -167,7 +167,7 @@ class TestExtractFrom3MF:
             )
 
         toml = extract_from_3mf(threemf)
-        assert "[slicer.machine_overrides]" in toml
+        assert "[slicer.orca.machine_overrides]" in toml
         assert 'nozzle_type = "hardened_steel"' in toml
 
     def test_missing_settings_raises(self, tmp_path):
@@ -366,9 +366,11 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
 [slicer]
 engine = "orca"
 version = "2.3.1"
+
+[slicer.orca]
 process = "MyProcess"
 
-[slicer.overrides]
+[slicer.orca.overrides]
 layer_height = "0.28"
 
 [[parts]]
@@ -387,9 +389,11 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
 [slicer]
 engine = "orca"
 version = "2.3.1"
+
+[slicer.orca]
 process = "MyProcess"
 
-[slicer.overrides]
+[slicer.orca.overrides]
 bogus_setting = "42"
 
 [[parts]]
@@ -617,7 +621,7 @@ class TestBuildToml:
             printer_name=None,
             overrides={"sparse_infill_density": "25%", "wall_loops": "3"},
         )
-        assert "[slicer.overrides]" in toml
+        assert "[slicer.orca.overrides]" in toml
         assert 'sparse_infill_density = "25%"' in toml
         assert "wall_loops = 3" in toml
 
@@ -634,7 +638,7 @@ class TestBuildToml:
             printer_name=None,
             overrides={},
         )
-        assert "[slicer.overrides]" not in toml
+        assert "[slicer.orca.overrides]" not in toml
 
     def test_defaults_omitted(self):
         """copies=1, orient=flat, filament=1 should not appear in output."""
