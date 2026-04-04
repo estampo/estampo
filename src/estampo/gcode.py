@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import re
 import zipfile
 from dataclasses import dataclass, field
@@ -12,6 +13,43 @@ from estampo import require_file
 # Number of lines to scan from the start/end of gcode for metadata
 GCODE_HEADER_LINES = 300
 GCODE_TAIL_LINES = 50
+
+# Filament constants (1.75mm diameter, PLA/PETG average density)
+_DIAMETER_CM = 0.175
+_DENSITY_G_CM3 = 1.24
+
+# Regex for extracting E values from G1 moves (absolute extrusion)
+_E_VALUE_RE = re.compile(r"E([\d.]+)")
+
+
+def _max_e_value(lines: list[str]) -> float:
+    """Find the maximum E value in G-code (absolute extrusion mode).
+
+    Scans for ``G1 ... E<value>`` moves, tracking ``G92 E0`` resets.
+    Returns total mm of filament extruded.  Falls back to 0 if the
+    gcode uses relative extrusion (``M83``).
+    """
+    total = 0.0
+    max_e = 0.0
+    relative = False
+    for line in lines:
+        stripped = line.strip()
+        if stripped == "M83":
+            relative = True
+        elif stripped == "M82":
+            relative = False
+        elif stripped.startswith("G92"):
+            if m := _E_VALUE_RE.search(stripped):
+                # E reset — accumulate what we had and restart
+                total += max_e
+                max_e = float(m.group(1))
+        elif not relative and stripped.startswith("G1"):
+            if m := _E_VALUE_RE.search(stripped):
+                e = float(m.group(1))
+                if e > max_e:
+                    max_e = e
+    total += max_e
+    return total
 
 
 def _format_seconds(secs: int) -> str:
@@ -56,15 +94,9 @@ def parse_gcode_metadata(gcode_path: Path) -> dict[str, str | float | int]:
         # CuraEngine: ;Filament used: 1.23456m
         elif m := re.match(r";Filament used:\s*([\d.]+)m", line):
             meters = float(m.group(1))
-            # Convert meters of 1.75mm filament to cm³ and grams
-            # Volume = length * pi * (d/2)^2; density ~1.24 g/cm³ (PLA/PETG avg)
-            diameter_cm = 0.175
-            import math
-
-            cm3 = meters * 100 * math.pi * (diameter_cm / 2) ** 2
+            cm3 = meters * 100 * math.pi * (_DIAMETER_CM / 2) ** 2
             stats["filament_cm3"] = round(cm3, 2)
-            # Approximate grams (density varies by material, ~1.24 is reasonable)
-            stats["filament_g"] = round(cm3 * 1.24, 2)
+            stats["filament_g"] = round(cm3 * _DENSITY_G_CM3, 2)
 
     # Scan tail for OrcaSlicer filament stats (CuraEngine puts them in header).
     # OrcaSlicer emits one line per slot (including 0.00 for unused slots)
@@ -90,6 +122,16 @@ def parse_gcode_metadata(gcode_path: Path) -> dict[str, str | float | int]:
         stats["filament_g"] = g
     if cm3 > 0:
         stats["filament_cm3"] = cm3
+
+    # Fallback: if no filament stats found (or zero), compute from E moves.
+    # This covers CuraEngine's placeholder-header bug and any other slicer
+    # that doesn't embed filament stats in the G-code.
+    if not stats.get("filament_g"):
+        e_mm = _max_e_value(lines)
+        if e_mm > 0:
+            e_cm3 = (e_mm / 10) * math.pi * (_DIAMETER_CM / 2) ** 2
+            stats["filament_cm3"] = round(e_cm3, 2)
+            stats["filament_g"] = round(e_cm3 * _DENSITY_G_CM3, 2)
 
     # Convert time string like "1h 7m 32s" to seconds (if not already set)
     if "print_time" in stats and "print_time_secs" not in stats:
@@ -174,18 +216,21 @@ def analyze_gcode(path: Path) -> GcodeInfo:
             # CuraEngine material index (single extruder)
             pass  # filament type not encoded here
         elif m := re.match(r";Filament used:\s*([\d.]+)m", line):
-            # Convert meters to approximate grams for single-extruder
-            import math
-
             meters = float(m.group(1))
-            diameter_cm = 0.175
-            cm3 = meters * 100 * math.pi * (diameter_cm / 2) ** 2
-            info.filament_usage_g = [round(cm3 * 1.24, 2)]
+            cm3 = meters * 100 * math.pi * (_DIAMETER_CM / 2) ** 2
+            info.filament_usage_g = [round(cm3 * _DENSITY_G_CM3, 2)]
 
     # Parse per-slot filament usage from tail (OrcaSlicer)
     for line in lines[-GCODE_TAIL_LINES:]:
         if m := re.match(r";\s*filament used \[g\]\s*=\s*(.+)", line):
             info.filament_usage_g = [float(v.strip()) for v in m.group(1).split(",")]
+
+    # Fallback: compute from E moves if no filament usage found (or zero)
+    if not info.filament_usage_g or all(v == 0 for v in info.filament_usage_g):
+        e_mm = _max_e_value(lines)
+        if e_mm > 0:
+            e_cm3 = (e_mm / 10) * math.pi * (_DIAMETER_CM / 2) ** 2
+            info.filament_usage_g = [round(e_cm3 * _DENSITY_G_CM3, 2)]
 
     # Walk gcode for layers and tool changes.
     # OrcaSlicer: Z_HEIGHT appears immediately after CHANGE_LAYER.
