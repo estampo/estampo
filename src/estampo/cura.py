@@ -1,8 +1,8 @@
 """CuraEngine slicer backend.
 
-Slices STL files using CuraEngine via Docker, with BBL-specific start/end
-G-code for Bambu Lab printers. Produces plain G-code that can be packaged
-into .gcode.3mf.
+Slices STL files using CuraEngine via Docker, with a proper Bambu Lab P1S
+machine definition (inheriting from bambulab_base → fdmprinter).  Produces
+plain G-code that can be packaged into .gcode.3mf.
 
 Uses CuraEngine 5.12.0 built from source, packaged in a minimal Docker
 image with bundled printer definitions.
@@ -10,6 +10,7 @@ image with bundled printer definitions.
 
 from __future__ import annotations
 
+import importlib.resources
 import logging
 import re
 import shutil
@@ -24,8 +25,20 @@ log = logging.getLogger(__name__)
 DOCKERHUB_REPO = "estampo/estampo"
 CURAENGINE_VERSION = "5.12.0"
 
-# Definitions directory inside the Docker image (bundled from Cura AppImage).
+# Definitions directory inside the Docker image (fdmprinter.def.json etc.)
 _DEFS_DIR = "/opt/cura/definitions"
+
+# Bundled BBL definition files shipped with estampo
+_DATA_PKG = "estampo.data"
+_BBL_DEFS = ("bambulab_base.def.json", "bambulab_p1s.def.json")
+
+
+def _bundled_def_path(name: str) -> Path:
+    """Return the filesystem path of a bundled definition file."""
+    ref = importlib.resources.files(_DATA_PKG).joinpath(name)
+    # importlib.resources may return a traversable; as_posix works for
+    # files already on disk (installed via pip / editable).
+    return Path(str(ref))
 
 
 def cura_docker_image(version: str | None = None) -> str:
@@ -37,14 +50,12 @@ def cura_docker_image(version: str | None = None) -> str:
 
 @dataclass
 class CuraProfile:
-    """Minimal slicer profile for CuraEngine targeting a BBL printer."""
+    """Slicer profile for CuraEngine targeting a BBL printer.
 
-    # Machine
-    machine_width: float = 256.0
-    machine_depth: float = 256.0
-    machine_height: float = 256.0
-    machine_heated_bed: bool = True
-    machine_name: str = "Bambu Lab P1S"
+    Machine geometry and start/end G-code come from the bambulab_p1s
+    definition file.  This profile controls process settings (layer
+    height, speeds, temperatures, infill) passed as ``-s`` overrides.
+    """
 
     # Nozzle / material
     nozzle_diameter: float = 0.4
@@ -72,46 +83,12 @@ class CuraProfile:
     overrides: dict[str, str] = field(default_factory=dict)
 
 
-def _render_bbl_gcode(profile: CuraProfile) -> tuple[str, str]:
-    """Render P1S start/end G-code for Bambu Lab printers.
-
-    Returns (start_gcode, end_gcode) as rendered strings.
-    """
-    bed = profile.material_bed_temperature
-    nozzle = profile.material_print_temperature
-
-    start = f"""\
-M140 S{bed}  ; set bed temp
-M104 S{nozzle}  ; set nozzle temp
-G28  ; home all axes
-M190 S{bed}  ; wait for bed temp
-M109 S{nozzle}  ; wait for nozzle temp
-G92 E0  ; reset extruder
-G1 Z2.0 F3000  ; move Z up
-G1 X5 Y5 F5000  ; move to start
-G1 Z0.28 F1500  ; lower to first layer
-G1 X60 E9 F1000  ; prime line
-G1 X100 E12.5 F1000  ; prime line
-G92 E0  ; reset extruder
-G1 Z2.0 F3000  ; lift nozzle
-"""
-
-    end = """\
-G91  ; relative positioning
-G1 E-2 F2700  ; retract
-G1 Z5 F3000  ; lift nozzle
-G90  ; absolute positioning
-G1 X0 Y250 F5000  ; present print
-M104 S0  ; turn off nozzle
-M140 S0  ; turn off bed
-M107  ; turn off fan
-M84  ; disable steppers
-"""
-    return start, end
-
-
 def _settings_flags(profile: CuraProfile) -> list[str]:
-    """Build -s key=value flags from profile."""
+    """Build -s key=value flags from profile.
+
+    Machine settings (bed size, heated bed, start/end gcode) are handled
+    by the bambulab_p1s definition — only process/material settings here.
+    """
     pairs: dict[str, object] = {
         "layer_height": profile.layer_height,
         "layer_height_0": profile.layer_height_0,
@@ -128,13 +105,8 @@ def _settings_flags(profile: CuraProfile) -> list[str]:
         "speed_travel": profile.speed_travel,
         "speed_wall_0": profile.speed_wall_0,
         "speed_infill": profile.speed_infill,
-        "machine_width": profile.machine_width,
-        "machine_depth": profile.machine_depth,
-        "machine_height": profile.machine_height,
-        "machine_heated_bed": "true" if profile.machine_heated_bed else "false",
         "material_print_temp_prepend": "false",
         "material_bed_temp_prepend": "false",
-        "adhesion_type": "none",
         # CuraEngine 5.12 requires these explicitly (not resolved from def)
         "roofing_layer_count": 0,
         "flooring_layer_count": 0,
@@ -150,12 +122,9 @@ def _settings_flags(profile: CuraProfile) -> list[str]:
 def _patch_gcode_header(gcode_path: Path, stderr: str) -> None:
     """Patch CuraEngine placeholder header with real values from stderr.
 
-    When invoked via CLI with our AppImage-extracted binary, CuraEngine
-    writes placeholder values (``TIME:6666``, ``Filament used: 0m``) to
-    the G-code header and does not seek back to update them after slicing.
-    The real values are logged to stderr.  This function extracts the
-    real header from stderr and replaces the placeholder block in the
-    G-code file.
+    Safety net for cases where CuraEngine doesn't seek back to update the
+    G-code header after slicing.  With the source-built binary this should
+    not be needed, but we keep it as a fallback.
     """
     m = re.search(
         r"Gcode header after slicing:\s*(;FLAVOR:.*?;TARGET_MACHINE\.NAME:\S+)",
@@ -169,8 +138,6 @@ def _patch_gcode_header(gcode_path: Path, stderr: str) -> None:
     real_header = m.group(1).strip() + "\n"
 
     text = gcode_path.read_text()
-    # The placeholder block starts with ";FLAVOR:" and ends before the blank
-    # line / ";Generated with" line.
     patched = re.sub(
         r";FLAVOR:.*?;TARGET_MACHINE\.NAME:\S+\n",
         real_header,
@@ -193,10 +160,9 @@ def slice_stl(
 ) -> Path:
     """Slice an STL file with CuraEngine and return the output directory.
 
-    Uses Docker with the estampo/estampo:cura-X.Y.Z image (same layered
-    pattern as OrcaSlicer). Injects BBL P1S start/end G-code via Jinja2
-    templates, written as files under output_dir and read inside the
-    container via volume mount.
+    Uses Docker with the estampo/estampo:cura-X.Y.Z image.  The Bambu Lab
+    P1S machine definition (bundled with estampo) provides machine geometry
+    and start/end G-code; process settings come from the CuraProfile.
 
     Args:
         stl_path: Path to the input STL file.
@@ -216,37 +182,37 @@ def slice_stl(
     output_dir = output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Render BBL start/end G-code to files under output_dir so they're
-    # accessible via the same volume mount as the output.
-    start_gcode, end_gcode = _render_bbl_gcode(profile)
     staging = output_dir / ".cura-staging"
     staging.mkdir(exist_ok=True)
-    (staging / "start.gcode").write_text(start_gcode)
-    (staging / "end.gcode").write_text(end_gcode)
+
+    # Copy bundled BBL definition files so CuraEngine can resolve the
+    # bambulab_p1s → bambulab_base → fdmprinter inheritance chain.
+    for def_name in _BBL_DEFS:
+        shutil.copy2(_bundled_def_path(def_name), staging / def_name)
 
     # Copy STL into staging so it's accessible via volume mount
-    stl_in_staging = staging / stl_path.name
-    shutil.copy2(stl_path, stl_in_staging)
+    shutil.copy2(stl_path, staging / stl_path.name)
 
     # Container paths (output_dir mounted at /work/output)
     c_staging = "/work/output/.cura-staging"
     c_stl = f"{c_staging}/{stl_path.name}"
     c_output = "/work/output/" + stl_path.stem + ".gcode"
 
-    # Build the shell command that runs inside the container.
-    # Start/end gcode are loaded from files into shell vars because
-    # -s values can't contain newlines directly.
+    # Build the CuraEngine command.
+    # -d adds search paths for definition file resolution (inherits chain).
+    # -j loads the P1S definition (machine geometry + start/end gcode).
+    # -g starts a mesh group, -e0 sets extruder 0 context for per-extruder
+    # settings (material_diameter etc.) that CuraEngine requires.
     settings = _settings_flags(profile)
+    settings_str = " ".join(f'"{s}"' for s in settings)
     inner_cmd = (
-        f"START=$(cat {c_staging}/start.gcode) && "
-        f"END=$(cat {c_staging}/end.gcode) && "
         f"CuraEngine slice "
-        f"-j {_DEFS_DIR}/fdmprinter.def.json "
+        f"-d {c_staging}:{_DEFS_DIR}:/opt/cura/extruders "
+        f"-j {c_staging}/bambulab_p1s.def.json "
         f"-o {c_output} "
-        + " ".join(f'"{s}"' for s in settings)
-        + ' -s "machine_start_gcode=$START" '
-        + '-s "machine_end_gcode=$END" '
-        + f"-l {c_stl}"
+        f"{settings_str} "
+        f"-g -e0 {settings_str} "
+        f"-l {c_stl}"
     )
 
     cmd = [
@@ -283,9 +249,6 @@ def slice_stl(
         combined = (result.stdout + "\n" + result.stderr).strip()
         raise EstampoError(f"CuraEngine produced no output:\n{combined[:500]}")
 
-    # CuraEngine CLI writes placeholder values in the G-code header
-    # (TIME:6666, Filament used: 0m) and does not update them after slicing.
-    # The real values are logged to stderr.  Parse and patch the file.
     _patch_gcode_header(output_gcode, result.stderr)
 
     log.info("CuraEngine output: %s (%d bytes)", output_gcode, output_gcode.stat().st_size)
