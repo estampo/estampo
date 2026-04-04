@@ -11,6 +11,7 @@ image with bundled printer definitions.
 from __future__ import annotations
 
 import importlib.resources
+import json
 import logging
 import re
 import shutil
@@ -32,6 +33,9 @@ _DEFS_DIR = "/opt/cura/definitions"
 _DATA_PKG = "estampo.data"
 _BBL_DEFS = ("bambulab_base.def.json", "bambulab_p1s.def.json")
 
+# Bundled machine profile JSONs (nozzle/material overrides per printer)
+_BUNDLED_MACHINE_DIR = Path(__file__).parent / "data" / "cura" / "machine"
+
 
 def _bundled_def_path(name: str) -> Path:
     """Return the filesystem path of a bundled definition file."""
@@ -48,6 +52,56 @@ def cura_docker_image(version: str | None = None) -> str:
     return f"{DOCKERHUB_REPO}:cura-{CURAENGINE_VERSION}"
 
 
+def list_cura_machine_profiles(
+    project_dir: Path | None = None, profiles_dir: str = "profiles"
+) -> list[str]:
+    """Return available CuraEngine machine profile names (without .json extension).
+
+    Searches project profiles directory first, then bundled profiles.
+    Names from both sources are merged and deduplicated.
+    """
+    names: dict[str, None] = {}
+    # Project-local profiles take priority (listed first)
+    if project_dir:
+        local_dir = project_dir / profiles_dir / "cura" / "machine"
+        if local_dir.is_dir():
+            for p in sorted(local_dir.glob("*.json")):
+                names[p.stem] = None
+    # Bundled fallback
+    if _BUNDLED_MACHINE_DIR.is_dir():
+        for p in sorted(_BUNDLED_MACHINE_DIR.glob("*.json")):
+            names[p.stem] = None
+    return list(names)
+
+
+def load_cura_machine_profile(
+    name: str,
+    project_dir: Path | None = None,
+    profiles_dir: str = "profiles",
+) -> dict[str, object]:
+    """Load a CuraEngine machine profile JSON by name.
+
+    Searches project profiles directory first, then bundled profiles.
+    Raises FileNotFoundError if not found.
+    """
+    candidates: list[Path] = []
+    if project_dir:
+        candidates.append(project_dir / profiles_dir / "cura" / "machine" / f"{name}.json")
+    candidates.append(_BUNDLED_MACHINE_DIR / f"{name}.json")
+
+    for path in candidates:
+        if path.exists():
+            log.debug("Loading CuraEngine machine profile from %s", path)
+            return json.loads(path.read_text())
+
+    searched = ", ".join(str(c) for c in candidates)
+    raise FileNotFoundError(
+        f"CuraEngine machine profile '{name}' not found.\n"
+        f"Searched: {searched}\n"
+        f"Add a JSON file to your project's {profiles_dir}/cura/machine/ directory."
+    )
+
+
 @dataclass
 class CuraProfile:
     """Slicer profile for CuraEngine targeting a BBL printer.
@@ -55,6 +109,8 @@ class CuraProfile:
     Machine geometry and start/end G-code come from the bambulab_p1s
     definition file.  This profile controls process settings (layer
     height, speeds, temperatures, infill) passed as ``-s`` overrides.
+    Nozzle and material dimensions can be overridden via a machine
+    profile JSON (see ``load_cura_machine_profile``).
     """
 
     # Nozzle / material
@@ -377,13 +433,29 @@ def cura_profile_from_config(
     overrides: dict[str, object] | None = None,
     bed_type: str | None = None,
     filament_type: str | None = None,
+    printer: str | None = None,
+    project_dir: Path | None = None,
+    profiles_dir: str = "profiles",
 ) -> CuraProfile:
-    """Build a CuraProfile from estampo config overrides.
+    """Build a CuraProfile from a machine profile JSON and config overrides.
+
+    The machine profile JSON defines machine geometry and nozzle dimensions.
+    Config overrides (process settings) are applied on top.
 
     Maps estampo-style override keys (which may use OrcaSlicer names) to
     CuraEngine equivalents where possible.
     """
     profile = CuraProfile()
+
+    # Load machine definition from JSON
+    machine_name = printer or "Bambu Lab P1S 0.4 nozzle"
+    machine_data = load_cura_machine_profile(machine_name, project_dir, profiles_dir)
+    for key, value in machine_data.items():
+        if hasattr(profile, key):
+            field_type = type(getattr(profile, key))
+            if not isinstance(value, field_type):
+                value = field_type(value)
+            setattr(profile, key, value)
 
     if bed_type:
         profile.bed_type = bed_type
@@ -409,6 +481,9 @@ def cura_profile_from_config(
                 # OrcaSlicer key name → CuraProfile attribute
                 attr = orca_to_cura[key]
                 if hasattr(profile, attr):
+                    field_type = type(getattr(profile, attr))
+                    if not isinstance(value, field_type):
+                        value = field_type(value)
                     setattr(profile, attr, value)
             elif hasattr(profile, key):
                 # Native CuraEngine key that matches a CuraProfile attribute

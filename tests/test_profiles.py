@@ -93,9 +93,9 @@ def test_pin_profiles(tmp_path):
         project_dir=tmp_path,
     )
     assert len(pinned) == 3
-    assert (tmp_path / "profiles" / "machine" / "Bambu Lab P1S 0.4 nozzle.json").exists()
-    assert (tmp_path / "profiles" / "process" / "0.20mm Standard @BBL X1C.json").exists()
-    assert (tmp_path / "profiles" / "filament" / "Generic PLA @base.json").exists()
+    assert (tmp_path / "profiles" / "orca" / "machine" / "Bambu Lab P1S 0.4 nozzle.json").exists()
+    assert (tmp_path / "profiles" / "orca" / "process" / "0.20mm Standard @BBL X1C.json").exists()
+    assert (tmp_path / "profiles" / "orca" / "filament" / "Generic PLA @base.json").exists()
 
     # Verify pinned files are valid JSON
     for p in pinned:
@@ -707,6 +707,25 @@ def test_pin_profiles_no_docker_version_raises(tmp_path):
             filaments=[],
             project_dir=project,
         )
+
+
+def test_pin_profiles_cura_inline_returns_empty(tmp_path):
+    """pin_profiles returns [] immediately for inline engines like cura."""
+    project = tmp_path / "project"
+    project.mkdir()
+
+    with patch("estampo.profiles.extract_docker_profiles") as mock_docker:
+        result = pin_profiles(
+            engine="cura",
+            printer=None,
+            process=None,
+            filaments=[],
+            project_dir=project,
+            docker_version="5.12.0",
+        )
+
+    assert result == []
+    mock_docker.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

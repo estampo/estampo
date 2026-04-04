@@ -298,9 +298,9 @@ filaments = ["Generic PLA @base"]
 file = "{_posix(FIXTURES / "cube_10mm.stl")}"
 """)
     main(["profiles", "pin", str(config)])
-    assert (tmp_path / "profiles" / "machine" / "Bambu Lab P1S 0.4 nozzle.json").exists()
-    assert (tmp_path / "profiles" / "process" / "0.20mm Standard @BBL X1C.json").exists()
-    assert (tmp_path / "profiles" / "filament" / "Generic PLA @base.json").exists()
+    assert (tmp_path / "profiles" / "orca" / "machine" / "Bambu Lab P1S 0.4 nozzle.json").exists()
+    assert (tmp_path / "profiles" / "orca" / "process" / "0.20mm Standard @BBL X1C.json").exists()
+    assert (tmp_path / "profiles" / "orca" / "filament" / "Generic PLA @base.json").exists()
 
 
 # --- Docker-based slicing integration tests ---

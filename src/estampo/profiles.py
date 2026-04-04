@@ -517,6 +517,10 @@ def pin_profiles(
     """
     import shutil
 
+    if engine in _INLINE_ENGINES:
+        log.info("Engine '%s' uses inline settings — nothing to pin.", engine)
+        return []
+
     pinned: list[Path] = []
 
     items: list[tuple[str, str]] = []
@@ -582,9 +586,19 @@ def pin_profiles(
 # Profile import (add)
 # ---------------------------------------------------------------------------
 
-# Keys commonly found in each profile category
+# Keys commonly found in each profile category (OrcaSlicer and CuraEngine)
 _CATEGORY_KEYS: dict[str, set[str]] = {
-    "machine": {"printer_model", "machine_start_gcode", "printable_area"},
+    "machine": {
+        # OrcaSlicer
+        "printer_model",
+        "machine_start_gcode",
+        "printable_area",
+        # CuraEngine
+        "machine_width",
+        "machine_depth",
+        "machine_height",
+        "machine_heated_bed",
+    },
     "process": {"layer_height", "wall_loops", "sparse_infill_density"},
     "filament": {"filament_type", "filament_density", "nozzle_temperature"},
 }
@@ -606,6 +620,7 @@ def add_profile(
     category: str | None = None,
     name: str | None = None,
     profiles_dir: str = "profiles",
+    engine: str = "orca",
 ) -> Path:
     """Import a profile JSON file into the project's profiles directory.
 
@@ -662,8 +677,11 @@ def add_profile(
     # Determine name
     profile_name = name or data.get("name") or default_name
 
-    # Write to profiles directory
-    dest_dir = project_dir / profiles_dir / category
+    # Write to profiles directory — inline engines (cura) use a sub-namespace
+    if engine in _INLINE_ENGINES:
+        dest_dir = project_dir / profiles_dir / engine / category
+    else:
+        dest_dir = project_dir / profiles_dir / category
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest = dest_dir / f"{profile_name}.json"
 
