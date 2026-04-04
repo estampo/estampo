@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 import tomllib
+import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from estampo import EstampoError
+
+log = logging.getLogger(__name__)
 
 VALID_ORIENTS = {"flat", "upright", "side", "upside-down"}
 
@@ -18,18 +22,45 @@ class PlateConfig:
 
 
 @dataclass
-class SlicerConfig:
-    engine: str = "orca"
-    version: str | None = None  # required OrcaSlicer version (e.g. "2.3.1")
+class OrcaSlicerConfig:
+    """OrcaSlicer-specific settings: profile chain (printer/process/filament)."""
+
     printer: str | None = None
     process: str | None = None
     filaments: list[str] = field(default_factory=list)
     slots: dict[int, str] = field(default_factory=dict)  # slot (1-indexed) → profile name
-    bed_type: str | None = None  # e.g. "Textured PEI Plate", "Engineering Plate"
     overrides: dict[str, object] = field(default_factory=dict)
     machine_overrides: dict[str, object] = field(default_factory=dict)
     filament_overrides: dict[str, object] = field(default_factory=dict)
+
+
+@dataclass
+class CuraSlicerConfig:
+    """CuraEngine-specific settings: flat key-value overrides (no profile chain)."""
+
+    overrides: dict[str, object] = field(default_factory=dict)
+
+
+@dataclass
+class SlicerConfig:
+    engine: str = "orca"
+    version: str | None = None  # required slicer version (e.g. "2.3.1", "5.12.0")
+    bed_type: str | None = None  # e.g. "Textured PEI Plate", "Engineering Plate"
     profiles_dir: str = "profiles"
+
+    # Engine-specific sub-configs (both may be populated; engine selects active one)
+    orca: OrcaSlicerConfig = field(default_factory=OrcaSlicerConfig)
+    cura: CuraSlicerConfig = field(default_factory=CuraSlicerConfig)
+
+    # Active-engine fields — populated from the active engine's sub-config during
+    # load_config().  Existing code reads these directly (facade pattern).
+    printer: str | None = None
+    process: str | None = None
+    filaments: list[str] = field(default_factory=list)
+    slots: dict[int, str] = field(default_factory=dict)  # slot (1-indexed) → profile name
+    overrides: dict[str, object] = field(default_factory=dict)
+    machine_overrides: dict[str, object] = field(default_factory=dict)
+    filament_overrides: dict[str, object] = field(default_factory=dict)
 
 
 @dataclass
@@ -174,6 +205,42 @@ def _resolve_filaments(
                     parts[i].object_filaments[obj_name] = obj_fil
 
 
+def _parse_slots(raw: dict) -> dict[int, str]:
+    """Parse and validate a slots mapping from raw TOML data."""
+    slots_parsed: dict[int, str] = {}
+    for key, profile in raw.get("slots", {}).items():
+        try:
+            slot_num = int(key)
+        except (TypeError, ValueError):
+            raise EstampoError(f"slicer.slots: key '{key}' must be an integer slot number")
+        if slot_num < 1:
+            raise EstampoError(f"slicer.slots: slot must be >= 1, got {slot_num}")
+        if not isinstance(profile, str) or not profile.strip():
+            raise EstampoError(f"slicer.slots[{slot_num}]: profile name must be a non-empty string")
+        slots_parsed[slot_num] = profile
+    return slots_parsed
+
+
+def _parse_orca_config(raw: dict) -> OrcaSlicerConfig:
+    """Build an OrcaSlicerConfig from a raw TOML dict."""
+    return OrcaSlicerConfig(
+        printer=raw.get("printer"),
+        process=raw.get("process"),
+        filaments=raw.get("filaments", []),
+        slots=_parse_slots(raw),
+        overrides=raw.get("overrides", {}),
+        machine_overrides=raw.get("machine_overrides", {}),
+        filament_overrides=raw.get("filament_overrides", {}),
+    )
+
+
+def _parse_cura_config(raw: dict) -> CuraSlicerConfig:
+    """Build a CuraSlicerConfig from a raw TOML dict."""
+    return CuraSlicerConfig(
+        overrides=raw.get("overrides", {}),
+    )
+
+
 def load_config(path: Path) -> EstampoConfig:
     """Load and validate an estampo.toml file."""
     path = path.resolve()
@@ -194,32 +261,74 @@ def load_config(path: Path) -> EstampoConfig:
 
     # Slicer config
     slicer_raw = raw.get("slicer", {})
-    slots_parsed: dict[int, str] = {}
-    for key, profile in slicer_raw.get("slots", {}).items():
-        try:
-            slot_num = int(key)
-        except (TypeError, ValueError):
-            raise EstampoError(f"slicer.slots: key '{key}' must be an integer slot number")
-        if slot_num < 1:
-            raise EstampoError(f"slicer.slots: slot must be >= 1, got {slot_num}")
-        if not isinstance(profile, str) or not profile.strip():
-            raise EstampoError(f"slicer.slots[{slot_num}]: profile name must be a non-empty string")
-        slots_parsed[slot_num] = profile
+    engine = slicer_raw.get("engine", "orca")
+    if engine not in ("orca", "cura"):
+        raise EstampoError(f"slicer.engine must be 'orca' or 'cura', got '{engine}'")
+
+    # Detect format: new engine-namespaced sections vs legacy flat keys.
+    # New format has [slicer.orca] and/or [slicer.cura] as dict sub-keys.
+    orca_raw = slicer_raw.get("orca")
+    cura_raw = slicer_raw.get("cura")
+    is_new_format = isinstance(orca_raw, dict) or isinstance(cura_raw, dict)
+
+    if is_new_format:
+        orca_cfg = _parse_orca_config(orca_raw or {})
+        cura_cfg = _parse_cura_config(cura_raw or {})
+    else:
+        # Legacy flat format — all keys live directly under [slicer]
+        # Emit deprecation warning if orca-specific keys are at top level
+        _legacy_keys = {
+            "printer",
+            "process",
+            "filaments",
+            "slots",
+            "machine_overrides",
+            "filament_overrides",
+        }
+        if _legacy_keys & slicer_raw.keys():
+            warnings.warn(
+                "Flat [slicer] config is deprecated — move engine-specific settings "
+                "to [slicer.orca] or [slicer.cura]. See 'estampo init' for the new format.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        orca_cfg = _parse_orca_config(slicer_raw)
+        cura_cfg = _parse_cura_config(slicer_raw.get("cura", {}))
+
+    # Populate active-engine facade fields from the selected engine's sub-config
+    if engine == "orca":
+        active_printer = orca_cfg.printer
+        active_process = orca_cfg.process
+        active_filaments = orca_cfg.filaments
+        active_slots = orca_cfg.slots
+        active_overrides = orca_cfg.overrides
+        active_machine_overrides = orca_cfg.machine_overrides
+        active_filament_overrides = orca_cfg.filament_overrides
+    else:
+        # CuraEngine: no profile chain, only flat overrides
+        active_printer = None
+        active_process = None
+        active_filaments = []
+        active_slots = {}
+        active_overrides = cura_cfg.overrides
+        active_machine_overrides = {}
+        active_filament_overrides = {}
+
     slicer = SlicerConfig(
-        engine=slicer_raw.get("engine", "orca"),
+        engine=engine,
         version=slicer_raw.get("version"),
-        printer=slicer_raw.get("printer"),
-        process=slicer_raw.get("process"),
-        filaments=slicer_raw.get("filaments", []),
-        slots=slots_parsed,
         bed_type=slicer_raw.get("bed_type"),
-        overrides=slicer_raw.get("overrides", {}),
-        machine_overrides=slicer_raw.get("machine_overrides", {}),
-        filament_overrides=slicer_raw.get("filament_overrides", {}),
         profiles_dir=slicer_raw.get("profiles_dir", "profiles"),
+        orca=orca_cfg,
+        cura=cura_cfg,
+        printer=active_printer,
+        process=active_process,
+        filaments=active_filaments,
+        slots=active_slots,
+        overrides=active_overrides,
+        machine_overrides=active_machine_overrides,
+        filament_overrides=active_filament_overrides,
     )
-    if slicer.engine not in ("orca", "cura"):
-        raise EstampoError(f"slicer.engine must be 'orca' or 'cura', got '{slicer.engine}'")
 
     # Parts — first pass: parse everything except filament resolution
     parts_raw = raw.get("parts", [])

@@ -288,9 +288,13 @@ def cura_profile_from_config(
         cura_overrides: dict[str, str] = {}
         for key, value in overrides.items():
             if key in orca_to_cura:
+                # OrcaSlicer key name → CuraProfile attribute
                 attr = orca_to_cura[key]
                 if hasattr(profile, attr):
                     setattr(profile, attr, value)
+            elif hasattr(profile, key):
+                # Native CuraEngine key that matches a CuraProfile attribute
+                setattr(profile, key, value)
             else:
                 # Pass through as raw CuraEngine -s override
                 cura_overrides[key] = str(value)

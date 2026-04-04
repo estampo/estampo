@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from estampo import EstampoError
-from estampo.config import load_config
+from estampo.config import CuraSlicerConfig, OrcaSlicerConfig, load_config
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -1017,3 +1017,167 @@ file = "cube.stl"
     )
     with pytest.raises(EstampoError, match="output_dir must be a non-empty string"):
         load_config(path)
+
+
+# --- Engine-namespaced config format ---
+
+
+class TestEngineNamespacedConfig:
+    """Tests for the new [slicer.orca] / [slicer.cura] config format."""
+
+    def test_orca_namespaced(self, tmp_path):
+        """New format: OrcaSlicer settings under [slicer.orca]."""
+        path = _write_toml(
+            tmp_path,
+            """
+[slicer]
+engine = "orca"
+version = "2.3.2"
+bed_type = "Textured PEI Plate"
+
+[slicer.orca]
+printer = "Bambu Lab P1S 0.4 nozzle"
+process = "0.20mm Standard @BBL X1C"
+filaments = ["Generic PETG"]
+
+[slicer.orca.overrides]
+sparse_infill_density = "30%"
+
+[[parts]]
+file = "cube.stl"
+""",
+            create_files=["cube.stl"],
+        )
+        cfg = load_config(path)
+        assert cfg.slicer.engine == "orca"
+        assert cfg.slicer.version == "2.3.2"
+        # Facade fields populated from orca sub-config
+        assert cfg.slicer.printer == "Bambu Lab P1S 0.4 nozzle"
+        assert cfg.slicer.process == "0.20mm Standard @BBL X1C"
+        assert cfg.slicer.filaments == ["Generic PETG"]
+        assert cfg.slicer.overrides == {"sparse_infill_density": "30%"}
+        # Sub-config objects also available
+        assert isinstance(cfg.slicer.orca, OrcaSlicerConfig)
+        assert cfg.slicer.orca.printer == "Bambu Lab P1S 0.4 nozzle"
+
+    def test_cura_namespaced(self, tmp_path):
+        """New format: CuraEngine settings under [slicer.cura]."""
+        path = _write_toml(
+            tmp_path,
+            """
+[slicer]
+engine = "cura"
+version = "5.12.0"
+bed_type = "Textured PEI Plate"
+
+[slicer.cura]
+overrides = { infill_sparse_density = 25, support_structure = "tree" }
+
+[[parts]]
+file = "cube.stl"
+""",
+            create_files=["cube.stl"],
+        )
+        cfg = load_config(path)
+        assert cfg.slicer.engine == "cura"
+        assert cfg.slicer.version == "5.12.0"
+        # Cura has no profile chain — facade fields are empty
+        assert cfg.slicer.printer is None
+        assert cfg.slicer.process is None
+        assert cfg.slicer.filaments == []
+        # Overrides come from cura sub-config
+        assert cfg.slicer.overrides == {"infill_sparse_density": 25, "support_structure": "tree"}
+        assert isinstance(cfg.slicer.cura, CuraSlicerConfig)
+        assert cfg.slicer.cura.overrides == {
+            "infill_sparse_density": 25,
+            "support_structure": "tree",
+        }
+
+    def test_both_engines_coexist(self, tmp_path):
+        """Both [slicer.orca] and [slicer.cura] present; engine selects active one."""
+        path = _write_toml(
+            tmp_path,
+            """
+[slicer]
+engine = "cura"
+version = "5.12.0"
+bed_type = "Textured PEI Plate"
+
+[slicer.orca]
+printer = "Bambu Lab P1S 0.4 nozzle"
+process = "0.20mm Standard @BBL X1C"
+filaments = ["Generic PETG"]
+
+[slicer.cura]
+overrides = { infill_sparse_density = 25 }
+
+[[parts]]
+file = "cube.stl"
+""",
+            create_files=["cube.stl"],
+        )
+        cfg = load_config(path)
+        # Active engine is cura
+        assert cfg.slicer.engine == "cura"
+        assert cfg.slicer.printer is None  # cura doesn't use printer profiles
+        assert cfg.slicer.overrides == {"infill_sparse_density": 25}
+        # But orca sub-config is still populated
+        assert cfg.slicer.orca.printer == "Bambu Lab P1S 0.4 nozzle"
+        assert cfg.slicer.orca.filaments == ["Generic PETG"]
+
+    def test_legacy_flat_still_works(self, tmp_path):
+        """Legacy flat format without [slicer.orca] section still works."""
+        path = _write_toml(
+            tmp_path,
+            """
+[slicer]
+engine = "orca"
+printer = "Bambu Lab P1S 0.4 nozzle"
+process = "0.20mm Standard @BBL X1C"
+filaments = ["Generic PLA @base"]
+
+[slicer.overrides]
+sparse_infill_density = "25%"
+
+[[parts]]
+file = "cube.stl"
+""",
+            create_files=["cube.stl"],
+        )
+        with pytest.warns(DeprecationWarning, match="Flat.*slicer.*deprecated"):
+            cfg = load_config(path)
+        assert cfg.slicer.printer == "Bambu Lab P1S 0.4 nozzle"
+        assert cfg.slicer.filaments == ["Generic PLA @base"]
+        assert cfg.slicer.overrides == {"sparse_infill_density": "25%"}
+        # Legacy flat keys are also in the orca sub-config
+        assert cfg.slicer.orca.printer == "Bambu Lab P1S 0.4 nozzle"
+
+    def test_cura_namespaced_with_orca_machine_overrides(self, tmp_path):
+        """Orca sub-config supports machine_overrides and filament_overrides."""
+        path = _write_toml(
+            tmp_path,
+            """
+[slicer]
+engine = "orca"
+version = "2.3.2"
+
+[slicer.orca]
+printer = "Bambu Lab P1S 0.4 nozzle"
+process = "0.20mm Standard @BBL X1C"
+filaments = ["Generic PLA @base"]
+
+[slicer.orca.machine_overrides]
+nozzle_diameter = "0.6"
+
+[slicer.orca.filament_overrides]
+filament_retraction_length = "0.8"
+
+[[parts]]
+file = "cube.stl"
+""",
+            create_files=["cube.stl"],
+        )
+        cfg = load_config(path)
+        assert cfg.slicer.machine_overrides == {"nozzle_diameter": "0.6"}
+        assert cfg.slicer.filament_overrides == {"filament_retraction_length": "0.8"}
+        assert cfg.slicer.orca.machine_overrides == {"nozzle_diameter": "0.6"}

@@ -30,24 +30,32 @@ padding = 5.0           # gap between parts in mm
 [slicer]
 engine = "orca"                            # "orca" (OrcaSlicer) or "cura" (CuraEngine)
 # version = "2.3.1"                        # pin slicer version for reproducibility
+# bed_type = "Textured PEI Plate"          # or: Cool Plate, Engineering Plate, High Temp Plate
+
+# OrcaSlicer profile chain:
+[slicer.orca]
 printer = "Bambu Lab P1S 0.4 nozzle"       # machine profile name
 process = "0.20mm Standard @BBL X1C"       # process/quality profile
 filaments = ["Generic PLA @base"]          # filament profiles (one per AMS slot)
-# bed_type = "Textured PEI Plate"          # or: Cool Plate, Engineering Plate, High Temp Plate
 
 # Per-slot filament mapping (alternative to filaments list):
-# [slicer.slots]
+# [slicer.orca.slots]
 # 1 = "Generic PLA @base"
 # 2 = "Generic PETG @base"
 
 # Machine profile overrides (e.g. if you upgraded your nozzle):
-# [slicer.machine_overrides]
+# [slicer.orca.machine_overrides]
 # nozzle_type = "hardened_steel"   # brass, stainless_steel, or hardened_steel
 
-# Slicer setting overrides:
-# [slicer.overrides]
+# OrcaSlicer setting overrides:
+# [slicer.orca.overrides]
 # sparse_infill_density = "25%"
 # wall_loops = 3
+
+# CuraEngine overrides (used when engine = "cura"):
+# [slicer.cura.overrides]
+# infill_sparse_density = 25
+# support_structure = "tree"
 
 [[parts]]
 file = "my-part.stl"          # path relative to this file
@@ -120,22 +128,39 @@ def _load_existing(path: Path) -> _ExistingConfig | None:
     if raw_parts:
         parts = [{"file": p.get("file", ""), **p} for p in raw_parts]
 
-    nozzle_type = slicer.get("machine_overrides", {}).get("nozzle_type")
+    # Detect new engine-namespaced format vs legacy flat format
+    orca_section = slicer.get("orca")
+    cura_section = slicer.get("cura")
+    is_new_format = isinstance(orca_section, dict) or isinstance(cura_section, dict)
+
+    if is_new_format:
+        orca = orca_section or {}
+        cura = cura_section or {}
+        printer_val = orca.get("printer")
+        process_val = orca.get("process")
+        filaments_val = orca.get("filaments")
+        nozzle_type = orca.get("machine_overrides", {}).get("nozzle_type")
+        overrides = orca.get("overrides") or cura.get("overrides")
+    else:
+        printer_val = slicer.get("printer")
+        process_val = slicer.get("process")
+        filaments_val = slicer.get("filaments")
+        nozzle_type = slicer.get("machine_overrides", {}).get("nozzle_type")
+        overrides = slicer.get("overrides")
+
+    if overrides:
+        overrides = {k: str(v) for k, v in overrides.items()}
 
     plate_raw = plate.get("size")
     plate_size = None
     if isinstance(plate_raw, list) and len(plate_raw) == 2:
         plate_size = (int(plate_raw[0]), int(plate_raw[1]))
 
-    overrides = slicer.get("overrides")
-    if overrides:
-        overrides = {k: str(v) for k, v in overrides.items()}
-
     return _ExistingConfig(
         project_name=raw.get("name"),
-        printer=slicer.get("printer"),
-        process=slicer.get("process"),
-        filaments=slicer.get("filaments"),
+        printer=printer_val,
+        process=process_val,
+        filaments=filaments_val,
         bed_type=slicer.get("bed_type"),
         nozzle_type=nozzle_type,
         slicer_version=slicer.get("version"),
@@ -1304,40 +1329,53 @@ def _build_toml(
     lines.append("padding = 5.0")
     lines.append("")
 
-    # Slicer
+    # Slicer — common fields
     lines.append("[slicer]")
     lines.append(f'engine = "{engine}"')
     if slicer_version:
         lines.append(f'version = "{slicer_version}"')
-    if printer_profile:
-        lines.append(f'printer = "{printer_profile}"')
-    if process_profile:
-        lines.append(f'process = "{process_profile}"')
-    if filament_names:
-        fil_list = ", ".join(f'"{f}"' for f in filament_names)
-        lines.append(f"filaments = [{fil_list}]")
     if bed_type:
         lines.append(f'bed_type = "{bed_type}"')
     lines.append("")
 
-    # Slicer overrides
-    if overrides:
-        lines.append("[slicer.overrides]")
-        for key, value in overrides.items():
-            # Try to emit numeric values without quotes
-            try:
-                float(value)
-                lines.append(f"{key} = {value}")
-            except ValueError:
-                lines.append(f'{key} = "{value}"')
+    # Engine-specific sections
+    if engine == "orca":
+        lines.append("[slicer.orca]")
+        if printer_profile:
+            lines.append(f'printer = "{printer_profile}"')
+        if process_profile:
+            lines.append(f'process = "{process_profile}"')
+        if filament_names:
+            fil_list = ", ".join(f'"{f}"' for f in filament_names)
+            lines.append(f"filaments = [{fil_list}]")
         lines.append("")
 
-    # Machine overrides
-    if machine_overrides:
-        lines.append("[slicer.machine_overrides]")
-        for key, value in machine_overrides.items():
-            lines.append(f'{key} = "{value}"')
-        lines.append("")
+        if overrides:
+            lines.append("[slicer.orca.overrides]")
+            for key, value in overrides.items():
+                try:
+                    float(value)
+                    lines.append(f"{key} = {value}")
+                except ValueError:
+                    lines.append(f'{key} = "{value}"')
+            lines.append("")
+
+        if machine_overrides:
+            lines.append("[slicer.orca.machine_overrides]")
+            for key, value in machine_overrides.items():
+                lines.append(f'{key} = "{value}"')
+            lines.append("")
+
+    elif engine == "cura":
+        if overrides:
+            lines.append("[slicer.cura.overrides]")
+            for key, value in overrides.items():
+                try:
+                    float(value)
+                    lines.append(f"{key} = {value}")
+                except ValueError:
+                    lines.append(f'{key} = "{value}"')
+            lines.append("")
 
     # Parts
     for p in parts:

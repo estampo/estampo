@@ -93,6 +93,23 @@ def test_profile_from_config_passthrough_overrides():
     assert profile.overrides == {"retraction_amount": "0.8", "support_enable": "true"}
 
 
+def test_profile_from_config_native_cura_keys():
+    """Native CuraEngine key names set CuraProfile attributes directly."""
+    overrides = {
+        "infill_sparse_density": 30,
+        "wall_line_count": 5,
+        "material_print_temperature": 250,
+        "layer_height_0": 0.28,
+    }
+    profile = cura_profile_from_config(overrides=overrides)
+    assert profile.infill_sparse_density == 30
+    assert profile.wall_line_count == 5
+    assert profile.material_print_temperature == 250
+    assert profile.layer_height_0 == 0.28
+    # All mapped to attributes — no passthrough overrides
+    assert profile.overrides == {}
+
+
 # --- _settings_flags ---
 
 
