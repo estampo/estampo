@@ -89,6 +89,17 @@ def _settings_flags(profile: CuraProfile) -> list[str]:
     Machine settings (bed size, heated bed, start/end gcode) are handled
     by the bambulab_p1s definition — only process/material settings here.
     """
+    # CuraEngine computes infill_line_distance from infill_sparse_density
+    # via a ``value`` expression in fdmprinter.def.json, but ``value``
+    # overrides ``-s`` flags. Set infill_line_distance directly so our
+    # density setting actually takes effect.
+    infill_line_width = profile.nozzle_diameter  # default assumption
+    density = profile.infill_sparse_density
+    if density > 0:
+        infill_line_distance = round(infill_line_width * 100 / density, 4)
+    else:
+        infill_line_distance = 0
+
     pairs: dict[str, object] = {
         "layer_height": profile.layer_height,
         "layer_height_0": profile.layer_height_0,
@@ -97,7 +108,8 @@ def _settings_flags(profile: CuraProfile) -> list[str]:
         "material_bed_temperature": profile.material_bed_temperature,
         "material_bed_temperature_layer_0": profile.material_bed_temperature,
         "material_diameter": profile.material_diameter,
-        "infill_sparse_density": profile.infill_sparse_density,
+        "infill_sparse_density": density,
+        "infill_line_distance": infill_line_distance,
         "wall_line_count": profile.wall_line_count,
         "top_layers": profile.top_layers,
         "bottom_layers": profile.bottom_layers,
