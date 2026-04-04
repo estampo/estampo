@@ -227,13 +227,19 @@ def _slice_via_docker(
 ) -> Path:
     """Run the slicer inside the estampo Docker container.
 
-    Profile files live under output_dir/.profiles/ so they're accessible
-    via the same volume mount as the output directory. No separate mount
-    needed (avoids macOS Docker temp-dir visibility issues).
+    The input file and profiles are staged under output_dir so
+    everything is accessible via a single volume mount.  This avoids
+    macOS issues where separate temp-dir bind-mounts aren't visible
+    to Docker, and reduces the number of mount points.
     """
     input_3mf = input_3mf.resolve()
     output_dir = output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Stage input inside output_dir — a single bind-mount for all I/O.
+    staged_input = output_dir / f".input{input_3mf.suffix}"
+    shutil.copy2(input_3mf, staged_input)
+    container_input = f"/work/output/.input{input_3mf.suffix}"
 
     # Profile dir is under output_dir, so rewrite paths relative to /work/output
     host_prefix = str(profile_dir)
@@ -245,8 +251,6 @@ def _slice_via_docker(
         "--rm",
         "--platform",
         "linux/amd64",
-        "-v",
-        f"{input_3mf}:/work/input.3mf:ro",
         "-v",
         f"{output_dir}:/work/output",
         "--entrypoint",
@@ -277,7 +281,7 @@ def _slice_via_docker(
             "--min-save",
             "--outputdir",
             "/work/output",
-            "/work/input.3mf",
+            container_input,
         ]
     )
 
@@ -287,6 +291,9 @@ def _slice_via_docker(
 
     with ui.status("Slicing"):
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+
+    # Clean up staged input regardless of outcome
+    staged_input.unlink(missing_ok=True)
 
     if result.returncode != 0:
         log.error("Docker slicer stderr:\n%s", result.stderr)
