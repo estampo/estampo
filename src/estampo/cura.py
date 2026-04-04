@@ -119,6 +119,7 @@ def _settings_flags(profile: CuraProfile) -> list[str]:
         "speed_infill": profile.speed_infill,
         "material_print_temp_prepend": "false",
         "material_bed_temp_prepend": "false",
+        "adhesion_type": "none",
         # CuraEngine 5.12 requires these explicitly (not resolved from def)
         "roofing_layer_count": 0,
         "flooring_layer_count": 0,
@@ -165,19 +166,33 @@ def _patch_gcode_header(gcode_path: Path, stderr: str) -> None:
 
 
 def _place_on_bed(stl_path: Path, staging_dir: Path) -> Path:
-    """Copy STL into staging, ensuring the mesh sits on the bed (Z≥0).
+    """Copy STL into staging, ensuring the mesh sits on the bed (Z>=0)
+    and is centered at the XY origin.
 
-    CuraEngine only slices geometry above Z=0.  If the mesh minimum Z
-    is negative (common for origin-centered models), shift it up so
-    the lowest vertex touches Z=0.
+    CuraEngine only slices geometry above Z=0 and positions meshes
+    relative to the bed center.  This function:
+    1. Shifts Z so the lowest vertex is at Z=0.
+    2. Centers the mesh at (0, 0) in XY so CuraEngine places it at
+       the center of the build plate.
     """
     import trimesh
 
     mesh: trimesh.Trimesh = trimesh.load(str(stl_path), force="mesh")  # type: ignore[assignment]
+
+    # Center XY at origin (CuraEngine places meshes relative to bed center)
+    x_center = float((mesh.bounds[0][0] + mesh.bounds[1][0]) / 2)
+    y_center = float((mesh.bounds[0][1] + mesh.bounds[1][1]) / 2)
+    if abs(x_center) > 0.01 or abs(y_center) > 0.01:
+        mesh.vertices[:, 0] -= x_center  # type: ignore[attr-defined]
+        mesh.vertices[:, 1] -= y_center  # type: ignore[attr-defined]
+        log.info("Centered mesh XY (shifted by %.2f, %.2f)", -x_center, -y_center)
+
+    # Place on bed (Z >= 0)
     z_min = float(mesh.bounds[0][2])
     if z_min < 0:
         mesh.vertices[:, 2] -= z_min
         log.info("Shifted mesh up by %.2fmm to place on bed", -z_min)
+
     out = staging_dir / stl_path.name
     mesh.export(str(out), file_type="stl")
     return out
