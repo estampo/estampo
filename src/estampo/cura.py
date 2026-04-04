@@ -4,8 +4,8 @@ Slices STL files using CuraEngine via Docker, with BBL-specific start/end
 G-code for Bambu Lab printers. Produces plain G-code that can be packaged
 into .gcode.3mf.
 
-Uses CuraEngine 5.12.0 extracted from the UltiMaker Cura AppImage,
-packaged in a minimal Docker image (~95 MB) with bundled definitions.
+Uses CuraEngine 5.12.0 built from source, packaged in a minimal Docker
+image with bundled printer definitions.
 """
 
 from __future__ import annotations
