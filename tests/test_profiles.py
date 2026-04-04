@@ -903,7 +903,16 @@ class TestEngineNamespacedProfiles:
         sys_machine.mkdir(parents=True)
         (sys_machine / "TestPrinter.json").write_text('{"type": "machine"}')
 
-        with patch.dict("estampo.profiles.SYSTEM_DIRS", {"orca": tmp_path / "sys"}, clear=True):
+        # Mock Docker extraction — returns a dir with the same profiles
+        docker_dir = tmp_path / "docker_profiles"
+        docker_machine = docker_dir / "machine"
+        docker_machine.mkdir(parents=True)
+        (docker_machine / "TestPrinter.json").write_text('{"type": "machine"}')
+
+        with (
+            patch.dict("estampo.profiles.SYSTEM_DIRS", {"orca": tmp_path / "sys"}, clear=True),
+            patch("estampo.profiles.extract_docker_profiles", return_value=docker_dir),
+        ):
             pin_profiles(
                 engine="orca",
                 printer="TestPrinter",
