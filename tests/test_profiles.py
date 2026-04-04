@@ -787,3 +787,160 @@ def test_pinned_profiles_version_returns_none_without_marker(tmp_path):
 def test_pinned_profiles_version_returns_none_without_dir(tmp_path):
     """Returns None when profiles dir doesn't exist."""
     assert pinned_profiles_version(tmp_path) is None
+
+
+# ---------------------------------------------------------------------------
+# Engine-namespaced profile directories
+# ---------------------------------------------------------------------------
+
+
+class TestEngineNamespacedProfiles:
+    """Tests for profiles/<engine>/<category>/ directory layout."""
+
+    def test_discover_names_engine_namespaced(self, tmp_path):
+        """Pinned profiles found under profiles/<engine>/<category>/."""
+        orca_machine = tmp_path / "profiles" / "orca" / "machine"
+        orca_machine.mkdir(parents=True)
+        (orca_machine / "MyPrinter.json").write_text('{"type": "machine"}')
+
+        with patch.dict("estampo.profiles.SYSTEM_DIRS", {}, clear=True):
+            names, source = discover_profile_names("orca", project_dir=tmp_path)
+
+        assert source == "pinned"
+        assert "MyPrinter" in names.get("machine", [])
+
+    def test_discover_names_legacy_fallback(self, tmp_path):
+        """Legacy profiles/<category>/ still found when no engine subdir."""
+        legacy_machine = tmp_path / "profiles" / "machine"
+        legacy_machine.mkdir(parents=True)
+        (legacy_machine / "OldPrinter.json").write_text('{"type": "machine"}')
+
+        with patch.dict("estampo.profiles.SYSTEM_DIRS", {}, clear=True):
+            names, source = discover_profile_names("orca", project_dir=tmp_path)
+
+        assert source == "pinned"
+        assert "OldPrinter" in names.get("machine", [])
+
+    def test_discover_names_engine_takes_precedence(self, tmp_path):
+        """Engine-namespaced profiles take precedence over legacy flat."""
+        # Create both paths
+        (tmp_path / "profiles" / "orca" / "machine").mkdir(parents=True)
+        (tmp_path / "profiles" / "orca" / "machine" / "NewPrinter.json").write_text(
+            '{"type": "machine"}'
+        )
+        (tmp_path / "profiles" / "machine").mkdir(parents=True)
+        (tmp_path / "profiles" / "machine" / "OldPrinter.json").write_text('{"type": "machine"}')
+
+        with patch.dict("estampo.profiles.SYSTEM_DIRS", {}, clear=True):
+            names, source = discover_profile_names("orca", project_dir=tmp_path)
+
+        assert source == "pinned"
+        assert "NewPrinter" in names.get("machine", [])
+        # Legacy profile NOT included — engine-namespaced found first
+        assert "OldPrinter" not in names.get("machine", [])
+
+    def test_resolve_profile_engine_namespaced(self, tmp_path):
+        """resolve_profile finds profiles in profiles/<engine>/<category>/."""
+        orca_process = tmp_path / "profiles" / "orca" / "process"
+        orca_process.mkdir(parents=True)
+        expected = orca_process / "MyProcess.json"
+        expected.write_text('{"type": "process", "layer_height": "0.2"}')
+
+        result = resolve_profile("MyProcess", "orca", "process", tmp_path)
+        assert result == expected
+
+    def test_resolve_profile_legacy_fallback(self, tmp_path):
+        """resolve_profile falls back to legacy profiles/<category>/."""
+        legacy_process = tmp_path / "profiles" / "process"
+        legacy_process.mkdir(parents=True)
+        expected = legacy_process / "OldProcess.json"
+        expected.write_text('{"type": "process"}')
+
+        result = resolve_profile("OldProcess", "orca", "process", tmp_path)
+        assert result == expected
+
+    def test_resolve_profile_engine_over_legacy(self, tmp_path):
+        """Engine-namespaced profile found before legacy."""
+        (tmp_path / "profiles" / "orca" / "process").mkdir(parents=True)
+        engine_path = tmp_path / "profiles" / "orca" / "process" / "MyProcess.json"
+        engine_path.write_text('{"layer_height": "0.12"}')
+
+        (tmp_path / "profiles" / "process").mkdir(parents=True)
+        legacy_path = tmp_path / "profiles" / "process" / "MyProcess.json"
+        legacy_path.write_text('{"layer_height": "0.20"}')
+
+        result = resolve_profile("MyProcess", "orca", "process", tmp_path)
+        assert result == engine_path
+
+    def test_pin_profiles_writes_engine_namespaced(self, tmp_path):
+        """pin_profiles writes to profiles/<engine>/<category>/."""
+        # Create a system profile to pin
+        sys_machine = tmp_path / "sys" / "machine"
+        sys_machine.mkdir(parents=True)
+        (sys_machine / "TestPrinter.json").write_text(
+            json.dumps({"type": "machine", "bed_size": "256x256"})
+        )
+
+        with patch.dict("estampo.profiles.SYSTEM_DIRS", {"orca": tmp_path / "sys"}, clear=True):
+            pinned = pin_profiles(
+                engine="orca",
+                printer="TestPrinter",
+                process=None,
+                filaments=[],
+                project_dir=tmp_path,
+            )
+
+        assert len(pinned) == 1
+        # Written to engine-namespaced path
+        assert pinned[0] == tmp_path / "profiles" / "orca" / "machine" / "TestPrinter.json"
+        assert pinned[0].exists()
+        data = json.loads(pinned[0].read_text())
+        assert data["bed_size"] == "256x256"
+
+    def test_pin_profiles_version_marker_engine_namespaced(self, tmp_path):
+        """Version marker written to profiles/<engine>/.slicer-version."""
+        sys_machine = tmp_path / "sys" / "machine"
+        sys_machine.mkdir(parents=True)
+        (sys_machine / "TestPrinter.json").write_text('{"type": "machine"}')
+
+        with patch.dict("estampo.profiles.SYSTEM_DIRS", {"orca": tmp_path / "sys"}, clear=True):
+            pin_profiles(
+                engine="orca",
+                printer="TestPrinter",
+                process=None,
+                filaments=[],
+                project_dir=tmp_path,
+                docker_version="2.3.2",
+            )
+
+        marker = tmp_path / "profiles" / "orca" / ".slicer-version"
+        assert marker.exists()
+        assert marker.read_text().strip() == "2.3.2"
+
+    def test_pinned_profiles_version_engine_namespaced(self, tmp_path):
+        """pinned_profiles_version reads from profiles/<engine>/.slicer-version."""
+        engine_dir = tmp_path / "profiles" / "orca"
+        engine_dir.mkdir(parents=True)
+        (engine_dir / ".slicer-version").write_text("2.3.2\n")
+
+        assert pinned_profiles_version(tmp_path, engine="orca") == "2.3.2"
+
+    def test_pinned_profiles_version_legacy_fallback(self, tmp_path):
+        """pinned_profiles_version falls back to profiles/.slicer-version."""
+        profiles = tmp_path / "profiles"
+        profiles.mkdir(parents=True)
+        (profiles / ".slicer-version").write_text("2.3.1\n")
+
+        assert pinned_profiles_version(tmp_path, engine="orca") == "2.3.1"
+
+    def test_pinned_profiles_version_engine_over_legacy(self, tmp_path):
+        """Engine-namespaced version marker takes precedence."""
+        profiles = tmp_path / "profiles"
+        profiles.mkdir(parents=True)
+        (profiles / ".slicer-version").write_text("2.3.1\n")
+
+        engine_dir = profiles / "orca"
+        engine_dir.mkdir()
+        (engine_dir / ".slicer-version").write_text("2.3.2\n")
+
+        assert pinned_profiles_version(tmp_path, engine="orca") == "2.3.2"

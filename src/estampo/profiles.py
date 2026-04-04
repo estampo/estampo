@@ -148,15 +148,19 @@ def discover_profile_names(
     if any(system.values()):
         return {cat: sorted(system.get(cat, {}).keys()) for cat in CATEGORIES}, "system"
 
-    # 2. Pinned profiles in repo
+    # 2. Pinned profiles in repo (engine-namespaced path first, then legacy)
     if project_dir:
-        pinned: dict[str, list[str]] = {}
-        for cat in CATEGORIES:
-            cat_dir = project_dir / profiles_dir / cat
-            if cat_dir.is_dir():
-                pinned[cat] = sorted(f.stem for f in cat_dir.glob("*.json") if f.is_file())
-        if any(pinned.values()):
-            return pinned, "pinned"
+        for base in (
+            project_dir / profiles_dir / engine,  # new: profiles/orca/
+            project_dir / profiles_dir,  # legacy: profiles/
+        ):
+            pinned: dict[str, list[str]] = {}
+            for cat in CATEGORIES:
+                cat_dir = base / cat
+                if cat_dir.is_dir():
+                    pinned[cat] = sorted(f.stem for f in cat_dir.glob("*.json") if f.is_file())
+            if any(pinned.values()):
+                return pinned, "pinned"
 
     # 3. Bundled profiles
     bundled = load_bundled_profiles(engine, version)
@@ -351,12 +355,16 @@ def resolve_profile(
             raise FileNotFoundError(f"Profile path not found: {path}")
         return path
 
-    # Check local pinned profiles
+    # Check local pinned profiles (engine-namespaced first, then legacy)
     if project_dir:
-        local = project_dir / profiles_dir / category / f"{name_or_path}.json"
-        if local.exists():
-            log.debug("Resolved '%s' from pinned profiles: %s", name_or_path, local)
-            return local
+        for base in (
+            project_dir / profiles_dir / engine,  # new: profiles/orca/
+            project_dir / profiles_dir,  # legacy: profiles/
+        ):
+            local = base / category / f"{name_or_path}.json"
+            if local.exists():
+                log.debug("Resolved '%s' from pinned profiles: %s", name_or_path, local)
+                return local
 
     # Check Docker-extracted profiles (version-matched)
     if docker_profile_dir:
@@ -366,9 +374,9 @@ def resolve_profile(
             return docker
 
     # Check system directory
-    base = SYSTEM_DIRS.get(engine)
-    if base:
-        system = base / category / f"{name_or_path}.json"
+    sys_base = SYSTEM_DIRS.get(engine)
+    if sys_base:
+        system = sys_base / category / f"{name_or_path}.json"
         if system.exists():
             log.debug("Resolved '%s' from system profiles: %s", name_or_path, system)
             return system
@@ -438,11 +446,23 @@ def resolve_profile_data(
     return merged
 
 
-def pinned_profiles_version(project_dir: Path, profiles_dir: str = "profiles") -> str | None:
+def pinned_profiles_version(
+    project_dir: Path,
+    profiles_dir: str = "profiles",
+    engine: str | None = None,
+) -> str | None:
     """Read the slicer version that pinned profiles were created with.
+
+    Checks engine-namespaced path first (``profiles/<engine>/.slicer-version``),
+    then falls back to legacy path (``profiles/.slicer-version``).
 
     Returns ``None`` if no marker file exists (pre-marker pinned profiles).
     """
+    if engine:
+        marker = project_dir / profiles_dir / engine / ".slicer-version"
+        if marker.exists():
+            return marker.read_text().strip()
+    # Legacy fallback
     marker = project_dir / profiles_dir / ".slicer-version"
     if marker.exists():
         return marker.read_text().strip()
@@ -514,13 +534,16 @@ def pin_profiles(
     if docker_version:
         docker_dir = extract_docker_profiles(docker_version)
 
+    # Engine-namespaced base: profiles/<engine>/
+    engine_base = project_dir / profiles_dir / engine
+
     try:
         for category, name in items:
             if _is_path(name):
                 log.info("Skipping '%s' (already a path)", name)
                 continue
 
-            dest_dir = project_dir / profiles_dir / category
+            dest_dir = engine_base / category
             dest_dir.mkdir(parents=True, exist_ok=True)
             dest = dest_dir / f"{name}.json"
 
@@ -544,7 +567,8 @@ def pin_profiles(
 
         # Write a version marker so slice-time can detect stale profiles.
         if docker_version:
-            marker = project_dir / profiles_dir / ".slicer-version"
+            marker = engine_base / ".slicer-version"
+            marker.parent.mkdir(parents=True, exist_ok=True)
             marker.write_text(docker_version + "\n")
             log.debug("Wrote slicer version marker: %s", marker)
     finally:

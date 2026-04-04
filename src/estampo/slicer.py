@@ -704,10 +704,14 @@ def slice_plate(
     # Profiles pinned for one slicer version can crash a different version due
     # to schema changes (array sizes, removed/added keys).
     if project_dir and docker_version:
-        pinned_dir = project_dir / profiles_dir
-        has_pinned = pinned_dir.is_dir() and any(pinned_dir.rglob("*.json"))
+        # Check both engine-namespaced and legacy paths for pinned profiles
+        engine_pinned = project_dir / profiles_dir / engine
+        legacy_pinned = project_dir / profiles_dir
+        has_pinned = (engine_pinned.is_dir() and any(engine_pinned.rglob("*.json"))) or (
+            legacy_pinned.is_dir() and any(legacy_pinned.rglob("*.json"))
+        )
         if has_pinned:
-            pinned_ver = pinned_profiles_version(project_dir, profiles_dir)
+            pinned_ver = pinned_profiles_version(project_dir, profiles_dir, engine)
             if pinned_ver and pinned_ver != docker_version:
                 raise EstampoError(
                     f"Pinned profiles were created for slicer {pinned_ver} but "
