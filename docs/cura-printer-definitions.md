@@ -32,6 +32,41 @@ CuraEngine has no separate process or filament profiles -- all tuning is done
 via `-s key=value` overrides on the command line, which estampo stores in
 `[slicer.cura.overrides]`.
 
+### Bambu Lab definitions are custom
+
+The standard Cura AppImage does not include Bambu Lab printer definitions --
+Bambu is not an Ultimaker partner. The `bambulab_base.def.json` and
+`bambulab_p1s.def.json` files shipped with estampo were hand-crafted for this
+project. They are maintained separately from the upstream Cura definitions.
+
+The manifest extraction must merge both sources: standard Cura definitions from
+the AppImage + estampo's custom Bambu definitions from `src/estampo/data/`.
+
+### Multi-filament support is user-declared
+
+Printers like the Bambu Lab P1S ship both with and without an AMS
+(Automatic Material System). The AMS is an accessory, not a property of the
+printer definition -- the machine geometry is identical either way.
+
+More broadly, multi-filament capability (AMS, tool changers, multi-extruder
+setups) varies across vendors and is not consistently represented in slicer
+definitions. Rather than trying to detect this from vendor-specific APIs or
+encode it in printer definitions, estampo treats it as a **user-declared
+configuration property**.
+
+During `estampo init`, after selecting a printer, the wizard asks whether the
+printer has multi-filament support. This is stored in the TOML config and
+drives filament slot selection, filament mapping, and G-code generation.
+
+This keeps estampo vendor-neutral -- the same flow works for Bambu AMS, Prusa
+MMU, E3D tool changers, or any future multi-filament system.
+
+```toml
+[slicer]
+engine = "cura"
+multi_filament = true    # user-declared during init
+```
+
 ## Design
 
 ### TOML config
@@ -43,6 +78,7 @@ The selected printer definition is stored in the TOML config:
 engine = "cura"
 version = "5.12.0"
 bed_type = "Textured PEI Plate"
+multi_filament = true
 
 [slicer.cura]
 printer = "BambuLab P1S"
@@ -127,7 +163,9 @@ Add `--engine cura` support:
   all definition files in the image.
 - Bulk-copy to a temp directory, read each JSON.
 - Filter: only include definitions where `metadata.visible` is not `false`
-  (skips intermediate definitions like `bambulab_base`, `fdmprinter`).
+  (skips intermediate definitions like `fdmprinter`, manufacturer bases).
+- Merge in estampo's custom Bambu Lab definitions from `src/estampo/data/`
+  (these are not in the upstream Cura AppImage).
 - Build manifest with `{name, id}` objects under the `machine` key.
 - Write to `src/estampo/data/profiles.cura.5.12.0.json`.
 
@@ -168,7 +206,13 @@ Replace the current CuraEngine numbered-list picker with the same
 - Present via `ui.pick()` with type-to-search filtering.
 - After selection, load the `.def.json` to extract `machine_width` /
   `machine_depth` for plate size auto-detection.
-- Update `_build_toml()` to emit `printer = "..."` under `[slicer.cura]`.
+- Ask "Does your printer have multi-filament support (AMS, MMU, tool
+  changer)?" -- store as `multi_filament = true/false` in `[slicer]`.
+  This replaces the current approach of inferring AMS from OrcaSlicer's
+  `single_extruder_multi_material` machine profile field, making the
+  flow vendor-neutral.
+- Update `_build_toml()` to emit `printer = "..."` under `[slicer.cura]`
+  and `multi_filament` under `[slicer]`.
 
 ### 5. Slice-time definition resolution
 
