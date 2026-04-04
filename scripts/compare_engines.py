@@ -90,20 +90,35 @@ def _gcode_structure(gcode_path: Path) -> dict[str, bool]:
     }
 
 
-def _slice_orca(stl_path: Path, output_base: Path) -> Path:
-    """Slice with OrcaSlicer via Docker."""
+def _stl_to_3mf(stl_path: Path, output_dir: Path) -> Path:
+    """Package an STL into a 3MF that OrcaSlicer can load.
+
+    Uses estampo's own plate builder which produces 3MFs with the
+    metadata structure OrcaSlicer expects (plain trimesh 3MF export
+    is not sufficient).
+    """
     import trimesh
 
+    from estampo.arrange import Placement
+    from estampo.plate import build_plate, export_plate
+
+    mesh = trimesh.load(str(stl_path), force="mesh")
+    # Center on plate, touching the bed
+    mesh.vertices -= mesh.bounds[0]
+    placement = Placement(mesh=mesh, name=stl_path.stem, x=128.0, y=128.0)
+    scene = build_plate([placement], plate_size=(256.0, 256.0))
+    out = output_dir / (stl_path.stem + ".3mf")
+    export_plate(scene, out)
+    return out
+
+
+def _slice_orca(stl_path: Path, output_base: Path) -> Path:
+    """Slice with OrcaSlicer via Docker."""
     output_dir = output_base / "orca"
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # OrcaSlicer needs a 3MF input
-    mesh = trimesh.load(str(stl_path))
-    if isinstance(mesh, trimesh.Scene):
-        mesh = mesh.to_geometry()
-    input_3mf = output_dir / "input.3mf"
-    scene = trimesh.Scene(mesh)
-    scene.export(str(input_3mf))
+    # OrcaSlicer CLI requires 3MF input — package the STL properly
+    input_3mf = _stl_to_3mf(stl_path, output_dir)
 
     result = slice_plate(
         input_3mf,

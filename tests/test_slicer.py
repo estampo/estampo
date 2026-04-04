@@ -336,6 +336,94 @@ def test_slice_via_docker_command(tmp_path):
     assert str(profile_dir) not in cmd[settings_idx]
 
 
+def test_slice_via_docker_stages_input_in_output_dir(tmp_path):
+    """Input file is copied into output_dir for single-mount Docker access."""
+    input_3mf = tmp_path / "plate.3mf"
+    input_3mf.write_text("fake-3mf-content")
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    profile_dir = output_dir / ".profiles"
+    profile_dir.mkdir()
+
+    mock_result = MagicMock(returncode=0, stdout="", stderr="")
+    staged_content = None
+
+    def capture_staged(cmd, **kwargs):
+        nonlocal staged_content
+        staged = output_dir / ".input.3mf"
+        if staged.exists():
+            staged_content = staged.read_text()
+        return mock_result
+
+    with patch("estampo.slicer.subprocess.run", side_effect=capture_staged):
+        _slice_via_docker(input_3mf, output_dir, profile_dir, None, None, "estampo:latest")
+
+    # Input was staged inside output_dir during Docker run
+    assert staged_content == "fake-3mf-content"
+    # Staged input is cleaned up after slicing
+    assert not (output_dir / ".input.3mf").exists()
+    # Only one volume mount (output_dir), no separate input mount
+    # (verified by absence of second -v flag with input path)
+
+
+def test_slice_via_docker_preserves_file_extension(tmp_path):
+    """File extension is preserved so OrcaSlicer parses the correct format."""
+    input_stl = tmp_path / "model.stl"
+    input_stl.write_text("fake-stl")
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    profile_dir = output_dir / ".profiles"
+    profile_dir.mkdir()
+
+    mock_result = MagicMock(returncode=0, stdout="", stderr="")
+    with patch("estampo.slicer.subprocess.run", return_value=mock_result) as mock_run:
+        _slice_via_docker(input_stl, output_dir, profile_dir, None, None, "estampo:latest")
+
+    cmd = mock_run.call_args[0][0]
+    # Container input path uses .stl extension, not hardcoded .3mf
+    assert "/work/output/.input.stl" in cmd
+    assert ".input.3mf" not in " ".join(cmd)
+    # Staged file in output_dir also uses .stl extension
+    assert not (output_dir / ".input.3mf").exists()
+
+
+def test_slice_via_docker_single_volume_mount(tmp_path):
+    """Only one -v mount (output_dir) — no separate input file mount."""
+    input_3mf = tmp_path / "plate.3mf"
+    input_3mf.write_text("fake")
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    profile_dir = output_dir / ".profiles"
+    profile_dir.mkdir()
+
+    mock_result = MagicMock(returncode=0, stdout="", stderr="")
+    with patch("estampo.slicer.subprocess.run", return_value=mock_result) as mock_run:
+        _slice_via_docker(input_3mf, output_dir, profile_dir, None, None, "estampo:latest")
+
+    cmd = mock_run.call_args[0][0]
+    volume_args = [cmd[i + 1] for i, v in enumerate(cmd) if v == "-v"]
+    assert len(volume_args) == 1
+    assert volume_args[0] == f"{output_dir}:/work/output"
+
+
+def test_slice_via_docker_cleans_staged_input_on_failure(tmp_path):
+    """Staged input is cleaned up even when slicer fails."""
+    input_3mf = tmp_path / "plate.3mf"
+    input_3mf.write_text("fake")
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    profile_dir = output_dir / ".profiles"
+    profile_dir.mkdir()
+
+    mock_result = MagicMock(returncode=1, stdout="", stderr="some error")
+    with patch("estampo.slicer.subprocess.run", return_value=mock_result):
+        with pytest.raises(RuntimeError, match="Docker slicer failed"):
+            _slice_via_docker(input_3mf, output_dir, profile_dir, None, None, "estampo:latest")
+
+    # Staged input must be cleaned up even on failure
+    assert not (output_dir / ".input.3mf").exists()
+
+
 def test_slice_via_docker_failure(tmp_path):
     """Verify Docker slicer failure raises RuntimeError."""
     input_3mf = tmp_path / "plate.3mf"

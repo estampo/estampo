@@ -1,0 +1,1 @@
+Stage Docker slicer input inside output directory and preserve file extension to fix bind-mount issues
