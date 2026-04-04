@@ -429,6 +429,15 @@ def slice_stl(
     return output_dir
 
 
+def _coerce(value: object, target_type: type) -> object:
+    """Coerce *value* to *target_type*, stripping common unit suffixes first."""
+    if isinstance(value, target_type):
+        return value
+    if isinstance(value, str):
+        value = value.strip().rstrip("%")
+    return target_type(value)  # type: ignore[call-arg]
+
+
 def cura_profile_from_config(
     overrides: dict[str, object] | None = None,
     bed_type: str | None = None,
@@ -453,8 +462,7 @@ def cura_profile_from_config(
     for key, value in machine_data.items():
         if hasattr(profile, key):
             field_type = type(getattr(profile, key))
-            if not isinstance(value, field_type):
-                value = field_type(value)
+            value = _coerce(value, field_type)
             setattr(profile, key, value)
 
     if bed_type:
@@ -482,8 +490,7 @@ def cura_profile_from_config(
                 attr = orca_to_cura[key]
                 if hasattr(profile, attr):
                     field_type = type(getattr(profile, attr))
-                    if not isinstance(value, field_type):
-                        value = field_type(value)
+                    value = _coerce(value, field_type)
                     setattr(profile, attr, value)
             elif hasattr(profile, key):
                 # Native CuraEngine key that matches a CuraProfile attribute
