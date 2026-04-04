@@ -7,6 +7,7 @@ import pytest
 from estampo import EstampoError
 from estampo.cura import (
     CuraProfile,
+    _patch_gcode_header,
     _render_bbl_gcode,
     _settings_flags,
     cura_docker_image,
@@ -283,3 +284,46 @@ def test_slice_plate_cura_dispatch(tmp_path):
     assert profile.layer_height == 0.12
     assert profile.filament_type == "PLA"
     assert "estampo/estampo:cura-5.12.0" in str(call_kwargs)
+
+
+# --- _patch_gcode_header ---
+
+
+def test_patch_gcode_header_replaces_placeholder(tmp_path):
+    """Placeholder header (TIME:6666, 0m) is replaced with real values from stderr."""
+    gcode = tmp_path / "test.gcode"
+    gcode.write_text(
+        ";FLAVOR:Marlin\n"
+        ";TIME:6666\n"
+        ";Filament used: 0m\n"
+        ";Layer height: 0.2\n"
+        ";MINX:2.14748e+06\n;MINY:2.14748e+06\n;MINZ:2.14748e+06\n"
+        ";MAXX:-2.14748e+06\n;MAXY:-2.14748e+06\n;MAXZ:-2.14748e+06\n"
+        ";TARGET_MACHINE.NAME:Unknown\n"
+        "\n;Generated with Cura_SteamEngine 5.12.0\nG28\n"
+    )
+    stderr = (
+        "[info] Gcode header after slicing: ;FLAVOR:Marlin\n"
+        ";TIME:1519\n"
+        ";Filament used: 0.714216m\n"
+        ";Layer height: 0.2\n"
+        ";MINX:128.2\n;MINY:128.2\n;MINZ:0.3\n"
+        ";MAXX:147.8\n;MAXY:147.8\n;MAXZ:19.9\n"
+        ";TARGET_MACHINE.NAME:Unknown\n"
+    )
+    _patch_gcode_header(gcode, stderr)
+    text = gcode.read_text()
+    assert ";TIME:1519" in text
+    assert ";Filament used: 0.714216m" in text
+    assert ";MINX:128.2" in text
+    assert ";TIME:6666" not in text
+    assert ";Filament used: 0m" not in text
+
+
+def test_patch_gcode_header_no_match(tmp_path):
+    """If stderr doesn't contain the expected header, file is unchanged."""
+    gcode = tmp_path / "test.gcode"
+    original = ";FLAVOR:Marlin\n;TIME:6666\n;Filament used: 0m\n;TARGET_MACHINE.NAME:X\nG28\n"
+    gcode.write_text(original)
+    _patch_gcode_header(gcode, "some random stderr output")
+    assert gcode.read_text() == original

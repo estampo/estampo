@@ -11,6 +11,7 @@ packaged in a minimal Docker image (~95 MB) with bundled definitions.
 from __future__ import annotations
 
 import logging
+import re
 import shutil
 import subprocess
 from dataclasses import dataclass, field
@@ -146,6 +147,44 @@ def _settings_flags(profile: CuraProfile) -> list[str]:
     return flags
 
 
+def _patch_gcode_header(gcode_path: Path, stderr: str) -> None:
+    """Patch CuraEngine placeholder header with real values from stderr.
+
+    When invoked via CLI with our AppImage-extracted binary, CuraEngine
+    writes placeholder values (``TIME:6666``, ``Filament used: 0m``) to
+    the G-code header and does not seek back to update them after slicing.
+    The real values are logged to stderr.  This function extracts the
+    real header from stderr and replaces the placeholder block in the
+    G-code file.
+    """
+    m = re.search(
+        r"Gcode header after slicing:\s*(;FLAVOR:.*?;TARGET_MACHINE\.NAME:\S+)",
+        stderr,
+        re.DOTALL,
+    )
+    if not m:
+        log.debug("Could not find real header in CuraEngine stderr; skipping patch")
+        return
+
+    real_header = m.group(1).strip() + "\n"
+
+    text = gcode_path.read_text()
+    # The placeholder block starts with ";FLAVOR:" and ends before the blank
+    # line / ";Generated with" line.
+    patched = re.sub(
+        r";FLAVOR:.*?;TARGET_MACHINE\.NAME:\S+\n",
+        real_header,
+        text,
+        count=1,
+        flags=re.DOTALL,
+    )
+    if patched != text:
+        gcode_path.write_text(patched)
+        log.info("Patched G-code header with real values from CuraEngine stderr")
+    else:
+        log.debug("G-code header patch had no effect")
+
+
 def slice_stl(
     stl_path: Path,
     output_dir: Path,
@@ -243,6 +282,11 @@ def slice_stl(
     if not output_gcode.exists() or output_gcode.stat().st_size < 100:
         combined = (result.stdout + "\n" + result.stderr).strip()
         raise EstampoError(f"CuraEngine produced no output:\n{combined[:500]}")
+
+    # CuraEngine CLI writes placeholder values in the G-code header
+    # (TIME:6666, Filament used: 0m) and does not update them after slicing.
+    # The real values are logged to stderr.  Parse and patch the file.
+    _patch_gcode_header(output_gcode, result.stderr)
 
     log.info("CuraEngine output: %s (%d bytes)", output_gcode, output_gcode.stat().st_size)
     return output_dir

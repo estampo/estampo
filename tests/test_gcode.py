@@ -94,6 +94,67 @@ def test_analyze_cura_layers(tmp_path):
     assert info.spans[0].extruder == 0
 
 
+def test_e_value_fallback_when_header_reports_zero(tmp_path):
+    """When header says ;Filament used: 0m, fall back to E-value calculation."""
+    lines = [
+        ";FLAVOR:Marlin",
+        ";TIME:1000",
+        ";Filament used: 0m",
+        ";Generated with Cura_SteamEngine 5.12.0",
+        "M82 ;absolute extrusion mode",
+        "G92 E0",
+        "G1 X10 Y10 E5.0 F1000",
+        "G1 X20 Y20 E10.0",
+        "G1 X30 Y30 E15.0",
+    ]
+    gcode = tmp_path / "test.gcode"
+    gcode.write_text("\n".join(lines))
+    stats = parse_gcode_metadata(gcode)
+    # Should have computed filament from E values, not from the 0m header
+    assert stats["filament_g"] > 0
+    assert stats["filament_cm3"] > 0
+
+
+def test_e_value_fallback_analyze_gcode(tmp_path):
+    """analyze_gcode also falls back to E values for zero filament header."""
+    lines = [
+        ";Generated with Cura_SteamEngine 5.12.0",
+        ";TIME:600",
+        ";Filament used: 0m",
+        ";LAYER_COUNT:2",
+        ";LAYER:0",
+        "G0 Z0.2",
+        "M82",
+        "G92 E0",
+        "G1 X10 Y10 E5.0 F1000",
+        ";LAYER:1",
+        "G0 Z0.4",
+        "G1 X20 Y20 E10.0",
+    ]
+    gcode = tmp_path / "test.gcode"
+    gcode.write_text("\n".join(lines))
+    info = analyze_gcode(gcode)
+    assert info.filament_usage_g
+    assert info.filament_usage_g[0] > 0
+
+
+def test_e_value_tracks_g92_resets(tmp_path):
+    """E-value fallback correctly handles G92 E0 resets."""
+    lines = [
+        ";Filament used: 0m",
+        "M82",
+        "G92 E0",
+        "G1 X10 E100.0",
+        "G92 E0",  # reset — 100mm accumulated
+        "G1 X20 E50.0",
+    ]
+    gcode = tmp_path / "test.gcode"
+    gcode.write_text("\n".join(lines))
+    stats = parse_gcode_metadata(gcode)
+    # Total E = 100 + 50 = 150mm
+    assert stats["filament_g"] > 0
+
+
 # --- analyze_gcode ---
 
 
