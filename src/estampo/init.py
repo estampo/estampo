@@ -1185,7 +1185,7 @@ def run_wizard(output: Path | None = None) -> str:
                 f"Pick machine (or enter name, default: {default_machine})", default_pick
             ).strip()
             if machine_pick.isdigit() and 1 <= int(machine_pick) <= len(cura_machines):
-                printer_profile = cura_machines[int(machine_pick) - 1]
+                printer_profile: str | None = cura_machines[int(machine_pick) - 1]
             elif machine_pick:
                 printer_profile = machine_pick
             else:
@@ -1202,7 +1202,7 @@ def run_wizard(output: Path | None = None) -> str:
         # Derive machine_info from the JSON for plate size detection
         machine_info = _MachineInfo()
         try:
-            machine_data = load_cura_machine_profile(printer_profile, dest.parent)
+            machine_data = load_cura_machine_profile(printer_profile or "", dest.parent)
             w = machine_data.get("machine_width")
             d = machine_data.get("machine_depth")
             if w is not None and d is not None:
