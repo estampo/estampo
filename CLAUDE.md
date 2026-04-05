@@ -49,10 +49,11 @@ Each module has a defined scope. Do not add logic to the wrong module — even i
 | Module | Owns | Must NOT contain |
 |--------|------|-----------------|
 | `pipeline.py` | Hamilton DAG node definitions, stage wiring | Slicer invocation, G-code parsing, printer logic |
-| `slicer.py` | OrcaSlicer invocation (Docker + local), output post-processing | CuraEngine logic, G-code parsing |
-| `cura.py` | CuraEngine invocation, def file resolution, machine profiles | OrcaSlicer logic, printer dispatch |
+| `orca.py` | All OrcaSlicer-specific logic — implements slicer plugin protocol | CuraEngine logic, G-code parsing, printer dispatch |
+| `cura.py` | All CuraEngine-specific logic — implements slicer plugin protocol | OrcaSlicer logic, printer dispatch |
+| `slicer.py` | Pure dispatch layer — routes to `orca.py` / `cura.py` by engine key | Engine-specific invocation logic |
 | `gcode.py` | All G-code parsing and metadata extraction | Slicer invocation, UI output |
-| `profiles.py` | Profile discovery, pinning, bundled profile loading | Slicer invocation, G-code logic |
+| `profiles.py` | Pure dispatch — routes profile/definition calls to the active engine module | Engine-specific profile logic (that lives in `orca.py` / `cura.py`) |
 | `config.py` | TOML parsing, config dataclasses | Business logic, file I/O beyond TOML |
 | `cli.py` | Typer commands, user-facing flags, Hamilton driver construction | Pipeline logic, slicer invocation |
 | `adapters.py` | Hamilton lifecycle hooks (progress, timing) | Pipeline logic, direct node invocation |
@@ -68,7 +69,8 @@ Four architecture decisions are documented in `docs/decisions/`. Read them befor
 3. **`docs/decisions/003-multi-engine-facade.md`** — OrcaSlicer + CuraEngine coexistence; facade pattern on SlicerConfig; engine-specific code stays in slicer.py / cura.py
 4. **`docs/decisions/004-bundled-profiles.md`** — Profiles extracted from Docker, committed to repo, bundled in pip package
 
-**Before adding a new slicer engine:** read ADR-003.  
+**Before adding a new slicer engine:** read ADR-006 (the complete protocol a new engine module must implement).  
+**Before adding engine `if/elif` to profiles.py, init.py, or slicer.py:** read ADR-006 — it goes in the engine module instead.  
 **Before touching Docker image tag construction:** read ADR-002.  
 **Before adding logic to pipeline.py:** read ADR-001.  
 **Before changing profile loading:** read ADR-004.  
