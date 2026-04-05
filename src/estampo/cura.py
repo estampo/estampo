@@ -619,14 +619,19 @@ def cura_profile_from_config(
     """
     profile = CuraProfile()
 
-    # Load machine definition from JSON
+    # Load machine profile JSON if available (nozzle/material overrides).
+    # Falls back to CuraProfile defaults when no machine profile exists —
+    # the .def.json definition is sufficient for slicing.
     machine_name = printer or "Bambu Lab P1S 0.4 nozzle"
-    machine_data = load_cura_machine_profile(machine_name, project_dir, profiles_dir)
-    for key, value in machine_data.items():
-        if hasattr(profile, key):
-            field_type = type(getattr(profile, key))
-            value = _coerce(value, field_type)
-            setattr(profile, key, value)
+    try:
+        machine_data = load_cura_machine_profile(machine_name, project_dir, profiles_dir)
+        for key, value in machine_data.items():
+            if hasattr(profile, key):
+                field_type = type(getattr(profile, key))
+                value = _coerce(value, field_type)
+                setattr(profile, key, value)
+    except FileNotFoundError:
+        log.debug("No machine profile for '%s', using defaults", machine_name)
 
     if bed_type:
         profile.bed_type = bed_type
