@@ -1,0 +1,1 @@
+Fix Claude PR review workflow: add missing id-token: write permission for OIDC authentication
