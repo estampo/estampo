@@ -21,9 +21,10 @@ jobs:
           fetch-depth: 0
 
       - uses: anthropics/claude-code-action@v1
+        continue-on-error: true
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          claude_args: "--model claude-opus-4-6 --max-turns 4"
+          claude_args: "--model claude-opus-4-6 --max-turns 8"
           prompt: |
             You are reviewing a PR on the estampo project — a 3D printing automation CLI
             that supports OrcaSlicer and CuraEngine backends. All code in this project is
