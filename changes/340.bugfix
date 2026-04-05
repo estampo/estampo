@@ -1,0 +1,1 @@
+Fix ``profiles pin`` failing for CuraEngine when printer name includes nozzle suffix or different casing

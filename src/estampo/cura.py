@@ -49,14 +49,51 @@ def _resolve_def_name(printer_name: str | None) -> str:
     """Map a human printer name to a definition filename stem.
 
     Uses the bundled manifest to map e.g. ``"BambuLab P1S"`` →
-    ``"bambulab_p1s"``.  Falls back to the name as-is if not found.
+    ``"bambulab_p1s"``.  Tries several fallbacks:
+
+    1. Exact match in manifest (``"BambuLab P1S"``).
+    2. Already a known definition ID (``"bambulab_p1s"``).
+    3. Case-insensitive match against manifest names.
+    4. Strip nozzle suffix (``"Bambu Lab P1S 0.4 nozzle"`` → retry).
+
+    Raises :class:`EstampoError` if nothing matches.
     """
     if not printer_name:
         return "bambulab_p1s"
     from estampo.profiles import load_cura_definition_map
 
     def_map = load_cura_definition_map()
-    return def_map.get(printer_name, printer_name)
+
+    # 1. Exact match
+    if printer_name in def_map:
+        return def_map[printer_name]
+
+    # 2. Already a definition ID (value in the map)
+    ids = set(def_map.values())
+    if printer_name in ids:
+        return printer_name
+
+    # 3. Case-insensitive match
+    lower_name = printer_name.lower()
+    for name, def_id in def_map.items():
+        if name.lower() == lower_name:
+            return def_id
+
+    # 4. Strip nozzle suffix pattern like " 0.4 nozzle", " 0.6mm nozzle"
+    stripped = re.sub(r"\s+\d+\.?\d*\s*(mm\s+)?nozzle$", "", printer_name, flags=re.IGNORECASE)
+    if stripped != printer_name:
+        # Retry with stripped name
+        if stripped in def_map:
+            return def_map[stripped]
+        for name, def_id in def_map.items():
+            if name.lower() == stripped.lower():
+                return def_id
+
+    raise EstampoError(
+        f"CuraEngine printer '{printer_name}' not found in the definition manifest. "
+        f"Available printers: {', '.join(sorted(def_map.keys()))}. "
+        f"Run 'estampo init' to pick a valid printer or check your TOML config."
+    )
 
 
 def _resolve_def_chain(

@@ -9,12 +9,52 @@ from estampo.cura import (
     CuraProfile,
     _patch_gcode_header,
     _place_on_bed,
+    _resolve_def_name,
     _settings_flags,
     _substitute_gcode_templates,
     cura_docker_image,
     cura_profile_from_config,
     slice_stl,
 )
+
+# --- _resolve_def_name ---
+
+
+def test_resolve_def_name_exact_match():
+    """Exact manifest name maps to definition ID."""
+    assert _resolve_def_name("BambuLab P1S") == "bambulab_p1s"
+
+
+def test_resolve_def_name_none_returns_default():
+    """None falls back to bambulab_p1s."""
+    assert _resolve_def_name(None) == "bambulab_p1s"
+
+
+def test_resolve_def_name_already_id():
+    """If the name is already a definition ID, return it as-is."""
+    assert _resolve_def_name("bambulab_p1s") == "bambulab_p1s"
+
+
+def test_resolve_def_name_case_insensitive():
+    """Case-insensitive matching against manifest names."""
+    assert _resolve_def_name("bambulab p1s") == "bambulab_p1s"
+
+
+def test_resolve_def_name_strips_nozzle_suffix():
+    """Machine profile names with nozzle suffix resolve correctly."""
+    assert _resolve_def_name("BambuLab P1S 0.4 nozzle") == "bambulab_p1s"
+
+
+def test_resolve_def_name_strips_nozzle_mm_suffix():
+    """Nozzle suffix with mm unit resolves correctly."""
+    assert _resolve_def_name("BambuLab P1S 0.6mm nozzle") == "bambulab_p1s"
+
+
+def test_resolve_def_name_unknown_raises():
+    """Unknown printer name raises EstampoError."""
+    with pytest.raises(EstampoError, match="not found in the definition manifest"):
+        _resolve_def_name("Totally Unknown Printer XYZ")
+
 
 # --- cura_docker_image ---
 
