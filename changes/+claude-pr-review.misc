@@ -1,0 +1,1 @@
+Add automatic Claude PR review workflow — checks ADR compliance, exception handling, eval() usage, and missing changelog fragments on every PR
