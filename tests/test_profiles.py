@@ -729,6 +729,188 @@ def test_pin_profiles_cura_no_profiles_returns_empty(tmp_path):
 
 
 # ---------------------------------------------------------------------------
+# CuraEngine definition detection and pinning
+# ---------------------------------------------------------------------------
+
+
+def test_is_cura_definition():
+    """Detect CuraEngine .def.json format."""
+    from estampo.profiles import is_cura_definition
+
+    assert is_cura_definition(
+        {
+            "version": 2,
+            "name": "Test Printer",
+            "metadata": {"visible": True},
+            "overrides": {"machine_width": {"value": 200}},
+        }
+    )
+    # Missing overrides — not a def.json
+    assert not is_cura_definition({"version": 2, "metadata": {}})
+    # OrcaSlicer machine profile — not a def.json
+    assert not is_cura_definition({"type": "machine", "name": "Bambu Lab P1S"})
+
+
+def test_detect_category_cura_def():
+    """CuraEngine .def.json is always detected as machine."""
+    assert (
+        detect_category(
+            {
+                "version": 2,
+                "name": "Test",
+                "metadata": {},
+                "overrides": {},
+            }
+        )
+        == "machine"
+    )
+
+
+def test_deep_merge_cura_overrides():
+    """Child setting values override parent at the sub-dict level."""
+    from estampo.profiles import _deep_merge_cura_overrides
+
+    base = {
+        "layer_height": {"value": 0.4, "default_value": 0.4},
+        "speed_print": {"value": 60},
+    }
+    child = {
+        "layer_height": {"value": 0.2},
+        "wall_count": {"value": 3},
+    }
+    merged = _deep_merge_cura_overrides(base, child)
+    # Child overrides value but preserves parent's default_value
+    assert merged["layer_height"] == {"value": 0.2, "default_value": 0.4}
+    # Parent-only key preserved
+    assert merged["speed_print"] == {"value": 60}
+    # Child-only key added
+    assert merged["wall_count"] == {"value": 3}
+
+
+def test_squash_cura_def(tmp_path):
+    """Squashing walks inheritance and deep-merges overrides."""
+    from estampo.profiles import _squash_cura_def
+
+    # Create a chain: child → parent
+    parent = {
+        "version": 2,
+        "name": "Parent",
+        "metadata": {"visible": False, "author": "test"},
+        "overrides": {
+            "machine_width": {"value": 200},
+            "speed_print": {"value": 60, "default_value": 60},
+        },
+    }
+    child = {
+        "version": 2,
+        "name": "Child Printer",
+        "inherits": "parent",
+        "metadata": {"visible": True},
+        "overrides": {
+            "machine_width": {"value": 256},
+            "machine_depth": {"value": 256},
+        },
+    }
+    (tmp_path / "parent.def.json").write_text(json.dumps(parent))
+    (tmp_path / "child.def.json").write_text(json.dumps(child))
+
+    squashed = _squash_cura_def("child", tmp_path)
+    assert "inherits" not in squashed
+    assert squashed["name"] == "Child Printer"
+    # Child overrides parent
+    assert squashed["overrides"]["machine_width"] == {"value": 256}
+    # Parent-only setting preserved
+    assert squashed["overrides"]["speed_print"] == {"value": 60, "default_value": 60}
+    # Child-only setting added
+    assert squashed["overrides"]["machine_depth"] == {"value": 256}
+    # Metadata merged (child visible overrides parent)
+    assert squashed["metadata"]["visible"] is True
+    assert squashed["metadata"]["author"] == "test"
+
+
+def test_add_profile_cura_def(tmp_path):
+    """Adding a CuraEngine .def.json writes to profiles/cura/definitions/."""
+    def_data = {
+        "version": 2,
+        "name": "My Printer",
+        "metadata": {"visible": True},
+        "overrides": {"machine_width": {"value": 300}},
+    }
+    src = tmp_path / "my_printer.def.json"
+    src.write_text(json.dumps(def_data))
+
+    dest = add_profile(str(src), tmp_path, engine="cura")
+    assert dest.parent.name == "definitions"
+    assert dest.name == "my_printer.def.json"
+    assert dest.exists()
+
+    loaded = json.loads(dest.read_text())
+    assert loaded["name"] == "My Printer"
+
+
+def test_pin_cura_definitions_from_bundled(tmp_path):
+    """Pinning a bundled CuraEngine definition squashes it."""
+    from estampo.profiles import pin_cura_definitions
+
+    result = pin_cura_definitions(
+        printer="BambuLab P1S",
+        project_dir=tmp_path,
+    )
+    assert len(result) == 1
+    dest = result[0]
+    assert dest.name == "bambulab_p1s.def.json"
+    assert dest.parent.name == "definitions"
+
+    squashed = json.loads(dest.read_text())
+    assert "inherits" not in squashed
+    assert squashed["name"] == "BambuLab P1S"
+    # Should have overrides from both P1S and base merged
+    assert "machine_width" in squashed["overrides"]
+    assert "machine_heated_bed" in squashed["overrides"]
+
+
+def test_pin_profiles_delegates_to_cura(tmp_path):
+    """pin_profiles delegates to pin_cura_definitions for engine='cura'."""
+    result = pin_profiles(
+        engine="cura",
+        printer="BambuLab P1S",
+        process=None,
+        filaments=[],
+        project_dir=tmp_path,
+    )
+    assert len(result) == 1
+    assert result[0].name == "bambulab_p1s.def.json"
+
+
+def test_discover_profile_names_cura_pinned(tmp_path):
+    """Discover pinned CuraEngine definitions."""
+    defs_dir = tmp_path / "profiles" / "cura" / "definitions"
+    defs_dir.mkdir(parents=True)
+    (defs_dir / "my_printer.def.json").write_text(
+        json.dumps(
+            {
+                "version": 2,
+                "name": "My Printer",
+                "metadata": {},
+                "overrides": {},
+            }
+        )
+    )
+
+    names, source = discover_profile_names("cura", project_dir=tmp_path)
+    assert source == "pinned"
+    assert "My Printer" in names["machine"]
+
+
+def test_load_cura_definition_map():
+    """Load name→id mapping from bundled manifest."""
+    from estampo.profiles import load_cura_definition_map
+
+    def_map = load_cura_definition_map()
+    assert def_map.get("BambuLab P1S") == "bambulab_p1s"
+
+
+# ---------------------------------------------------------------------------
 # validate_override_keys
 # ---------------------------------------------------------------------------
 
