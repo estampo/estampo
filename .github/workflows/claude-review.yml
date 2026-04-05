@@ -1,0 +1,61 @@
+name: Claude PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+    branches: [main]
+
+# Skip draft PRs
+jobs:
+  review:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_args: "--model claude-opus-4-6 --max-turns 4"
+          prompt: |
+            You are reviewing a PR on the estampo project — a 3D printing automation CLI
+            that supports OrcaSlicer and CuraEngine backends. All code in this project is
+            written by AI (Claude), so your job is to catch things that slip through without
+            a human author noticing.
+
+            Review the diff and post inline comments where specific. Post a summary comment
+            at the end. Be direct and specific — no filler.
+
+            **Architecture rules to enforce (from CLAUDE.md and ADRs):**
+
+            - `pipeline.py` must not contain engine-specific logic (ADR-001)
+            - `slicer.py`, `profiles.py`, `init.py` must not contain engine `if/elif` branches —
+              engine-specific code belongs in `orca.py` / `cura.py` (ADR-006)
+            - `gcode.py`, `arrange.py`, `plate.py` must have zero Bambu-specific imports (ADR-005)
+            - Never construct Docker image tag strings manually — always call `docker_image()` or
+              `cura_docker_image()` (ADR-002)
+            - Never force slicer settings like `use_relative_e_distances` — let the profile chain decide
+
+            **Code quality to flag:**
+
+            - `except Exception:` or bare `except:` that swallows errors silently — should catch
+              specific exceptions and either re-raise as `EstampoError` or log at warning level
+            - `eval()` usage — must not be used; flag any new instances immediately
+            - Hardcoded magic numbers that should be in `constants.py` (e.g. `256`, `5`)
+            - New Bambu-specific logic added to core modules (pipeline, gcode, arrange, plate)
+            - Missing changelog fragment in `changes/` (every PR needs one)
+            - New public functions without type annotations
+            - Tests missing for new non-trivial functionality
+
+            **What NOT to flag:**
+
+            - Stylistic preferences (ruff handles formatting)
+            - Type issues (mypy handles those)
+            - Minor naming nitpicks unless genuinely confusing
+            - Things that are already tracked issues (#315-#336)
