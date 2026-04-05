@@ -32,6 +32,47 @@ After pushing a PR or merging to main:
 2. If any run fails, inspect with `gh run view <id> --log-failed`
 3. Fix failures before moving on to other work
 
+## Module Ownership (enforce strictly)
+
+Each module has a defined scope. Do not add logic to the wrong module — even if it seems convenient.
+
+| Module | Owns | Must NOT contain |
+|--------|------|-----------------|
+| `pipeline.py` | Hamilton DAG node definitions, stage wiring | Slicer invocation, G-code parsing, printer logic |
+| `slicer.py` | OrcaSlicer invocation (Docker + local), output post-processing | CuraEngine logic, G-code parsing |
+| `cura.py` | CuraEngine invocation, def file resolution, machine profiles | OrcaSlicer logic, printer dispatch |
+| `gcode.py` | All G-code parsing and metadata extraction | Slicer invocation, UI output |
+| `profiles.py` | Profile discovery, pinning, bundled profile loading | Slicer invocation, G-code logic |
+| `config.py` | TOML parsing, config dataclasses | Business logic, file I/O beyond TOML |
+| `cli.py` | Typer commands, user-facing flags, Hamilton driver construction | Pipeline logic, slicer invocation |
+| `adapters.py` | Hamilton lifecycle hooks (progress, timing) | Pipeline logic, direct node invocation |
+| `printer.py` | Printer dispatch (LAN/Cloud/Bambu Connect) | Slicing, G-code generation |
+| `credentials.py` | `~/.config/estampo/credentials.toml` loading | Any other file I/O |
+
+## Architecture: Key Decisions
+
+Four architecture decisions are documented in `docs/decisions/`. Read them before changing any of the following:
+
+1. **`docs/decisions/001-hamilton-dag-pipeline.md`** — Why Hamilton; DAG invariants; what must not go in pipeline nodes
+2. **`docs/decisions/002-docker-local-fallback.md`** — Docker-first + local fallback; `docker_image()` as single source of truth
+3. **`docs/decisions/003-multi-engine-facade.md`** — OrcaSlicer + CuraEngine coexistence; facade pattern on SlicerConfig; engine-specific code stays in slicer.py / cura.py
+4. **`docs/decisions/004-bundled-profiles.md`** — Profiles extracted from Docker, committed to repo, bundled in pip package
+
+**Before adding a new slicer engine:** read ADR-003.  
+**Before touching Docker image tag construction:** read ADR-002.  
+**Before adding logic to pipeline.py:** read ADR-001.  
+**Before changing profile loading:** read ADR-004.
+
+## What estampo is NOT
+
+To prevent scope creep and re-invention:
+
+- **Not a slicer.** estampo wraps slicers (OrcaSlicer, CuraEngine). Do not reimplement slicing algorithms in Python.
+- **Not a profile editor.** estampo pins and references profiles. Do not build profile editing UI or deep profile merging logic.
+- **Not a printer firmware.** estampo sends files to printers via existing APIs (Bambu LAN, Bambu Cloud). Do not implement printer protocols from scratch.
+- **Not a CAD tool.** estampo loads meshes. The `build123d` integration is for code-CAD users who want to go straight from model to print — it is not a CAD kernel.
+- **Not a standalone G-code generator.** G-code comes from the slicer. estampo parses G-code metadata (print time, filament weight) but does not generate toolpaths.
+
 ## Architecture: Slicer Execution
 
 The user installs estampo via pip/pipx on their local machine. When slicing:
