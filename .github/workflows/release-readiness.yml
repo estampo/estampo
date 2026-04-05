@@ -11,6 +11,10 @@ on:
         description: "OrcaSlicer version to test"
         required: true
         default: "2.3.1"
+      cura_version:
+        description: "CuraEngine version to test"
+        required: true
+        default: "5.12.0"
   # NOTE: workflow_call was removed because calling this workflow from a
   # tag-push-triggered workflow causes startup_failure (zero jobs created).
   # See: https://github.com/estampo/estampo/pull/244
@@ -338,6 +342,79 @@ jobs:
         run: |
           docker run --rm --entrypoint CuraEngine \
             estampo/estampo:cura-${{ matrix.cura_version }}-test help
+
+  cura-profile-extraction:
+    needs: build-cura-image
+    if: always() && needs.build-cura-image.result == 'success'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        cura_version: ["5.12.0"]
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: cura-image-${{ matrix.cura_version }}
+
+      - name: Load image
+        run: docker load -i cura-image.tar
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install project
+        run: |
+          pip install uv
+          uv sync --extra dev
+
+      - name: Extract CuraEngine definitions
+        run: |
+          uv run python scripts/extract_profiles.py \
+            --engine cura \
+            ${{ matrix.cura_version }} \
+            --image estampo/estampo:cura-${{ matrix.cura_version }}-test
+
+      - name: Validate definition manifest
+        run: |
+          python3 -c "
+          import json, sys
+          f = 'src/estampo/data/profiles.cura.${{ matrix.cura_version }}.json'
+          d = json.load(open(f))
+          assert d['engine'] == 'cura', f'bad engine: {d[\"engine\"]}'
+          assert d['version'] == '${{ matrix.cura_version }}', f'bad version: {d[\"version\"]}'
+          machines = d['machine']
+          assert len(machines) > 0, 'machine list is empty'
+          for m in machines:
+              assert 'name' in m and 'id' in m, f'bad entry: {m}'
+          print(f'  machine: {len(machines)} printer definitions')
+          print('CuraEngine definition extraction OK')
+          "
+
+      - name: Commit updated definitions
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          git add src/estampo/data/
+          git diff --cached --quiet src/estampo/data/ && echo "No definition changes" && exit 0
+          BRANCH="update-cura-definitions-${{ matrix.cura_version }}-$(date +%Y%m%d)"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git commit -m "Update bundled CuraEngine definitions (${{ matrix.cura_version }})"
+          git push origin "$BRANCH"
+          gh pr create \
+            --title "Update bundled CuraEngine ${{ matrix.cura_version }} definitions" \
+            --body "Auto-extracted from estampo/estampo:cura-${{ matrix.cura_version }}-test." \
+            --base main \
+            --head "$BRANCH" \
+          || echo "::warning::Could not create PR automatically. Branch '$BRANCH' pushed — create the PR manually."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   cura-slice-test:
     needs: build-cura-image
