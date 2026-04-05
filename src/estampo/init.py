@@ -1164,51 +1164,35 @@ def run_wizard(output: Path | None = None) -> str:
 
     # --- Discover profiles (needed for picker and machine info) ---
     if engine == "cura":
-        from estampo.cura import list_cura_machine_profiles, load_cura_machine_profile
-
-        profiles: dict[str, list[str]] = {}
         process_profile = None
 
-        # Pick a machine profile JSON (project-local or bundled)
-        cura_machines = list_cura_machine_profiles(dest.parent)
-        default_machine = (existing and existing.printer) or (
-            cura_machines[0] if cura_machines else ""
+        # Discover CuraEngine printer definitions (bundled manifest or pinned)
+        profiles, profile_source = discover_profile_names(
+            engine, project_dir=dest.parent, profiles_dir="profiles"
         )
-        ui.heading("CuraEngine Machine Profile")
-        if cura_machines:
-            ui.info("Available machine profiles:")
-            for i, m in enumerate(cura_machines, 1):
-                marker = " ←" if m == default_machine else ""
-                ui.info(f"  {i}. {m}{marker}")
-            default_pick = "1" if not default_machine else ""
-            machine_pick = _prompt_str(
-                f"Pick machine (or enter name, default: {default_machine})", default_pick
-            ).strip()
-            if machine_pick.isdigit() and 1 <= int(machine_pick) <= len(cura_machines):
-                printer_profile: str | None = cura_machines[int(machine_pick) - 1]
-            elif machine_pick:
-                printer_profile = machine_pick
-            else:
-                printer_profile = default_machine
+        if profile_source == "bundled":
+            ui.info("Using bundled printer definition list")
+            ui.console.print()
+
+        machines = sorted(profiles.get("machine", []))
+        ui.heading("CuraEngine Printer Definition")
+        if machines:
+            chosen = _prompt_choice("Pick a printer", machines)
+            printer_profile: str | None = machines[chosen[0]]
         else:
-            ui.warn("No CuraEngine machine profiles found.")
-            ui.info("Add a JSON file to profiles/cura/machine/ or use a bundled name.")
-            printer_profile = (
-                _prompt_str("Machine profile name", default_machine).strip() or default_machine
-            )
-        ui.info(f"  → {printer_profile}")
+            ui.warn("No CuraEngine printer definitions found.")
+            printer_profile = _prompt_str("Printer definition name", "BambuLab P1S").strip()
         ui.console.print()
 
-        # Derive machine_info from the JSON for plate size detection
+        # Derive plate size from the .def.json
         machine_info = _MachineInfo()
         try:
-            machine_data = load_cura_machine_profile(printer_profile or "", dest.parent)
-            w = machine_data.get("machine_width")
-            d = machine_data.get("machine_depth")
-            if w is not None and d is not None:
-                machine_info.plate_size = (int(float(str(w))), int(float(str(d))))
-        except FileNotFoundError:
-            pass
+            from estampo.cura import resolve_cura_bed_size
+
+            w, d = resolve_cura_bed_size(printer_profile or "")
+            machine_info.plate_size = (int(w), int(d))
+        except Exception:
+            log.debug("Failed to read CuraEngine bed size", exc_info=True)
         plate_x, plate_y = _wizard_pick_plate(machine_info)
     else:
         profiles, profile_source = discover_profile_names(engine)
@@ -1407,6 +1391,11 @@ def _build_toml(
             lines.append("")
 
     elif engine == "cura":
+        if printer_profile or overrides:
+            lines.append("[slicer.cura]")
+            if printer_profile:
+                lines.append(f'printer = "{printer_profile}"')
+            lines.append("")
         if overrides:
             lines.append("[slicer.cura.overrides]")
             for key, value in overrides.items():
