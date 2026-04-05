@@ -191,50 +191,117 @@ This makes the post-processing layer thinner than initially feared:
 - Replace `Tn` commands with M620/M621 AMS sequences
 - Inject Bambu-specific temperature management around tool changes
 
-## Recommended Path Forward
+## Decision: CuraEngine + bambox Post-Processing
 
-### Short term: stabilise OrcaSlicer 2.3.1
+After evaluating the options, the chosen path is:
 
-- Pin to OrcaSlicer 2.3.1 in Docker, do not upgrade
-- Add crash detection and retry logic in estampo's slicer dispatch
-- This is the only path that works for AMS multi-filament today
+**CuraEngine as the primary slicer, with bambox handling Bambu-specific
+post-processing and packaging.**
 
-### Medium term: CuraEngine multi-filament via Anycubic pattern
+Other users of estampo can use CuraEngine natively with their own printers —
+no post-processing needed. The Bambu-specific path only activates when
+targeting a Bambu printer.
 
-1. Add 4 fake extruder definitions to `bambulab_p1s.def.json` (following the
-   Anycubic ACE PRO pattern)
-2. CuraEngine generates T-commands and prime towers natively
-3. Build a post-processor (in bambox or estampo) that translates:
-   - `Tn` → `M620 S{n}A` / `M621 S{n}A` AMS sequences
-   - Inject temperature management around tool changes
-4. Fix the start/end G-code template substitution — either:
-   - Use Jinja2 properly (bambox already has this), or
-   - Expand `_substitute_gcode_templates()` to handle all variables
+### Architecture
 
-### Medium term: evaluate PrusaSlicer
+```
+estampo → CuraEngine → raw G-code (print-ready for native Cura printers)
+                            ↓ (Bambu printers only)
+                        bambox post-process (T→AMS, start/end injection)
+                            ↓
+                        bambox pack (.gcode.3mf)
+                            ↓
+                        bambox print (cloud bridge)
+```
 
-- Investigate whether the tool change G-code bug (#1245) is fixed in recent
-  versions
-- Test headless Docker packaging with current PrusaSlicer releases
-- If viable, implement `prusa.py` per ADR-006 protocol
-- PrusaSlicer's MMU2 mode may produce cleaner multi-material output than
-  CuraEngine's fake-IDEX approach
+### Separation of concerns
 
-### Long term: slicer-agnostic post-processing in bambox
+- **estampo** produces G-code from models via CuraEngine. The CuraEngine
+  `.def.json` definitions use minimal start/end G-code — just enough for
+  CuraEngine to produce valid output. For non-Bambu printers, CuraEngine
+  definitions contain the real start/end G-code as usual and output is
+  print-ready with no post-processing.
 
-- bambox already has `gcode_compat.py` for translating layer markers
-- Extend this to handle T-command → AMS translation
-- bambox becomes the single place that understands "generic slicer G-code →
-  Bambu-ready G-code"
-- estampo remains slicer-agnostic; bambox remains slicer-agnostic but
-  printer-aware
+- **bambox** owns all Bambu-specific logic:
+  - Post-processes CuraEngine G-code: replaces `Tn` tool changes with
+    `M620`/`M621` AMS sequences, injects temperature management
+  - Injects real P1S start/end G-code (from Jinja2 templates, replacing
+    the minimal stubs from CuraEngine)
+  - Translates slicer layer markers to BBL firmware format (existing
+    `gcode_compat.py`)
+  - Packages into `.gcode.3mf` with settings, thumbnails, checksums
+  - Sends to printer via cloud bridge
 
-### Principle: clean separation
+- **Neither project depends on the other at the Python level.** estampo
+  invokes bambox as a CLI tool or subprocess, not as an imported library.
 
-- **estampo** produces G-code from models (slicer-agnostic, printer-agnostic)
-- **bambox** translates G-code for Bambu printers (slicer-agnostic, Bambu-specific)
-- Post-processing for Bambu lives in bambox, not estampo
-- Slicer invocation lives in estampo, not bambox
+### Implementation plan
+
+#### Phase 1: CuraEngine multi-filament (estampo)
+
+1. Add 4 fake extruder definitions to `bambulab_p1s.def.json` following the
+   Anycubic ACE PRO pattern (4 extruders, identical nozzle, zero XY offset)
+2. Set `machine_extruder_count: 4` in the P1S definition
+3. Use minimal start/end G-code in the `.def.json` — basic homing, temp
+   setting, and a marker comment that bambox can recognise
+4. CuraEngine now generates T-commands and prime towers natively
+5. Validate: single-filament prints should still work (T0 only, bambox
+   post-processes as before)
+
+#### Phase 2: T-command post-processor (bambox)
+
+1. Add a `bbl_postprocess` module to bambox that:
+   - Detects `Tn` tool change commands in G-code
+   - Replaces each with the appropriate M620/M621 AMS sequence
+   - Injects nozzle temperature management around tool changes
+     (heat new filament, cool old)
+   - Handles the initial tool load (T0 at start)
+2. Extend `gcode_compat.py` or create a new entry point that chains:
+   slicer detection → layer marker injection → T-command rewriting →
+   start/end injection
+3. Wire into bambox CLI: `bambox pack` gains a `--bbl-postprocess` flag
+   (or auto-detects when targeting a Bambu printer)
+
+#### Phase 3: Start/end G-code injection (bambox)
+
+1. bambox already has P1S start/end Jinja2 templates (270-line start,
+   55-line end, 189-line toolchange) — these are the real sequences with
+   AMS handling, nozzle wash, vibration suppression, bed leveling
+2. The post-processor strips CuraEngine's minimal start/end stubs and
+   replaces with rendered Jinja2 templates
+3. Template context (bed temp, nozzle temp, filament type, bed plate type)
+   comes from the `.gcode.3mf` packaging metadata or CLI flags
+
+#### Phase 4: estampo integration
+
+1. estampo's slicer dispatch calls CuraEngine as today
+2. For Bambu printer targets, estampo invokes bambox CLI to post-process
+   and package: `bambox pack --bbl-postprocess input.gcode -o output.gcode.3mf`
+3. For non-Bambu targets, CuraEngine output is used directly — no bambox
+   involvement
+
+### What this does NOT change
+
+- **OrcaSlicer remains available** as a fallback engine in estampo for users
+  who prefer it. Its output is already print-ready and bypasses bambox
+  post-processing.
+- **CuraEngine definitions for non-Bambu printers** are unaffected. They
+  continue to contain full start/end G-code and produce print-ready output.
+- **bambox's existing gcode_compat.py** continues to work for G-code from
+  any slicer — the T-command rewriting is an additional step, not a
+  replacement.
+
+### PrusaSlicer and Kiri:Moto
+
+PrusaSlicer remains a candidate for future evaluation per ADR-006. Its MMU2
+mode may produce cleaner multi-material output than CuraEngine's fake-IDEX
+approach, but the tool change G-code bug
+([#1245](https://github.com/prusa3d/PrusaSlicer/issues/1245)) and
+containerisation difficulty need to be resolved first.
+
+Kiri:Moto is a candidate for simple single-filament jobs where headless
+reliability is paramount, but its lack of multi-material support rules it
+out for AMS workflows.
 
 ## Open Questions
 
@@ -242,16 +309,24 @@ This makes the post-processing layer thinner than initially feared:
    `T0`/`T1` like the Anycubic does, the post-processing layer becomes trivial.
    This needs testing on a real P1S with AMS.
 
-2. **Can we strip start/end G-code from CuraEngine output?** If estampo tells
-   CuraEngine to use minimal start/end G-code and bambox injects the real
-   sequences, we avoid the template substitution problem entirely. But this
-   means estampo's CuraEngine output is not print-ready for non-Bambu printers.
+2. **What should the minimal start/end G-code in the `.def.json` look like?**
+   It needs to be enough for CuraEngine to produce valid G-code, but
+   recognisable by bambox so it can be stripped and replaced. A marker comment
+   like `; ESTAMPO_MINIMAL_START` / `; ESTAMPO_MINIMAL_END` would work.
 
-3. **Should bambox depend on estampo or vice versa?** Currently neither depends
-   on the other. The post-processing layer needs to live somewhere — probably
-   bambox, since it's Bambu-specific.
+3. **How does estampo invoke bambox?** Options: CLI subprocess
+   (`bambox pack ...`), Python API import, or writing G-code to a known
+   location and letting a separate step handle it. CLI subprocess maintains
+   the cleanest boundary.
 
 4. **Is the eval() hack in cura.py a security concern?** It runs `eval()` on
    strings derived from `.def.json` files. These are trusted files today, but
    if estampo ever accepts user-provided definitions, this becomes an injection
-   vector. Replacing with Jinja2 would fix this.
+   vector. With bambox handling template substitution via Jinja2, estampo's
+   `_substitute_gcode_templates()` can be simplified or removed for Bambu
+   targets.
+
+5. **Purge volume tuning.** CuraEngine's prime tower handles purge geometry,
+   but the purge volumes per material pair may need tuning. OrcaSlicer has
+   a flushing volume matrix per filament pair — CuraEngine's model is simpler.
+   This may affect print quality for multi-colour prints and needs testing.
