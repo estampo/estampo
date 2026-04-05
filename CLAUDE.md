@@ -3,6 +3,16 @@
 ## Working with the maintainer
 The project maintainer is technically experienced and understands the codebase deeply. When they tell you something — about how the code works, what's broken, or what needs to happen — trust their judgement. Don't second-guess their observations or explain things they already know. If they say something is failing, it is.
 
+## Issues and PRs
+
+Every non-trivial piece of work should have a GitHub issue. Before starting:
+- Check `gh issue list` for an existing issue covering the work
+- If none exists, create one with `gh issue create` before writing code
+- Reference it in the PR body with `Closes #N` so it auto-closes on merge
+
+Issues live at: https://github.com/estampo/estampo/issues  
+Milestones: v0.3.0 (CuraEngine production-ready), v0.4.0 (bambu-3mf + bambu-cloud extraction)
+
 ## Pre-PR Checklist (MANDATORY)
 Before pushing any PR branch, always run locally:
 1. `uv run ruff check src tests` — lint must pass with zero errors
