@@ -1,0 +1,1 @@
+Add ADR-006 defining the slicer plugin protocol: each engine is a self-contained module; top-level files are pure dispatch layers; clear contract for adding new slicers
