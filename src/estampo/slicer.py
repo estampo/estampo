@@ -629,7 +629,15 @@ def slice_plate(
             profiles_dir=profiles_dir,
         )
         image = cura_docker_image(docker_version or required_version)
-        return slice_stl(stl_path, output_dir, profile, image=image)
+        return slice_stl(
+            stl_path,
+            output_dir,
+            profile,
+            image=image,
+            printer=printer,
+            project_dir=project_dir,
+            profiles_dir=profiles_dir,
+        )
 
     # If config specifies a version and no explicit docker_version was given,
     # use it as the docker_version for Docker-based slicing.

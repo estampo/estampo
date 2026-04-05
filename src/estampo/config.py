@@ -36,8 +36,9 @@ class OrcaSlicerConfig:
 
 @dataclass
 class CuraSlicerConfig:
-    """CuraEngine-specific settings: flat key-value overrides (no profile chain)."""
+    """CuraEngine-specific settings: printer definition + flat key-value overrides."""
 
+    printer: str | None = None  # CuraEngine printer definition name
     overrides: dict[str, object] = field(default_factory=dict)
 
 
@@ -237,6 +238,7 @@ def _parse_orca_config(raw: dict) -> OrcaSlicerConfig:
 def _parse_cura_config(raw: dict) -> CuraSlicerConfig:
     """Build a CuraSlicerConfig from a raw TOML dict."""
     return CuraSlicerConfig(
+        printer=raw.get("printer"),
         overrides=raw.get("overrides", {}),
     )
 
@@ -305,8 +307,8 @@ def load_config(path: Path) -> EstampoConfig:
         active_machine_overrides = orca_cfg.machine_overrides
         active_filament_overrides = orca_cfg.filament_overrides
     else:
-        # CuraEngine: no profile chain, only flat overrides
-        active_printer = None
+        # CuraEngine: printer definition + flat overrides
+        active_printer = cura_cfg.printer
         active_process = None
         active_filaments = []
         active_slots = {}

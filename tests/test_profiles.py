@@ -709,12 +709,13 @@ def test_pin_profiles_no_docker_version_raises(tmp_path):
         )
 
 
-def test_pin_profiles_cura_inline_returns_empty(tmp_path):
-    """pin_profiles returns [] immediately for inline engines like cura."""
+def test_pin_profiles_cura_no_profiles_returns_empty(tmp_path):
+    """pin_profiles returns [] for cura when no profiles are specified."""
     project = tmp_path / "project"
     project.mkdir()
 
     with patch("estampo.profiles.extract_docker_profiles") as mock_docker:
+        mock_docker.return_value = None
         result = pin_profiles(
             engine="cura",
             printer=None,
@@ -725,7 +726,6 @@ def test_pin_profiles_cura_inline_returns_empty(tmp_path):
         )
 
     assert result == []
-    mock_docker.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

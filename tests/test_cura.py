@@ -178,9 +178,10 @@ def test_settings_flags_custom_overrides():
 
 def test_bundled_definitions_exist():
     """BBL definition files are bundled with the package."""
-    from estampo.cura import _BBL_DEFS, _bundled_def_path
+    from estampo.cura import _bundled_def_path, _resolve_def_chain
 
-    for def_name in _BBL_DEFS:
+    # P1S definition and its base must exist
+    for def_name in ("bambulab_p1s.def.json", "bambulab_base.def.json"):
         path = _bundled_def_path(def_name)
         assert path.exists(), f"Missing bundled definition: {def_name}"
 
@@ -191,6 +192,12 @@ def test_bundled_definitions_exist():
     assert p1s["inherits"] == "bambulab_base"
     assert "machine_start_gcode" in p1s["overrides"]
     assert "machine_end_gcode" in p1s["overrides"]
+
+    # Definition chain should resolve both files
+    chain = _resolve_def_chain("bambulab_p1s")
+    assert len(chain) >= 2
+    assert chain[0].name == "bambulab_p1s.def.json"
+    assert chain[1].name == "bambulab_base.def.json"
 
 
 # --- slice_stl Docker execution ---

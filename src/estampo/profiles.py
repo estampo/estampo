@@ -45,7 +45,7 @@ def _is_path(value: str) -> bool:
 
 
 # Engines that use inline settings and have no extractable profile chain.
-_INLINE_ENGINES = frozenset({"cura"})
+_INLINE_ENGINES: frozenset[str] = frozenset()
 
 
 def discover_profiles(engine: str) -> dict[str, dict[str, Path]]:
@@ -58,7 +58,10 @@ def discover_profiles(engine: str) -> dict[str, dict[str, Path]]:
 
     base = SYSTEM_DIRS.get(engine)
     if base is None:
-        supported = sorted({*SYSTEM_DIRS, *_INLINE_ENGINES})
+        # CuraEngine has no system install directory — return empty
+        if engine == "cura":
+            return {cat: {} for cat in CATEGORIES}
+        supported = sorted({*SYSTEM_DIRS, "cura"})
         raise ValueError(f"Unknown engine: '{engine}'. Supported: {supported}")
 
     # Expected JSON "type" field for each category.
@@ -107,21 +110,57 @@ def load_bundled_profiles(engine: str, version: str | None = None) -> dict[str, 
 
     Returns a dict of ``{category: [name, ...]}`` or an empty dict if none found.
     """
+    data = _load_bundled_manifest(engine, version)
+    if not data:
+        return {}
+    return {cat: _extract_names(data.get(cat, [])) for cat in CATEGORIES}
+
+
+def _load_bundled_manifest(engine: str, version: str | None = None) -> dict | None:
+    """Load the raw bundled manifest JSON for an engine."""
     if version:
         exact = _BUNDLED_DIR / f"profiles.{engine}.{version}.json"
         if exact.exists():
             with open(exact) as f:
-                data = json.load(f)
-            return {cat: data.get(cat, []) for cat in CATEGORIES}
+                return json.load(f)
 
     # Fall back to highest bundled version
     candidates = sorted(_BUNDLED_DIR.glob(f"profiles.{engine}.*.json"))
     if candidates:
         with open(candidates[-1]) as f:
-            data = json.load(f)
-        return {cat: data.get(cat, []) for cat in CATEGORIES}
+            return json.load(f)
 
-    return {}
+    return None
+
+
+def _extract_names(items: list) -> list[str]:
+    """Extract name strings from a manifest list.
+
+    OrcaSlicer manifests have plain strings.  CuraEngine manifests have
+    ``{"name": "...", "id": "..."}`` objects.
+    """
+    names: list[str] = []
+    for item in items:
+        if isinstance(item, str):
+            names.append(item)
+        elif isinstance(item, dict) and "name" in item:
+            names.append(item["name"])
+    return names
+
+
+def load_cura_definition_map(version: str | None = None) -> dict[str, str]:
+    """Load a mapping of CuraEngine definition names to IDs.
+
+    Returns ``{"BambuLab P1S": "bambulab_p1s", ...}``.
+    """
+    data = _load_bundled_manifest("cura", version)
+    if not data:
+        return {}
+    result: dict[str, str] = {}
+    for item in data.get("machine", []):
+        if isinstance(item, dict) and "name" in item and "id" in item:
+            result[item["name"]] = item["id"]
+    return result
 
 
 def discover_profile_names(
@@ -150,6 +189,32 @@ def discover_profile_names(
 
     # 2. Pinned profiles in repo (engine-namespaced path first, then legacy)
     if project_dir:
+        # CuraEngine uses .def.json files in a definitions/ directory
+        if engine == "cura":
+            defs_dir = project_dir / profiles_dir / "cura" / "definitions"
+            if defs_dir.is_dir():
+                names = sorted(
+                    f.name.removesuffix(".def.json")
+                    for f in defs_dir.glob("*.def.json")
+                    if f.is_file()
+                )
+                if names:
+                    # Read human names from the definition files
+                    display_names: list[str] = []
+                    for stem in names:
+                        try:
+                            with open(defs_dir / f"{stem}.def.json") as fh:
+                                d = json.load(fh)
+                            display_names.append(d.get("name", stem))
+                        except (json.JSONDecodeError, OSError):
+                            display_names.append(stem)
+                    pinned_cura: dict[str, list[str]] = {
+                        "machine": display_names,
+                        "process": [],
+                        "filament": [],
+                    }
+                    return pinned_cura, "pinned"
+
         for base in (
             project_dir / profiles_dir / engine,  # new: profiles/orca/
             project_dir / profiles_dir,  # legacy: profiles/
@@ -677,8 +742,8 @@ def add_profile(
     # Determine name
     profile_name = name or data.get("name") or default_name
 
-    # Write to profiles directory — inline engines (cura) use a sub-namespace
-    if engine in _INLINE_ENGINES:
+    # Write to profiles directory — CuraEngine uses a sub-namespace
+    if engine == "cura":
         dest_dir = project_dir / profiles_dir / engine / category
     else:
         dest_dir = project_dir / profiles_dir / category
