@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Extract OrcaSlicer profile names from an estampo Docker image.
+"""Extract slicer profile names from estampo Docker images.
 
-Runs the image, lists profile JSON files, and writes
-src/estampo/data/profiles.orca.<version>.json.
+Supports both OrcaSlicer and CuraEngine profile extraction.
 
 Usage:
     python scripts/extract_profiles.py 2.3.1
     python scripts/extract_profiles.py 2.3.1 --image estampo/estampo:orca-2.3.1
-    python scripts/extract_profiles.py 2.3.1 2.2.0   # multiple versions (uses default image names)
+    python scripts/extract_profiles.py 2.3.1 2.2.0   # multiple versions
+    python scripts/extract_profiles.py --engine cura 5.12.0
 """
 
 from __future__ import annotations
@@ -16,18 +16,22 @@ import argparse
 import json
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
-from estampo.slicer import docker_image
-
-PROFILE_ROOT = "/opt/orca-slicer/resources/profiles/BBL"
-CATEGORIES = ("machine", "process", "filament")
 OUT_DIR = Path(__file__).parent.parent / "src" / "estampo" / "data"
 
+# ---------------------------------------------------------------------------
+# OrcaSlicer extraction
+# ---------------------------------------------------------------------------
 
-def extract(version: str, image: str) -> dict:
+ORCA_PROFILE_ROOT = "/opt/orca-slicer/resources/profiles/BBL"
+ORCA_CATEGORIES = ("machine", "process", "filament")
+
+
+def extract_orca(version: str, image: str) -> dict:
     """Pull profile names from the Docker image for the given OrcaSlicer version."""
-    print(f"Extracting profiles from {image} ...", flush=True)
+    print(f"Extracting OrcaSlicer profiles from {image} ...", flush=True)
 
     result = subprocess.run(
         [
@@ -37,7 +41,7 @@ def extract(version: str, image: str) -> dict:
             "--entrypoint",
             "find",
             image,
-            PROFILE_ROOT,
+            ORCA_PROFILE_ROOT,
             "-name",
             "*.json",
         ],
@@ -50,32 +54,149 @@ def extract(version: str, image: str) -> dict:
         print(f"  error: {result.stderr.strip()}", file=sys.stderr)
         sys.exit(1)
 
-    profiles: dict[str, list[str]] = {cat: [] for cat in CATEGORIES}
+    profiles: dict[str, list[str]] = {cat: [] for cat in ORCA_CATEGORIES}
 
     for line in result.stdout.splitlines():
         path = Path(line.strip())
         name = path.stem
         category = path.parent.name
-        if category not in CATEGORIES:
+        if category not in ORCA_CATEGORIES:
             continue
         if "template" in name.lower() or name.startswith("fdm_"):
             continue
         profiles[category].append(name)
 
-    for cat in CATEGORIES:
+    for cat in ORCA_CATEGORIES:
         profiles[cat] = sorted(profiles[cat])
         print(f"  {cat}: {len(profiles[cat])} profiles")
 
     return {"engine": "orca", "version": version, **profiles}
 
 
+# ---------------------------------------------------------------------------
+# CuraEngine extraction
+# ---------------------------------------------------------------------------
+
+CURA_DEFS_DIR = "/opt/cura/definitions"
+BUNDLED_DATA_DIR = Path(__file__).parent.parent / "src" / "estampo" / "data"
+
+
+def extract_cura(version: str, image: str) -> dict:
+    """Pull printer definition names from the CuraEngine Docker image.
+
+    Extracts all visible ``.def.json`` files from the Docker image and merges
+    in estampo's custom Bambu Lab definitions (which are not in the upstream
+    Cura AppImage).
+    """
+    print(f"Extracting CuraEngine definitions from {image} ...", flush=True)
+
+    # Create a stopped container and copy definitions out
+    container_id = None
+    tmp_dir = Path(tempfile.mkdtemp(prefix="cura_defs_"))
+    try:
+        result = subprocess.run(
+            ["docker", "create", "--platform", "linux/amd64", image, "true"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if result.returncode != 0:
+            print(f"  error creating container: {result.stderr.strip()}", file=sys.stderr)
+            sys.exit(1)
+        container_id = result.stdout.strip()
+
+        cp_result = subprocess.run(
+            ["docker", "cp", f"{container_id}:{CURA_DEFS_DIR}/.", str(tmp_dir)],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        if cp_result.returncode != 0:
+            print(f"  error copying defs: {cp_result.stderr.strip()}", file=sys.stderr)
+            sys.exit(1)
+    finally:
+        if container_id:
+            subprocess.run(
+                ["docker", "rm", "-f", container_id],
+                capture_output=True,
+                timeout=15,
+            )
+
+    # Read Docker definitions
+    definitions = _read_visible_defs(tmp_dir)
+
+    # Merge in estampo's custom Bambu Lab definitions
+    bundled_defs = _read_visible_defs(BUNDLED_DATA_DIR)
+    for def_entry in bundled_defs:
+        # Add if not already present (by id)
+        existing_ids = {d["id"] for d in definitions}
+        if def_entry["id"] not in existing_ids:
+            definitions.append(def_entry)
+
+    definitions.sort(key=lambda d: d["name"])
+    print(f"  machine: {len(definitions)} printer definitions")
+
+    # Clean up
+    import shutil
+
+    shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    return {
+        "engine": "cura",
+        "version": version,
+        "machine": definitions,
+        "process": [],
+        "filament": [],
+    }
+
+
+def _read_visible_defs(defs_dir: Path) -> list[dict[str, str]]:
+    """Read visible printer definitions from a directory of .def.json files."""
+    definitions: list[dict[str, str]] = []
+    for f in sorted(defs_dir.glob("*.def.json")):
+        try:
+            data = json.loads(f.read_text())
+        except (json.JSONDecodeError, OSError):
+            continue
+
+        # Skip non-printer definitions and invisible base definitions
+        metadata = data.get("metadata", {})
+        if metadata.get("visible") is False:
+            continue
+        # Skip fdmprinter/fdmextruder (root definitions, not real printers)
+        name = data.get("name", f.stem)
+        if name in ("FDM Printer Base Description", "FDM Extruder Base Description"):
+            continue
+        # Skip extruder definitions
+        if "extruder" in f.stem and "machine" not in f.stem:
+            continue
+
+        def_id = f.stem
+        if def_id.endswith(".def"):
+            def_id = def_id[:-4]
+
+        definitions.append({"name": name, "id": def_id})
+
+    return definitions
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("versions", nargs="+", help="OrcaSlicer version(s) to extract")
+    parser.add_argument("versions", nargs="+", help="Slicer version(s) to extract")
+    parser.add_argument(
+        "--engine",
+        choices=["orca", "cura"],
+        default="orca",
+        help="Slicer engine (default: orca)",
+    )
     parser.add_argument(
         "--image",
-        help=f"Docker image to use (default: {docker_image('<version>')}). "
-        "Only valid when a single version is given.",
+        help="Docker image to use (overrides default). Only valid when a single version is given.",
     )
     args = parser.parse_args()
 
@@ -85,9 +206,18 @@ def main() -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
     for version in args.versions:
-        image = args.image or docker_image(version)
-        data = extract(version, image)
-        out = OUT_DIR / f"profiles.orca.{version}.json"
+        if args.engine == "orca":
+            from estampo.slicer import docker_image
+
+            image = args.image or docker_image(version)
+            data = extract_orca(version, image)
+        else:
+            from estampo.cura import cura_docker_image
+
+            image = args.image or cura_docker_image(version)
+            data = extract_cura(version, image)
+
+        out = OUT_DIR / f"profiles.{args.engine}.{version}.json"
         out.write_text(json.dumps(data, indent=2) + "\n")
         print(f"  Written to {out}\n")
 
