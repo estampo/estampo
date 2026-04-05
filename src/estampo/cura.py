@@ -29,12 +29,12 @@ CURAENGINE_VERSION = "5.12.0"
 # Definitions directory inside the Docker image (fdmprinter.def.json etc.)
 _DEFS_DIR = "/opt/cura/definitions"
 
-# Bundled BBL definition files shipped with estampo
+# Bundled definition files shipped with estampo
 _DATA_PKG = "estampo.data"
-_BBL_DEFS = ("bambulab_base.def.json", "bambulab_p1s.def.json")
+_DATA_DIR = Path(__file__).parent / "data"
 
 # Bundled machine profile JSONs (nozzle/material overrides per printer)
-_BUNDLED_MACHINE_DIR = Path(__file__).parent / "data" / "cura" / "machine"
+_BUNDLED_MACHINE_DIR = _DATA_DIR / "cura" / "machine"
 
 
 def _bundled_def_path(name: str) -> Path:
@@ -43,6 +43,111 @@ def _bundled_def_path(name: str) -> Path:
     # importlib.resources may return a traversable; as_posix works for
     # files already on disk (installed via pip / editable).
     return Path(str(ref))
+
+
+def _resolve_def_name(printer_name: str | None) -> str:
+    """Map a human printer name to a definition filename stem.
+
+    Uses the bundled manifest to map e.g. ``"BambuLab P1S"`` →
+    ``"bambulab_p1s"``.  Falls back to the name as-is if not found.
+    """
+    if not printer_name:
+        return "bambulab_p1s"
+    from estampo.profiles import load_cura_definition_map
+
+    def_map = load_cura_definition_map()
+    return def_map.get(printer_name, printer_name)
+
+
+def _resolve_def_chain(
+    def_id: str,
+    project_dir: Path | None = None,
+    profiles_dir: str = "profiles",
+) -> list[Path]:
+    """Resolve a printer definition and its full inheritance chain.
+
+    Returns a list of Paths from leaf (printer) to root, e.g.
+    ``[bambulab_p1s.def.json, bambulab_base.def.json]``.
+
+    Search order per definition:
+    1. Pinned (squashed) in ``profiles/cura/definitions/``
+    2. Bundled with estampo in ``src/estampo/data/``
+    """
+    chain: list[Path] = []
+    seen: set[str] = set()
+    current_id: str | None = def_id
+
+    while current_id and current_id not in seen:
+        seen.add(current_id)
+        filename = f"{current_id}.def.json"
+
+        # Search: pinned → bundled
+        path: Path | None = None
+        if project_dir:
+            pinned = project_dir / profiles_dir / "cura" / "definitions" / filename
+            if pinned.exists():
+                path = pinned
+        if path is None:
+            bundled = _DATA_DIR / filename
+            if bundled.exists():
+                path = bundled
+
+        if path is None:
+            # Definition not found locally — will rely on Docker's built-in defs
+            break
+
+        chain.append(path)
+
+        # Check for inheritance
+        try:
+            with open(path) as f:
+                data = json.load(f)
+            parent = data.get("inherits")
+            if parent and isinstance(parent, str):
+                current_id = parent
+            else:
+                break
+        except (json.JSONDecodeError, OSError):
+            break
+
+    return chain
+
+
+def resolve_cura_bed_size(
+    printer_name: str,
+    project_dir: Path | None = None,
+    profiles_dir: str = "profiles",
+) -> tuple[float, float]:
+    """Return (width, depth) for a CuraEngine printer definition.
+
+    Walks the definition chain to find machine_width and machine_depth.
+    Falls back to (256, 256) if not found.
+    """
+    def_id = _resolve_def_name(printer_name)
+    chain = _resolve_def_chain(def_id, project_dir, profiles_dir)
+
+    # Search from leaf to root for machine_width/depth
+    width: float | None = None
+    depth: float | None = None
+    for path in chain:
+        try:
+            with open(path) as f:
+                data = json.load(f)
+            overrides = data.get("overrides", {})
+            if width is None:
+                w = overrides.get("machine_width", {})
+                if isinstance(w, dict) and "value" in w:
+                    width = float(w["value"])
+            if depth is None:
+                d = overrides.get("machine_depth", {})
+                if isinstance(d, dict) and "value" in d:
+                    depth = float(d["value"])
+            if width is not None and depth is not None:
+                break
+        except (json.JSONDecodeError, OSError):
+            continue
+
+    return (width or 256.0, depth or 256.0)
 
 
 def cura_docker_image(version: str | None = None) -> str:
@@ -221,27 +326,35 @@ def _patch_gcode_header(gcode_path: Path, stderr: str) -> None:
         log.debug("G-code header patch had no effect")
 
 
-def _place_on_bed(stl_path: Path, staging_dir: Path) -> Path:
+def _place_on_bed(
+    stl_path: Path, staging_dir: Path, bed_width: float = 256, bed_depth: float = 256
+) -> Path:
     """Copy STL into staging, ensuring the mesh sits on the bed (Z>=0)
-    and is centered at the XY origin.
+    and is centered on the build plate.
 
-    CuraEngine only slices geometry above Z=0 and positions meshes
-    relative to the bed center.  This function:
+    CuraEngine only slices geometry above Z=0.  With
+    ``machine_center_is_zero = false`` (BBL default), the bed origin is at
+    the corner, so the center of the bed is (width/2, depth/2).  This
+    function:
     1. Shifts Z so the lowest vertex is at Z=0.
-    2. Centers the mesh at (0, 0) in XY so CuraEngine places it at
-       the center of the build plate.
+    2. Centers the mesh at (bed_width/2, bed_depth/2) so the print sits
+       in the middle of the build plate.
     """
     import trimesh
 
     mesh: trimesh.Trimesh = trimesh.load(str(stl_path), force="mesh")  # type: ignore[assignment]
 
-    # Center XY at origin (CuraEngine places meshes relative to bed center)
+    # Center mesh on build plate (bed origin is at corner, not center)
     x_center = float((mesh.bounds[0][0] + mesh.bounds[1][0]) / 2)
     y_center = float((mesh.bounds[0][1] + mesh.bounds[1][1]) / 2)
-    if abs(x_center) > 0.01 or abs(y_center) > 0.01:
-        mesh.vertices[:, 0] -= x_center  # type: ignore[attr-defined]
-        mesh.vertices[:, 1] -= y_center  # type: ignore[attr-defined]
-        log.info("Centered mesh XY (shifted by %.2f, %.2f)", -x_center, -y_center)
+    target_x = bed_width / 2
+    target_y = bed_depth / 2
+    dx = target_x - x_center
+    dy = target_y - y_center
+    if abs(dx) > 0.01 or abs(dy) > 0.01:
+        mesh.vertices[:, 0] += dx  # type: ignore[attr-defined]
+        mesh.vertices[:, 1] += dy  # type: ignore[attr-defined]
+        log.info("Centered mesh on bed (shifted by %.2f, %.2f)", dx, dy)
 
     # Place on bed (Z >= 0)
     z_min = float(mesh.bounds[0][2])
@@ -328,11 +441,14 @@ def slice_stl(
     output_dir: Path,
     profile: CuraProfile | None = None,
     image: str | None = None,
+    printer: str | None = None,
+    project_dir: Path | None = None,
+    profiles_dir: str = "profiles",
 ) -> Path:
     """Slice an STL file with CuraEngine and return the output directory.
 
-    Uses Docker with the estampo/estampo:cura-X.Y.Z image.  The Bambu Lab
-    P1S machine definition (bundled with estampo) provides machine geometry
+    Uses Docker with the estampo/estampo:cura-X.Y.Z image.  The machine
+    definition (resolved from *printer* name) provides machine geometry
     and start/end G-code; process settings come from the CuraProfile.
 
     Args:
@@ -340,6 +456,9 @@ def slice_stl(
         output_dir: Directory for output G-code.
         profile: Slicer profile. Defaults to P1S / PETG-CF / 0.2mm.
         image: Docker image override. Defaults to estampo/estampo:cura-5.12.0.
+        printer: Printer definition name (e.g. ``"BambuLab P1S"``).
+        project_dir: Project root for pinned profile lookup.
+        profiles_dir: Profiles directory name within the project.
 
     Returns:
         The output directory (matching slicer.slice_plate contract).
@@ -356,15 +475,22 @@ def slice_stl(
     staging = output_dir / ".cura-staging"
     staging.mkdir(exist_ok=True)
 
-    # Copy bundled BBL definition files so CuraEngine can resolve the
-    # bambulab_p1s → bambulab_base → fdmprinter inheritance chain.
-    for def_name in _BBL_DEFS:
-        shutil.copy2(_bundled_def_path(def_name), staging / def_name)
+    # Resolve the printer definition and its inheritance chain.
+    def_id = _resolve_def_name(printer)
+    def_chain = _resolve_def_chain(def_id, project_dir, profiles_dir)
+    if def_chain:
+        machine_def = def_chain[0].name
+        for def_path in def_chain:
+            shutil.copy2(def_path, staging / def_path.name)
+    else:
+        # No local definitions found — rely on Docker's built-in defs
+        machine_def = f"{def_id}.def.json"
 
-    # Place mesh on the build plate (Z≥0) before slicing.  STL files
-    # centered at origin (e.g. Z from -5 to +5) would lose the bottom
-    # half because CuraEngine only slices above Z=0.
-    staged_stl = _place_on_bed(stl_path, staging)
+    # Get bed dimensions for mesh centering
+    bed_w, bed_d = resolve_cura_bed_size(printer or "", project_dir, profiles_dir)
+
+    # Place mesh on the build plate (Z>=0, centered) before slicing.
+    staged_stl = _place_on_bed(stl_path, staging, bed_width=bed_w, bed_depth=bed_d)
 
     # Container paths (output_dir mounted at /work/output)
     c_staging = "/work/output/.cura-staging"
@@ -381,7 +507,7 @@ def slice_stl(
     inner_cmd = (
         f"CuraEngine slice "
         f"-d {c_staging}:{_DEFS_DIR}:/opt/cura/extruders "
-        f"-j {c_staging}/bambulab_p1s.def.json "
+        f"-j {c_staging}/{machine_def} "
         f"-o {c_output} "
         f"{settings_str} "
         f"-g -e0 {settings_str} "
