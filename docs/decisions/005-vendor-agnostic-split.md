@@ -73,11 +73,9 @@ For non-Bambu printers, estampo sends plain G-code directly — no BBL packaging
 
 Gradual decoupling — no big bang rewrite. Each phase is independently shippable.
 
-**Phase 1 (v0.4.0):** Extract `bambu-3mf` as a standalone library. estampo depends on it. No user-visible change. This unblocks CuraEngine → Bambu printer workflow.
+**v0.4.0:** Extract both `bambu-3mf` and `bambu-cloud` as standalone libraries. estampo depends on both. No user-visible change, but all Bambu-specific code is out of estampo core.
 
-**Phase 2 (v0.5.0):** Extract `bambu-cloud` as a standalone library. estampo depends on it for Bambu dispatch; uses plain G-code send for other printers.
-
-**Phase 3 (future):** estampo has zero Bambu-specific imports. `bambu-3mf` and `bambu-cloud` are optional extras: `pip install estampo[bambu]`.
+**Future:** estampo has zero Bambu-specific imports. `bambu-3mf` and `bambu-cloud` are optional extras: `pip install estampo[bambu]`.
 
 ## Consequences
 

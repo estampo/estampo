@@ -55,11 +55,21 @@ The goal is for a user to be able to replace `engine = "orca"` with `engine = "c
 See `docs/decisions/005-vendor-agnostic-split.md` for the full rationale.  
 See `docs/architecture-roadmap.md` for slicer comparison research and template details.
 
-- Extract `bambu-3mf` as a standalone library: BBL `.gcode.3mf` packaging + G-code templates (start/end/toolchange macros)
-- estampo depends on `bambu-3mf`; no user-visible change, but `printer.py` packaging logic migrates there
+- Extract `bambu-3mf` as standalone library: BBL `.gcode.3mf` packaging + G-code templates (start/end/toolchange macros); `thumbnails.py` moves here
+- Extract `bambu-cloud` as standalone library: Bambu LAN/Cloud/Connect dispatch, AMS slot mapping; `cloud/` directory moves here
+- estampo depends on both as packages; no user-visible change
 - CuraEngine → Bambu printer workflow unblocked: Cura plain G-code → `bambu-3mf` → printer
-- `thumbnails.py` moves to `bambu-3mf` (BBL-specific metadata)
-- estampo `pipeline.py` and slicer modules have zero Bambu-specific imports after this phase
+- estampo core (pipeline.py, slicer.py, cura.py, gcode.py) has zero Bambu-specific imports after this milestone
+
+---
+
+## v0.5.0 — Sketch
+
+**Theme: Non-Bambu printer support and `pip install estampo[bambu]`.**
+
+- `bambu-3mf` and `bambu-cloud` become optional extras, not hard dependencies
+- Plain G-code send path for non-Bambu printers (Prusa, Voron, etc.)
+- OrcaSlicer 2.3.x stability improvements
 
 ---
 
