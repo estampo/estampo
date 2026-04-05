@@ -147,7 +147,7 @@ def main():
         print("Error: Set BAMBU_EMAIL and BAMBU_PASSWORD environment variables")
         sys.exit(1)
 
-    print(f"\nBambu Cloud Login")
+    print("\nBambu Cloud Login")
     print(f"  Account: {email}")
 
     # Check for existing token
@@ -162,33 +162,37 @@ def main():
                 refresh = input("  Refresh token anyway? [y/N]: ").strip().lower()
                 if refresh != "y":
                     print("\n  Using existing token. You're good to go!")
-                    print(f"  Run: python scripts/test_cloud_print.py --status-only")
+                    print("  Run: python scripts/test_cloud_print.py --status-only")
                     return
         except Exception:
             pass
 
     # Fresh login
-    print(f"\n  Logging in...")
+    print("\n  Logging in...")
     token, refresh_token = login(email, password)
     profile = get_user_profile(token)
 
     # Save token with all fields required by the bridge
-    TOKEN_FILE.write_text(json.dumps({
-        "token": token,
-        "refreshToken": refresh_token,
-        "email": email,
-        "uid": profile["uid"],
-        "name": profile["name"],
-        "avatar": profile["avatar"],
-    }))
+    TOKEN_FILE.write_text(
+        json.dumps(
+            {
+                "token": token,
+                "refreshToken": refresh_token,
+                "email": email,
+                "uid": profile["uid"],
+                "name": profile["name"],
+                "avatar": profile["avatar"],
+            }
+        )
+    )
     TOKEN_FILE.chmod(0o600)
 
-    print(f"\n  Login successful!")
+    print("\n  Login successful!")
     print(f"  User ID: {profile['uid']}")
     print(f"  Token saved to: {TOKEN_FILE}")
 
     # Show devices as a bonus
-    print(f"\n  Fetching printers...")
+    print("\n  Fetching printers...")
     devices = get_devices(token)
     if devices:
         for d in devices:
@@ -200,8 +204,8 @@ def main():
     else:
         print("    No printers found")
 
-    print(f"\n  You're ready! Next run:")
-    print(f"    python scripts/test_cloud_print.py --status-only")
+    print("\n  You're ready! Next run:")
+    print("    python scripts/test_cloud_print.py --status-only")
 
 
 if __name__ == "__main__":
