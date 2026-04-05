@@ -815,6 +815,7 @@ def test_squash_cura_def(tmp_path):
     (tmp_path / "child.def.json").write_text(json.dumps(child))
 
     squashed = _squash_cura_def("child", tmp_path)
+    # Both definitions are local — fully resolved, no inherits
     assert "inherits" not in squashed
     assert squashed["name"] == "Child Printer"
     # Child overrides parent
@@ -826,6 +827,40 @@ def test_squash_cura_def(tmp_path):
     # Metadata merged (child visible overrides parent)
     assert squashed["metadata"]["visible"] is True
     assert squashed["metadata"]["author"] == "test"
+
+
+def test_squash_cura_def_keeps_unresolved_parent(tmp_path):
+    """Squashing preserves inherits when the root parent is not available locally."""
+    from estampo.profiles import _squash_cura_def
+
+    # child → base → fdmprinter (not available locally)
+    base = {
+        "version": 2,
+        "name": "Base",
+        "inherits": "fdmprinter",
+        "metadata": {"visible": False},
+        "overrides": {
+            "speed_print": {"value": 100},
+            "acceleration_infill": {"value": "acceleration_print"},
+        },
+    }
+    child = {
+        "version": 2,
+        "name": "My Printer",
+        "inherits": "base",
+        "metadata": {"visible": True},
+        "overrides": {"machine_width": {"value": 256}},
+    }
+    (tmp_path / "base.def.json").write_text(json.dumps(base))
+    (tmp_path / "child.def.json").write_text(json.dumps(child))
+
+    squashed = _squash_cura_def("child", tmp_path)
+    # fdmprinter is not local — keep inherits so CuraEngine resolves at runtime
+    assert squashed["inherits"] == "fdmprinter"
+    assert squashed["name"] == "My Printer"
+    assert squashed["overrides"]["machine_width"] == {"value": 256}
+    assert squashed["overrides"]["speed_print"] == {"value": 100}
+    assert squashed["overrides"]["acceleration_infill"] == {"value": "acceleration_print"}
 
 
 def test_add_profile_cura_def(tmp_path):
@@ -862,7 +897,8 @@ def test_pin_cura_definitions_from_bundled(tmp_path):
     assert dest.parent.name == "definitions"
 
     squashed = json.loads(dest.read_text())
-    assert "inherits" not in squashed
+    # fdmprinter is not bundled — kept so CuraEngine resolves at runtime
+    assert squashed.get("inherits") == "fdmprinter"
     assert squashed["name"] == "BambuLab P1S"
     # Should have overrides from both P1S and base merged
     assert "machine_width" in squashed["overrides"]
