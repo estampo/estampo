@@ -648,17 +648,22 @@ def _squash_cura_def(def_id: str, defs_dir: Path) -> dict:
     """Walk the inheritance chain for a CuraEngine definition and squash it.
 
     Reads ``*.def.json`` files from *defs_dir*, follows ``inherits`` links,
-    and deep-merges overrides from root to leaf.  Returns a standalone
-    definition dict with ``inherits`` removed.
+    and deep-merges overrides from root to leaf.  If the chain ends at an
+    unresolved parent (e.g. ``fdmprinter`` which ships inside the CuraEngine
+    Docker image), ``inherits`` is preserved so CuraEngine can resolve it
+    at runtime via its ``-d`` search path.
     """
     chain: list[dict] = []
     current_id: str | None = def_id
     seen: set[str] = set()
+    unresolved_parent: str | None = None
 
     while current_id and current_id not in seen:
         seen.add(current_id)
         path = defs_dir / f"{current_id}.def.json"
         if not path.exists():
+            # Parent not available locally — CuraEngine resolves it at runtime
+            unresolved_parent = current_id
             break
         with open(path) as f:
             data = json.load(f)
@@ -678,13 +683,14 @@ def _squash_cura_def(def_id: str, defs_dir: Path) -> dict:
 
     # Build squashed result from the leaf definition
     leaf = chain[0]
-    squashed = {
+    squashed: dict = {
         "version": leaf.get("version", 2),
         "name": leaf.get("name", def_id),
         "metadata": merged_metadata,
         "overrides": merged_overrides,
     }
-    # No "inherits" — it's fully resolved
+    if unresolved_parent:
+        squashed["inherits"] = unresolved_parent
     return squashed
 
 
