@@ -1,0 +1,1 @@
+Fix lint errors in ``scripts/bambu_cloud_login.py`` and ``scripts/test_cloud_print.py``
