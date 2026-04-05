@@ -50,14 +50,16 @@ The goal is for a user to be able to replace `engine = "orca"` with `engine = "c
 
 ## v0.4.0 — Planned
 
-**Theme: Decoupling and robustness.**
+**Theme: Printer-vendor agnostic pipeline. Phase 1 of the split.**
 
-Follows the vision in `docs/architecture-roadmap.md`: separate BBL packaging from the slicer, making estampo slicer-agnostic at the output layer.
+See `docs/decisions/005-vendor-agnostic-split.md` for the full rationale.  
+See `docs/architecture-roadmap.md` for slicer comparison research and template details.
 
-- Extract `bambu-3mf` as standalone library (BBL G-code templates, `.gcode.3mf` packaging)
-- CuraEngine → Bambu printer workflow (Cura output packaged for Bambu via `bambu-3mf`)
-- OrcaSlicer 2.3.x stability improvements (version-gated flags, profile validation)
-- Improved `--only` / `--until` UX
+- Extract `bambu-3mf` as a standalone library: BBL `.gcode.3mf` packaging + G-code templates (start/end/toolchange macros)
+- estampo depends on `bambu-3mf`; no user-visible change, but `printer.py` packaging logic migrates there
+- CuraEngine → Bambu printer workflow unblocked: Cura plain G-code → `bambu-3mf` → printer
+- `thumbnails.py` moves to `bambu-3mf` (BBL-specific metadata)
+- estampo `pipeline.py` and slicer modules have zero Bambu-specific imports after this phase
 
 ---
 

@@ -61,7 +61,8 @@ Four architecture decisions are documented in `docs/decisions/`. Read them befor
 **Before adding a new slicer engine:** read ADR-003.  
 **Before touching Docker image tag construction:** read ADR-002.  
 **Before adding logic to pipeline.py:** read ADR-001.  
-**Before changing profile loading:** read ADR-004.
+**Before changing profile loading:** read ADR-004.  
+**Before adding Bambu-specific code anywhere:** read ADR-005.
 
 ## What estampo is NOT
 
@@ -72,6 +73,7 @@ To prevent scope creep and re-invention:
 - **Not a printer firmware.** estampo sends files to printers via existing APIs (Bambu LAN, Bambu Cloud). Do not implement printer protocols from scratch.
 - **Not a CAD tool.** estampo loads meshes. The `build123d` integration is for code-CAD users who want to go straight from model to print — it is not a CAD kernel.
 - **Not a standalone G-code generator.** G-code comes from the slicer. estampo parses G-code metadata (print time, filament weight) but does not generate toolpaths.
+- **Not a Bambu-only tool.** Bambu Lab printer support is implemented in the separate `bambu-3mf` and `bambu-cloud` packages. Do not add new Bambu-specific logic to estampo core modules (pipeline.py, slicer.py, cura.py, gcode.py). See ADR-005.
 
 ## Architecture: Slicer Execution
 
