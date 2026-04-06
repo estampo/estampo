@@ -86,19 +86,15 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
         assert cfg.slicer.bed_type == "Textured PEI Plate"
         assert cfg.slicer.profiles_dir == "profiles"
 
-        # Facade fields mirror orca sub-config
-        assert cfg.slicer.printer == "Bambu Lab P1S 0.4 nozzle"
-        assert cfg.slicer.process == "0.20mm Standard @BBL X1C"
-        assert cfg.slicer.filaments == ["Generic PETG", "Generic PLA @base"]
-        assert cfg.slicer.overrides == {"sparse_infill_density": "30%", "wall_loops": 4}
-        assert cfg.slicer.machine_overrides == {"nozzle_type": "hardened_steel"}
-        assert cfg.slicer.filament_overrides == {"filament_retraction_length": "0.8"}
-        assert cfg.slicer.slots == {1: "Generic PETG", 2: "Generic PLA @base"}
-
-        # Sub-config objects
+        # Active property returns orca sub-config
+        assert cfg.slicer.active is cfg.slicer.orca
         assert cfg.slicer.orca.printer == "Bambu Lab P1S 0.4 nozzle"
+        assert cfg.slicer.orca.process == "0.20mm Standard @BBL X1C"
+        assert cfg.slicer.orca.filaments == ["Generic PETG", "Generic PLA @base"]
         assert cfg.slicer.orca.overrides == {"sparse_infill_density": "30%", "wall_loops": 4}
         assert cfg.slicer.orca.machine_overrides == {"nozzle_type": "hardened_steel"}
+        assert cfg.slicer.orca.filament_overrides == {"filament_retraction_length": "0.8"}
+        assert cfg.slicer.orca.slots == {1: "Generic PETG", 2: "Generic PLA @base"}
 
         # Cura sub-config is empty (not configured)
         assert cfg.slicer.cura.overrides == {}
@@ -172,11 +168,15 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
         )
         cfg = load_config(path)
 
-        # Verify facade fields work for profile resolution
+        # Verify active engine fields work for profile resolution
         from estampo.profiles import resolve_profile_data
 
         data = resolve_profile_data(
-            cfg.slicer.process, cfg.slicer.engine, "process", cfg.base_dir, cfg.slicer.profiles_dir
+            cfg.slicer.orca.process,
+            cfg.slicer.engine,
+            "process",
+            cfg.base_dir,
+            cfg.slicer.profiles_dir,
         )
         assert data["layer_height"] == "0.20"
         assert data["wall_loops"] == "3"  # pre-override value
@@ -211,9 +211,9 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
         from estampo.profiles import validate_override_keys
 
         warnings = validate_override_keys(
-            cfg.slicer.overrides,
+            cfg.slicer.orca.overrides,
             cfg.slicer.engine,
-            cfg.slicer.process,
+            cfg.slicer.orca.process,
             project_dir=cfg.base_dir,
         )
         assert any("bogus_key" in w for w in warnings)
@@ -250,20 +250,14 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
         assert cfg.slicer.version == "5.12.0"
         assert cfg.slicer.bed_type == "Textured PEI Plate"
 
-        # Cura has no profile chain — facade fields are empty
-        assert cfg.slicer.printer is None
-        assert cfg.slicer.process is None
-        assert cfg.slicer.filaments == []
-        assert cfg.slicer.machine_overrides == {}
-        assert cfg.slicer.filament_overrides == {}
-
-        # Overrides come from cura sub-config
-        assert cfg.slicer.overrides == {
+        # Active property points to cura sub-config
+        assert cfg.slicer.active is cfg.slicer.cura
+        assert cfg.slicer.cura.printer is None
+        assert cfg.slicer.cura.overrides == {
             "infill_sparse_density": 30,
             "support_structure": "tree",
             "layer_height": 0.12,
         }
-        assert cfg.slicer.cura.overrides == cfg.slicer.overrides
 
     def test_cura_profile_from_config_integration(self, tmp_path):
         """Config → cura_profile_from_config → CuraProfile fields."""
@@ -288,9 +282,9 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
         )
         cfg = load_config(path)
 
-        # Build CuraProfile from config facade fields
+        # Build CuraProfile from cura sub-config
         profile = cura_profile_from_config(
-            overrides=cfg.slicer.overrides,
+            overrides=cfg.slicer.cura.overrides,
             bed_type=cfg.slicer.bed_type,
         )
         assert profile.layer_height == 0.12
@@ -332,7 +326,7 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
                 input_3mf,
                 engine=cfg.slicer.engine,
                 output_dir=output_dir,
-                overrides=cfg.slicer.overrides or None,
+                overrides=cfg.slicer.cura.overrides or None,
                 bed_type=cfg.slicer.bed_type,
                 docker_version=cfg.slicer.version,
             )
@@ -364,7 +358,7 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
 """,
         )
         cfg = load_config(path)
-        profile = cura_profile_from_config(overrides=cfg.slicer.overrides)
+        profile = cura_profile_from_config(overrides=cfg.slicer.cura.overrides)
         flags = _settings_flags(profile)
 
         # Convert to dict
@@ -382,7 +376,7 @@ class TestDualEngineConfig:
     """Both engines configured in one TOML — engine field selects active."""
 
     def test_switch_orca_to_cura(self, tmp_path):
-        """Switching engine from orca to cura changes facade fields."""
+        """Switching engine from orca to cura changes active sub-config."""
         toml_content = """
 [slicer]
 engine = "{engine}"
@@ -412,24 +406,21 @@ file = "{part}"
             toml_content.format(engine="orca", part=part),
         )
         cfg_orca = load_config(path)
-        assert cfg_orca.slicer.printer == "Bambu Lab P1S 0.4 nozzle"
-        assert cfg_orca.slicer.overrides == {"sparse_infill_density": "30%"}
+        assert cfg_orca.slicer.active is cfg_orca.slicer.orca
+        assert cfg_orca.slicer.orca.printer == "Bambu Lab P1S 0.4 nozzle"
+        assert cfg_orca.slicer.orca.overrides == {"sparse_infill_density": "30%"}
 
-        # Reload as cura
+        # Reload as cura — active switches to cura sub-config
         path.write_text(toml_content.format(engine="cura", part=part))
         cfg_cura = load_config(path)
-        assert cfg_cura.slicer.printer is None
-        assert cfg_cura.slicer.overrides == {
+        assert cfg_cura.slicer.active is cfg_cura.slicer.cura
+        assert cfg_cura.slicer.cura.overrides == {
             "infill_sparse_density": 25,
             "support_structure": "tree",
         }
 
         # Both sub-configs always populated regardless of active engine
         assert cfg_cura.slicer.orca.printer == "Bambu Lab P1S 0.4 nozzle"
-        assert cfg_cura.slicer.cura.overrides == {
-            "infill_sparse_density": 25,
-            "support_structure": "tree",
-        }
 
     def test_validate_both_engines(self, tmp_path):
         """Validation works correctly for each engine's profile chain."""

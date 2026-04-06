@@ -778,9 +778,10 @@ def _mock_pin_cfg(tmp_path, profiles_dir="profiles"):
     """Create a mock config for profiles pin tests."""
     mock_cfg = MagicMock()
     mock_cfg.slicer.engine = "orca"
-    mock_cfg.slicer.printer = "Bambu Lab P1S 0.4 nozzle"
-    mock_cfg.slicer.process = "0.20mm Standard @BBL X1C"
-    mock_cfg.slicer.filaments = ["Generic PLA @base"]
+    mock_cfg.slicer.active = mock_cfg.slicer.orca
+    mock_cfg.slicer.orca.printer = "Bambu Lab P1S 0.4 nozzle"
+    mock_cfg.slicer.orca.process = "0.20mm Standard @BBL X1C"
+    mock_cfg.slicer.orca.filaments = ["Generic PLA @base"]
     mock_cfg.slicer.version = None
     mock_cfg.slicer.profiles_dir = profiles_dir
     mock_cfg.base_dir = tmp_path

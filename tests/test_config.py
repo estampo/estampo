@@ -53,9 +53,9 @@ filament = 2
     assert cfg.plate.size == (200, 200)
     assert cfg.plate.padding == 3.0
     assert cfg.slicer.engine == "orca"
-    assert cfg.slicer.printer == "Bambu Lab P1S 0.4 nozzle"
-    assert cfg.slicer.process == "0.20mm Standard @BBL X1C"
-    assert cfg.slicer.filaments == ["Generic PLA @base"]
+    assert cfg.slicer.orca.printer == "Bambu Lab P1S 0.4 nozzle"
+    assert cfg.slicer.orca.process == "0.20mm Standard @BBL X1C"
+    assert cfg.slicer.orca.filaments == ["Generic PLA @base"]
     assert cfg.slicer.version is None
     assert len(cfg.parts) == 2
     assert cfg.parts[0].copies == 2
@@ -268,7 +268,7 @@ file = "cube.stl"
         create_files=["cube.stl"],
     )
     cfg = load_config(path)
-    assert cfg.slicer.overrides == {
+    assert cfg.slicer.orca.overrides == {
         "sparse_infill_density": "25%",
         "wall_loops": 3,
     }
@@ -284,7 +284,7 @@ file = "cube.stl"
         create_files=["cube.stl"],
     )
     cfg = load_config(path)
-    assert cfg.slicer.overrides == {}
+    assert cfg.slicer.orca.overrides == {}
 
 
 def test_version(tmp_path):
@@ -438,7 +438,7 @@ filament = "Generic PETG-CF @base"
         create_files=["cube.stl"],
     )
     cfg = load_config(path)
-    assert cfg.slicer.filaments == ["Generic PETG-CF @base"]
+    assert cfg.slicer.orca.filaments == ["Generic PETG-CF @base"]
     assert cfg.parts[0].filament == 1
 
 
@@ -458,7 +458,7 @@ filament = "Generic PLA @base"
         create_files=["frame.stl", "cover.stl"],
     )
     cfg = load_config(path)
-    assert cfg.slicer.filaments == ["Generic PETG-CF @base", "Generic PLA @base"]
+    assert cfg.slicer.orca.filaments == ["Generic PETG-CF @base", "Generic PLA @base"]
     assert cfg.parts[0].filament == 1
     assert cfg.parts[1].filament == 2
 
@@ -479,7 +479,7 @@ filament = "Generic PLA @base"
         create_files=["a.stl", "b.stl"],
     )
     cfg = load_config(path)
-    assert cfg.slicer.filaments == ["Generic PLA @base"]
+    assert cfg.slicer.orca.filaments == ["Generic PLA @base"]
     assert cfg.parts[0].filament == 1
     assert cfg.parts[1].filament == 1
 
@@ -596,9 +596,9 @@ filament = "Generic TPU @base"
     cfg = load_config(path)
     assert cfg.parts[0].filament == 1  # PLA auto-assigned
     assert cfg.parts[1].filament == 5  # TPU from slots map
-    assert cfg.slicer.filaments[0] == "Generic PLA @base"
-    assert cfg.slicer.filaments[4] == "Generic TPU @base"
-    assert len(cfg.slicer.filaments) == 5
+    assert cfg.slicer.orca.filaments[0] == "Generic PLA @base"
+    assert cfg.slicer.orca.filaments[4] == "Generic TPU @base"
+    assert len(cfg.slicer.orca.filaments) == 5
 
 
 def test_slots_int_ref_with_map(tmp_path):
@@ -618,8 +618,8 @@ filament = 3
     )
     cfg = load_config(path)
     assert cfg.parts[0].filament == 3
-    assert cfg.slicer.filaments[0] == "Generic PLA @base"
-    assert cfg.slicer.filaments[2] == "Generic PETG-CF @base"
+    assert cfg.slicer.orca.filaments[0] == "Generic PLA @base"
+    assert cfg.slicer.orca.filaments[2] == "Generic PETG-CF @base"
 
 
 def test_slots_mixed_int_and_string(tmp_path):
@@ -704,8 +704,8 @@ filament = 3
     cfg = load_config(path)
     assert cfg.parts[0].filament == 1
     assert cfg.parts[1].filament == 3
-    assert cfg.slicer.filaments[0] == "Generic PETG-CF @base"
-    assert cfg.slicer.filaments[2] == "Generic PETG-CF @base"
+    assert cfg.slicer.orca.filaments[0] == "Generic PETG-CF @base"
+    assert cfg.slicer.orca.filaments[2] == "Generic PETG-CF @base"
 
 
 # --- object_filaments (multi-object 3MF) ---
@@ -726,7 +726,7 @@ inlay = "Bambu PLA Basic @BBL X1C"
         create_files=["widget.3mf"],
     )
     cfg = load_config(path)
-    assert cfg.slicer.filaments == ["Generic PETG-CF @base", "Bambu PLA Basic @BBL X1C"]
+    assert cfg.slicer.orca.filaments == ["Generic PETG-CF @base", "Bambu PLA Basic @BBL X1C"]
     assert cfg.parts[0].filament == 1  # default
     assert cfg.parts[0].object_filaments == {"inlay": 2}
 
@@ -747,15 +747,16 @@ text = "Generic TPU @base"
         create_files=["a.3mf"],
     )
     cfg = load_config(path)
-    assert "Generic PLA @base" in cfg.slicer.filaments
-    assert "Generic PETG-CF @base" in cfg.slicer.filaments
-    assert "Generic TPU @base" in cfg.slicer.filaments
+    assert "Generic PLA @base" in cfg.slicer.orca.filaments
+    assert "Generic PETG-CF @base" in cfg.slicer.orca.filaments
+    assert "Generic TPU @base" in cfg.slicer.orca.filaments
     assert (
         cfg.parts[0].object_filaments["logo"]
-        == cfg.slicer.filaments.index("Generic PETG-CF @base") + 1
+        == cfg.slicer.orca.filaments.index("Generic PETG-CF @base") + 1
     )
     assert (
-        cfg.parts[0].object_filaments["text"] == cfg.slicer.filaments.index("Generic TPU @base") + 1
+        cfg.parts[0].object_filaments["text"]
+        == cfg.slicer.orca.filaments.index("Generic TPU @base") + 1
     )
 
 
@@ -1054,10 +1055,10 @@ file = "cube.stl"
         assert cfg.slicer.engine == "orca"
         assert cfg.slicer.version == "2.3.2"
         # Facade fields populated from orca sub-config
-        assert cfg.slicer.printer == "Bambu Lab P1S 0.4 nozzle"
-        assert cfg.slicer.process == "0.20mm Standard @BBL X1C"
-        assert cfg.slicer.filaments == ["Generic PETG"]
-        assert cfg.slicer.overrides == {"sparse_infill_density": "30%"}
+        assert cfg.slicer.orca.printer == "Bambu Lab P1S 0.4 nozzle"
+        assert cfg.slicer.orca.process == "0.20mm Standard @BBL X1C"
+        assert cfg.slicer.orca.filaments == ["Generic PETG"]
+        assert cfg.slicer.orca.overrides == {"sparse_infill_density": "30%"}
         # Sub-config objects also available
         assert isinstance(cfg.slicer.orca, OrcaSlicerConfig)
         assert cfg.slicer.orca.printer == "Bambu Lab P1S 0.4 nozzle"
@@ -1083,17 +1084,14 @@ file = "cube.stl"
         cfg = load_config(path)
         assert cfg.slicer.engine == "cura"
         assert cfg.slicer.version == "5.12.0"
-        # Cura has no profile chain — facade fields are empty
-        assert cfg.slicer.printer is None
-        assert cfg.slicer.process is None
-        assert cfg.slicer.filaments == []
-        # Overrides come from cura sub-config
-        assert cfg.slicer.overrides == {"infill_sparse_density": 25, "support_structure": "tree"}
-        assert isinstance(cfg.slicer.cura, CuraSlicerConfig)
+        # Cura sub-config has overrides; orca sub-config is default/empty
+        assert cfg.slicer.cura.printer is None
         assert cfg.slicer.cura.overrides == {
             "infill_sparse_density": 25,
             "support_structure": "tree",
         }
+        assert isinstance(cfg.slicer.cura, CuraSlicerConfig)
+        assert cfg.slicer.active is cfg.slicer.cura
 
     def test_both_engines_coexist(self, tmp_path):
         """Both [slicer.orca] and [slicer.cura] present; engine selects active one."""
@@ -1121,9 +1119,9 @@ file = "cube.stl"
         cfg = load_config(path)
         # Active engine is cura
         assert cfg.slicer.engine == "cura"
-        assert cfg.slicer.printer is None  # cura doesn't use printer profiles
-        assert cfg.slicer.overrides == {"infill_sparse_density": 25}
-        # But orca sub-config is still populated
+        assert cfg.slicer.active is cfg.slicer.cura
+        assert cfg.slicer.cura.overrides == {"infill_sparse_density": 25}
+        # Orca sub-config is still populated independently
         assert cfg.slicer.orca.printer == "Bambu Lab P1S 0.4 nozzle"
         assert cfg.slicer.orca.filaments == ["Generic PETG"]
 
@@ -1172,6 +1170,6 @@ file = "cube.stl"
             create_files=["cube.stl"],
         )
         cfg = load_config(path)
-        assert cfg.slicer.machine_overrides == {"nozzle_diameter": "0.6"}
-        assert cfg.slicer.filament_overrides == {"filament_retraction_length": "0.8"}
+        assert cfg.slicer.orca.machine_overrides == {"nozzle_diameter": "0.6"}
+        assert cfg.slicer.orca.filament_overrides == {"filament_retraction_length": "0.8"}
         assert cfg.slicer.orca.machine_overrides == {"nozzle_diameter": "0.6"}

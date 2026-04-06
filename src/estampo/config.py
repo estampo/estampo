@@ -22,24 +22,27 @@ class PlateConfig:
 
 
 @dataclass
-class OrcaSlicerConfig:
-    """OrcaSlicer-specific settings: profile chain (printer/process/filament)."""
+class EngineConfig:
+    """Base class for engine-specific slicer settings."""
 
     printer: str | None = None
+    overrides: dict[str, object] = field(default_factory=dict)
+
+
+@dataclass
+class OrcaSlicerConfig(EngineConfig):
+    """OrcaSlicer-specific settings: profile chain (printer/process/filament)."""
+
     process: str | None = None
     filaments: list[str] = field(default_factory=list)
     slots: dict[int, str] = field(default_factory=dict)  # slot (1-indexed) → profile name
-    overrides: dict[str, object] = field(default_factory=dict)
     machine_overrides: dict[str, object] = field(default_factory=dict)
     filament_overrides: dict[str, object] = field(default_factory=dict)
 
 
 @dataclass
-class CuraSlicerConfig:
+class CuraSlicerConfig(EngineConfig):
     """CuraEngine-specific settings: printer definition + flat key-value overrides."""
-
-    printer: str | None = None  # CuraEngine printer definition name
-    overrides: dict[str, object] = field(default_factory=dict)
 
 
 @dataclass
@@ -53,15 +56,10 @@ class SlicerConfig:
     orca: OrcaSlicerConfig = field(default_factory=OrcaSlicerConfig)
     cura: CuraSlicerConfig = field(default_factory=CuraSlicerConfig)
 
-    # Active-engine fields — populated from the active engine's sub-config during
-    # load_config().  Existing code reads these directly (facade pattern).
-    printer: str | None = None
-    process: str | None = None
-    filaments: list[str] = field(default_factory=list)
-    slots: dict[int, str] = field(default_factory=dict)  # slot (1-indexed) → profile name
-    overrides: dict[str, object] = field(default_factory=dict)
-    machine_overrides: dict[str, object] = field(default_factory=dict)
-    filament_overrides: dict[str, object] = field(default_factory=dict)
+    @property
+    def active(self) -> EngineConfig:
+        """Return the active engine's sub-config."""
+        return self.orca if self.engine == "orca" else self.cura
 
 
 @dataclass
@@ -71,6 +69,7 @@ class PartConfig:
     orient: str = "flat"
     rotate: list[float] | None = None  # [rx, ry, rz] in degrees, overrides orient
     filament: int = 1  # slicer filament slot (1-indexed), resolved from name or int
+    material: str | None = None  # original material name from TOML (before slot resolution)
     scale: float = 1.0  # uniform scale factor
     object_filaments: dict[str, int] = field(default_factory=dict)  # 3MF object → slot
     object: str | None = None  # select named object from multi-object 3MF
@@ -98,52 +97,70 @@ class EstampoConfig:
     base_dir: Path  # directory containing the toml file
     name: str | None = None  # optional project name, used to prefix output filenames
     output_dir: str = "estampo_output"  # output directory, relative to base_dir
+    filaments: dict[str, str] = field(default_factory=dict)  # material alias → profile name
     printer: PrinterConfig | None = None
     pipeline: PipelineConfig = field(default_factory=PipelineConfig)
 
 
 def _resolve_filaments(
     parts: list[PartConfig],
-    slicer: SlicerConfig,
+    orca_cfg: OrcaSlicerConfig,
     raw_filaments: list[int | str],
     raw_obj_filaments: list[dict[str, int | str]],
+    filament_aliases: dict[str, str] | None = None,
 ) -> None:
     """Resolve filament names/indices and mutate parts in place.
 
     Sets ``.filament`` and ``.object_filaments`` on each part.
-    May also populate ``slicer.filaments`` when auto-deriving from string refs.
+    May also populate ``orca_cfg.filaments`` when auto-deriving from string refs.
+
+    If *filament_aliases* is provided (from the top-level ``[filaments]``
+    table), material names are resolved through it first.
     """
-    # Collect all raw filament values (part defaults + per-object overrides)
-    all_raw_filaments: list[int | str] = list(raw_filaments)
+    aliases = filament_aliases or {}
+
+    # Resolve aliases: "structural" → "Generic PETG-CF @BBL P1S"
+    resolved_raw: list[int | str] = []
+    for rf in raw_filaments:
+        resolved_raw.append(aliases.get(rf, rf) if isinstance(rf, str) else rf)
+    resolved_obj: list[dict[str, int | str]] = []
     for obj_fils in raw_obj_filaments:
+        resolved_obj.append(
+            {k: (aliases.get(v, v) if isinstance(v, str) else v) for k, v in obj_fils.items()}
+        )
+
+    # Collect all raw filament values (part defaults + per-object overrides)
+    all_raw_filaments: list[int | str] = list(resolved_raw)
+    for obj_fils in resolved_obj:
         all_raw_filaments.extend(obj_fils.values())
 
     # Resolve filament names → slot indices
     has_string_filaments = any(isinstance(f, str) for f in all_raw_filaments)
     has_int_filaments = any(isinstance(f, int) for f in all_raw_filaments)
 
-    if has_string_filaments and has_int_filaments and not slicer.filaments and not slicer.slots:
+    if has_string_filaments and has_int_filaments and not orca_cfg.filaments and not orca_cfg.slots:
         raise EstampoError(
-            "Cannot mix filament names and indices without [slicer].filaments or [slicer.slots]"
+            "Cannot mix filament names and indices without "
+            "[slicer.orca].filaments or [slicer.orca.slots]"
         )
 
-    if has_int_filaments and not has_string_filaments and not slicer.slots:
+    if has_int_filaments and not has_string_filaments and not orca_cfg.slots:
         # All integers, no slots map — backward compatible, no resolution needed
-        for i, raw_fil in enumerate(raw_filaments):
+        for i, raw_fil in enumerate(resolved_raw):
             if not isinstance(raw_fil, int):  # pragma: no cover
                 raise EstampoError(f"parts[{i}]: expected int filament, got {type(raw_fil)}")
             parts[i].filament = raw_fil
-            for obj_name, obj_fil in raw_obj_filaments[i].items():
+            for obj_name, obj_fil in resolved_obj[i].items():
                 if not isinstance(obj_fil, int):  # pragma: no cover
                     raise EstampoError(
                         f"parts[{i}].filaments.{obj_name}: expected int, got {type(obj_fil)}"
                     )
                 parts[i].object_filaments[obj_name] = obj_fil
     else:
-        if not slicer.filaments:
+        if not orca_cfg.filaments:
             # Auto-derive filaments list from string refs + slots map
             # Seed with slots map entries (slot → profile)
-            slot_to_name: dict[int, str] = dict(slicer.slots)
+            slot_to_name: dict[int, str] = dict(orca_cfg.slots)
             used_slots: set[int] = set(slot_to_name.keys())
 
             # Collect unique string filament names from parts (default + per-object)
@@ -164,44 +181,44 @@ def _resolve_filaments(
 
             # Build the filaments list — use empty string for unused gap slots
             max_slot = max(slot_to_name.keys())
-            slicer.filaments = [slot_to_name.get(s, "") for s in range(1, max_slot + 1)]
+            orca_cfg.filaments = [slot_to_name.get(s, "") for s in range(1, max_slot + 1)]
 
         # Build name → index lookup (first occurrence for name-based refs)
         fil_index: dict[str, int] = {}
-        for idx, name in enumerate(slicer.filaments):
+        for idx, name in enumerate(orca_cfg.filaments):
             if name not in fil_index:
                 fil_index[name] = idx + 1
 
-        for i, raw_fil in enumerate(raw_filaments):
+        for i, raw_fil in enumerate(resolved_raw):
             if isinstance(raw_fil, str):
                 if raw_fil not in fil_index:
                     raise EstampoError(
                         f"parts[{i}]: filament '{raw_fil}' not in "
-                        f"[slicer].filaments {slicer.filaments}"
+                        f"[slicer.orca].filaments {orca_cfg.filaments}"
                     )
                 parts[i].filament = fil_index[raw_fil]
             else:
                 # Integer slot ref — validate against slots map if present
-                if slicer.slots and raw_fil not in slicer.slots:
+                if orca_cfg.slots and raw_fil not in orca_cfg.slots:
                     raise EstampoError(
-                        f"parts[{i}]: filament slot {raw_fil} not defined in [slicer.slots]"
+                        f"parts[{i}]: filament slot {raw_fil} not defined in [slicer.orca.slots]"
                     )
                 parts[i].filament = raw_fil
 
             # Resolve per-object filament overrides for this part
-            for obj_name, obj_fil in raw_obj_filaments[i].items():
+            for obj_name, obj_fil in resolved_obj[i].items():
                 if isinstance(obj_fil, str):
                     if obj_fil not in fil_index:
                         raise EstampoError(
                             f"parts[{i}].filaments.{obj_name}: '{obj_fil}' not in "
-                            f"[slicer].filaments {slicer.filaments}"
+                            f"[slicer.orca].filaments {orca_cfg.filaments}"
                         )
                     parts[i].object_filaments[obj_name] = fil_index[obj_fil]
                 else:
-                    if slicer.slots and obj_fil not in slicer.slots:
+                    if orca_cfg.slots and obj_fil not in orca_cfg.slots:
                         raise EstampoError(
                             f"parts[{i}].filaments.{obj_name}: slot {obj_fil} "
-                            f"not defined in [slicer.slots]"
+                            f"not defined in [slicer.orca.slots]"
                         )
                     parts[i].object_filaments[obj_name] = obj_fil
 
@@ -292,25 +309,6 @@ def load_config(path: Path) -> EstampoConfig:
     orca_cfg = _parse_orca_config(orca_raw or {})
     cura_cfg = _parse_cura_config(cura_raw or {})
 
-    # Populate active-engine facade fields from the selected engine's sub-config
-    if engine == "orca":
-        active_printer = orca_cfg.printer
-        active_process = orca_cfg.process
-        active_filaments = orca_cfg.filaments
-        active_slots = orca_cfg.slots
-        active_overrides = orca_cfg.overrides
-        active_machine_overrides = orca_cfg.machine_overrides
-        active_filament_overrides = orca_cfg.filament_overrides
-    else:
-        # CuraEngine: printer definition + flat overrides
-        active_printer = cura_cfg.printer
-        active_process = None
-        active_filaments = []
-        active_slots = {}
-        active_overrides = cura_cfg.overrides
-        active_machine_overrides = {}
-        active_filament_overrides = {}
-
     slicer = SlicerConfig(
         engine=engine,
         version=slicer_raw.get("version"),
@@ -318,14 +316,22 @@ def load_config(path: Path) -> EstampoConfig:
         profiles_dir=slicer_raw.get("profiles_dir", "profiles"),
         orca=orca_cfg,
         cura=cura_cfg,
-        printer=active_printer,
-        process=active_process,
-        filaments=active_filaments,
-        slots=active_slots,
-        overrides=active_overrides,
-        machine_overrides=active_machine_overrides,
-        filament_overrides=active_filament_overrides,
     )
+
+    # Top-level [filaments] table — material aliases
+    filament_aliases: dict[str, str] = {}
+    filaments_raw = raw.get("filaments", {})
+    if filaments_raw:
+        if not isinstance(filaments_raw, dict):
+            raise EstampoError("[filaments] must be a table of name = profile mappings")
+        for alias, profile in filaments_raw.items():
+            if not isinstance(alias, str) or not alias.strip():
+                raise EstampoError(f"filaments: key must be a non-empty string, got {alias!r}")
+            if not isinstance(profile, str) or not profile.strip():
+                raise EstampoError(
+                    f"filaments.{alias}: value must be a non-empty string, got {profile!r}"
+                )
+            filament_aliases[alias] = profile
 
     # Parts — first pass: parse everything except filament resolution
     parts_raw = raw.get("parts", [])
@@ -391,6 +397,9 @@ def load_config(path: Path) -> EstampoConfig:
         sequence = int(p.get("sequence", 1))
         if sequence < 1:
             raise EstampoError(f"parts[{i}]: sequence must be >= 1, got {sequence}")
+        # Preserve original material name for logging/display
+        material_name = raw_fil if isinstance(raw_fil, str) else None
+
         parts.append(
             PartConfig(
                 file=file_path,
@@ -398,13 +407,21 @@ def load_config(path: Path) -> EstampoConfig:
                 orient=orient,
                 rotate=rotate,
                 filament=1,  # placeholder, resolved below
+                material=material_name,
                 scale=scale,
                 object=obj_name,
                 sequence=sequence,
             )
         )
 
-    _resolve_filaments(parts, slicer, raw_filaments, raw_obj_filaments)
+    # Filament resolution (OrcaSlicer only — CuraEngine has no multi-filament slots)
+    if engine == "orca":
+        _resolve_filaments(parts, orca_cfg, raw_filaments, raw_obj_filaments, filament_aliases)
+    else:
+        # CuraEngine: just set integer filament values directly
+        for i, raw_fil in enumerate(raw_filaments):
+            if isinstance(raw_fil, int):
+                parts[i].filament = raw_fil
 
     # Pipeline config (optional)
     from estampo.pipeline import STAGE_OUTPUTS
@@ -458,6 +475,7 @@ def load_config(path: Path) -> EstampoConfig:
         base_dir=base_dir,
         name=project_name,
         output_dir=output_dir,
+        filaments=filament_aliases,
         printer=printer,
         pipeline=pipeline,
     )
