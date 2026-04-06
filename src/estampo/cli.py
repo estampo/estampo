@@ -64,20 +64,10 @@ def _setup_logging(verbose: bool) -> None:
 
 
 def _resolve_config_path(config: Path | None) -> Path:
-    """Resolve config path, defaulting to ./estampo.toml (or ./fabprint.toml)."""
+    """Resolve config path, defaulting to ./estampo.toml."""
     if config is not None:
         return config
     candidate = Path("estampo.toml")
-    if not candidate.exists():
-        legacy = Path("fabprint.toml")
-        if legacy.exists():
-            import sys
-
-            print(
-                "Warning: fabprint.toml is deprecated — rename it to estampo.toml",
-                file=sys.stderr,
-            )
-            return legacy
     if not candidate.exists():
         raise EstampoError(
             "No config file specified and no estampo.toml found in the current directory.\n"

@@ -78,7 +78,7 @@ def test_apply_overrides():
 
 def test_resolve_profiles_all_filaments_resolved(tmp_path):
     """All filament slots are resolved to their actual profiles."""
-    profiles_dir = tmp_path / "profiles" / "filament"
+    profiles_dir = tmp_path / "profiles" / "orca" / "filament"
     profiles_dir.mkdir(parents=True)
     (profiles_dir / "PLA.json").write_text('{"name": "PLA"}')
     (profiles_dir / "PETG-CF.json").write_text('{"name": "PETG-CF"}')
@@ -110,9 +110,9 @@ def test_resolve_profiles_all_filaments_resolved(tmp_path):
 
 def test_resolve_profiles_machine_overrides(tmp_path: Path):
     """Machine overrides are applied to the machine profile, broadcasting to arrays."""
-    profiles_dir = tmp_path / "profiles" / "filament"
+    profiles_dir = tmp_path / "profiles" / "orca" / "filament"
     profiles_dir.mkdir(parents=True)
-    machine_dir = tmp_path / "profiles" / "machine"
+    machine_dir = tmp_path / "profiles" / "orca" / "machine"
     machine_dir.mkdir(parents=True)
     (machine_dir / "My Printer.json").write_text(
         '{"name": "My Printer", "type": "machine", '
@@ -143,7 +143,7 @@ def test_resolve_profiles_machine_overrides(tmp_path: Path):
 
 def test_resolve_profiles_machine_overrides_scalar_broadcast(tmp_path: Path):
     """Scalar nozzle_type in profile is broadcast to array based on sibling fields."""
-    machine_dir = tmp_path / "profiles" / "machine"
+    machine_dir = tmp_path / "profiles" / "orca" / "machine"
     machine_dir.mkdir(parents=True)
     # nozzle_type is scalar (as happens after inheritance resolution on some
     # pinned profiles), but other fields are 2-element arrays.
@@ -700,7 +700,7 @@ def test_slice_plate_errors_on_stale_pinned_profiles_no_marker(tmp_path):
     input_3mf.write_text("fake")
 
     # Create pinned profiles without version marker
-    profiles = tmp_path / "profiles" / "machine"
+    profiles = tmp_path / "profiles" / "orca" / "machine"
     profiles.mkdir(parents=True)
     (profiles / "Printer.json").write_text('{"name": "Printer"}')
 
@@ -723,10 +723,10 @@ def test_slice_plate_errors_on_version_mismatch(tmp_path):
     input_3mf.write_text("fake")
 
     # Create pinned profiles with mismatched version marker
-    profiles = tmp_path / "profiles" / "machine"
+    profiles = tmp_path / "profiles" / "orca" / "machine"
     profiles.mkdir(parents=True)
     (profiles / "Printer.json").write_text('{"name": "Printer"}')
-    (tmp_path / "profiles" / ".slicer-version").write_text("2.3.1\n")
+    (tmp_path / "profiles" / "orca" / ".slicer-version").write_text("2.3.1\n")
 
     with (
         patch("estampo.slicer._ensure_docker_image", return_value=True),
@@ -748,10 +748,10 @@ def test_slice_plate_ok_with_matching_version(tmp_path):
     output_dir = tmp_path / "output"
 
     # Create pinned profiles with matching version marker
-    profiles = tmp_path / "profiles" / "machine"
+    profiles = tmp_path / "profiles" / "orca" / "machine"
     profiles.mkdir(parents=True)
     (profiles / "Printer.json").write_text('{"type": "machine", "name": "Printer"}')
-    (tmp_path / "profiles" / ".slicer-version").write_text("2.3.2\n")
+    (tmp_path / "profiles" / "orca" / ".slicer-version").write_text("2.3.2\n")
 
     with (
         patch("estampo.slicer._ensure_docker_image", return_value=True),

@@ -55,46 +55,11 @@ PRINTER_TYPES = {
 }
 
 
-def _migrate_config_dir() -> None:
-    """Copy ~/.config/fabprint → ~/.config/estampo if old exists but new doesn't."""
-    import shutil
-
-    if sys.platform == "win32":
-        old_dir = Path.home() / "AppData/Roaming/fabprint"
-        new_dir = Path.home() / "AppData/Roaming/estampo"
-    else:
-        old_dir = Path.home() / ".config/fabprint"
-        new_dir = Path.home() / ".config/estampo"
-
-    if old_dir.exists() and not new_dir.exists() and not old_dir.is_symlink():
-        try:
-            shutil.copytree(old_dir, new_dir)
-        except OSError as exc:
-            log.warning("Config migration failed: %s", exc)
-            return
-        log.info("Migrated config: %s → %s", old_dir, new_dir)
-        print(
-            f"Migrated config from {old_dir} to {new_dir}.\n"
-            f"You can delete {old_dir} once you're satisfied everything works."
-        )
-
-
 def _credentials_path() -> Path:
     """Return the path to the credentials file."""
     env = os.environ.get("ESTAMPO_CREDENTIALS")
-    if not env:
-        env = os.environ.get("FABPRINT_CREDENTIALS")
-        if env:
-            import warnings
-
-            warnings.warn(
-                "FABPRINT_CREDENTIALS is deprecated — use ESTAMPO_CREDENTIALS instead",
-                DeprecationWarning,
-                stacklevel=2,
-            )
     if env:
         return Path(env)
-    _migrate_config_dir()
     if sys.platform == "win32":
         return Path.home() / "AppData/Roaming/estampo/credentials.toml"
     return Path.home() / ".config/estampo/credentials.toml"

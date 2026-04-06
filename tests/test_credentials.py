@@ -291,67 +291,6 @@ class TestCloudTokenJson:
                 assert path.stat().st_mode & 0o777 == 0o600
 
 
-class TestMigrateConfigDir:
-    def test_copies_old_to_new(self, tmp_path, monkeypatch):
-        """Copies ~/.config/fabprint → ~/.config/estampo when old exists, new doesn't."""
-        from estampo.credentials import _migrate_config_dir
-
-        monkeypatch.setattr("sys.platform", "linux")
-        monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path)
-        old_dir = tmp_path / ".config" / "fabprint"
-        old_dir.mkdir(parents=True)
-        (old_dir / "credentials.toml").write_text("test")
-
-        _migrate_config_dir()
-
-        new_dir = tmp_path / ".config" / "estampo"
-        assert new_dir.exists()
-        assert (new_dir / "credentials.toml").read_text() == "test"
-
-    def test_skips_when_new_exists(self, tmp_path, monkeypatch):
-        """Does not overwrite when ~/.config/estampo already exists."""
-        from estampo.credentials import _migrate_config_dir
-
-        monkeypatch.setattr("sys.platform", "linux")
-        monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path)
-        old_dir = tmp_path / ".config" / "fabprint"
-        old_dir.mkdir(parents=True)
-        (old_dir / "credentials.toml").write_text("old")
-        new_dir = tmp_path / ".config" / "estampo"
-        new_dir.mkdir(parents=True)
-        (new_dir / "credentials.toml").write_text("new")
-
-        _migrate_config_dir()
-
-        assert (new_dir / "credentials.toml").read_text() == "new"
-
-    def test_skips_when_old_missing(self, tmp_path, monkeypatch):
-        """No error when old dir doesn't exist."""
-        from estampo.credentials import _migrate_config_dir
-
-        monkeypatch.setattr("sys.platform", "linux")
-        monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path)
-
-        _migrate_config_dir()  # should not raise
-
-    def test_skips_symlink(self, tmp_path, monkeypatch):
-        """Refuses to migrate if old dir is a symlink."""
-        from estampo.credentials import _migrate_config_dir
-
-        monkeypatch.setattr("sys.platform", "linux")
-        monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path)
-        real_dir = tmp_path / "real_config"
-        real_dir.mkdir()
-        (real_dir / "credentials.toml").write_text("test")
-        config_dir = tmp_path / ".config"
-        config_dir.mkdir(parents=True)
-        (config_dir / "fabprint").symlink_to(real_dir)
-
-        _migrate_config_dir()
-
-        assert not (config_dir / "estampo").exists()
-
-
 class TestCredentialsPath:
     def test_env_var_override(self, tmp_path, monkeypatch):
         """ESTAMPO_CREDENTIALS env var overrides default path."""
@@ -359,15 +298,6 @@ class TestCredentialsPath:
 
         custom_path = tmp_path / "custom_creds.toml"
         monkeypatch.setenv("ESTAMPO_CREDENTIALS", str(custom_path))
-        assert _credentials_path() == custom_path
-
-    def test_legacy_env_var_fallback(self, tmp_path, monkeypatch):
-        """FABPRINT_CREDENTIALS env var works as fallback."""
-        from estampo.credentials import _credentials_path
-
-        custom_path = tmp_path / "custom_creds.toml"
-        monkeypatch.delenv("ESTAMPO_CREDENTIALS", raising=False)
-        monkeypatch.setenv("FABPRINT_CREDENTIALS", str(custom_path))
         assert _credentials_path() == custom_path
 
     def test_windows_path(self, monkeypatch):

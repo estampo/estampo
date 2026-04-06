@@ -129,25 +129,13 @@ def _load_existing(path: Path) -> _ExistingConfig | None:
     if raw_parts:
         parts = [{"file": p.get("file", ""), **p} for p in raw_parts]
 
-    # Detect new engine-namespaced format vs legacy flat format
-    orca_section = slicer.get("orca")
-    cura_section = slicer.get("cura")
-    is_new_format = isinstance(orca_section, dict) or isinstance(cura_section, dict)
-
-    if is_new_format:
-        orca = orca_section or {}
-        cura = cura_section or {}
-        printer_val = orca.get("printer")
-        process_val = orca.get("process")
-        filaments_val = orca.get("filaments")
-        nozzle_type = orca.get("machine_overrides", {}).get("nozzle_type")
-        overrides = orca.get("overrides") or cura.get("overrides")
-    else:
-        printer_val = slicer.get("printer")
-        process_val = slicer.get("process")
-        filaments_val = slicer.get("filaments")
-        nozzle_type = slicer.get("machine_overrides", {}).get("nozzle_type")
-        overrides = slicer.get("overrides")
+    orca = slicer.get("orca") or {}
+    cura = slicer.get("cura") or {}
+    printer_val = orca.get("printer")
+    process_val = orca.get("process")
+    filaments_val = orca.get("filaments")
+    nozzle_type = orca.get("machine_overrides", {}).get("nozzle_type")
+    overrides = orca.get("overrides") or cura.get("overrides")
 
     if overrides:
         overrides = {k: str(v) for k, v in overrides.items()}

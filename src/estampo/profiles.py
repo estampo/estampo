@@ -163,7 +163,7 @@ def discover_profile_names(
     if any(system.values()):
         return {cat: sorted(system.get(cat, {}).keys()) for cat in CATEGORIES}, "system"
 
-    # 2. Pinned profiles in repo (engine-namespaced path first, then legacy)
+    # 2. Pinned profiles in repo (engine-namespaced path: profiles/<engine>/)
     if project_dir:
         # CuraEngine uses .def.json files in a definitions/ directory
         if engine == "cura":
@@ -191,17 +191,14 @@ def discover_profile_names(
                     }
                     return pinned_cura, "pinned"
 
-        for base in (
-            project_dir / profiles_dir / engine,  # new: profiles/orca/
-            project_dir / profiles_dir,  # legacy: profiles/
-        ):
-            pinned: dict[str, list[str]] = {}
-            for cat in CATEGORIES:
-                cat_dir = base / cat
-                if cat_dir.is_dir():
-                    pinned[cat] = sorted(f.stem for f in cat_dir.glob("*.json") if f.is_file())
-            if any(pinned.values()):
-                return pinned, "pinned"
+        base = project_dir / profiles_dir / engine
+        pinned: dict[str, list[str]] = {}
+        for cat in CATEGORIES:
+            cat_dir = base / cat
+            if cat_dir.is_dir():
+                pinned[cat] = sorted(f.stem for f in cat_dir.glob("*.json") if f.is_file())
+        if any(pinned.values()):
+            return pinned, "pinned"
 
     # 3. Bundled profiles
     bundled = load_bundled_profiles(engine, version)
@@ -240,16 +237,12 @@ def resolve_profile(
             raise FileNotFoundError(f"Profile path not found: {path}")
         return path
 
-    # Check local pinned profiles (engine-namespaced first, then legacy)
+    # Check local pinned profiles (engine-namespaced path: profiles/<engine>/)
     if project_dir:
-        for base in (
-            project_dir / profiles_dir / engine,  # new: profiles/orca/
-            project_dir / profiles_dir,  # legacy: profiles/
-        ):
-            local = base / category / f"{name_or_path}.json"
-            if local.exists():
-                log.debug("Resolved '%s' from pinned profiles: %s", name_or_path, local)
-                return local
+        local = project_dir / profiles_dir / engine / category / f"{name_or_path}.json"
+        if local.exists():
+            log.debug("Resolved '%s' from pinned profiles: %s", name_or_path, local)
+            return local
 
     # Check Docker-extracted profiles (version-matched)
     if docker_profile_dir:
@@ -338,8 +331,7 @@ def pinned_profiles_version(
 ) -> str | None:
     """Read the slicer version that pinned profiles were created with.
 
-    Checks engine-namespaced path first (``profiles/<engine>/.slicer-version``),
-    then falls back to legacy path (``profiles/.slicer-version``).
+    Checks ``profiles/<engine>/.slicer-version``.
 
     Returns ``None`` if no marker file exists (pre-marker pinned profiles).
     """
@@ -347,10 +339,6 @@ def pinned_profiles_version(
         marker = project_dir / profiles_dir / engine / ".slicer-version"
         if marker.exists():
             return marker.read_text().strip()
-    # Legacy fallback
-    marker = project_dir / profiles_dir / ".slicer-version"
-    if marker.exists():
-        return marker.read_text().strip()
     return None
 
 
