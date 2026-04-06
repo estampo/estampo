@@ -20,6 +20,8 @@
 
 estampo fixes this. Define parts, slicer settings, and printer targets in a single TOML file — git-friendly, diffable, and committable alongside your CAD files. Same repo, same config → same G-code, locally or [in CI](#cicd-example).
 
+> **Warning:** estampo is in active early development. We are moving fast and breaking things — config format, CLI flags, and Python APIs may change between minor versions without deprecation. Pin your version if stability matters to you.
+
 > **Note:** This project was previously called **fabprint**. If you have an existing install,
 > run `pip install estampo` to upgrade — config files and credentials are migrated automatically.
 
