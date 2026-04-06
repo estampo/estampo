@@ -983,7 +983,7 @@ def run_wizard(output: Path | None = None) -> str:
         existing_engine = existing_pre.engine
 
     engines = ["orca", "cura"]
-    engine_labels = {"orca": "OrcaSlicer", "cura": "CuraEngine"}
+    engine_labels = {"orca": "OrcaSlicer", "cura": "CuraEngine (experimental)"}
     default_engine = existing_engine or "orca"
     default_idx = engines.index(default_engine) + 1 if default_engine in engines else 1
     ui.info("Select slicer engine:")
