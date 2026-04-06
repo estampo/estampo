@@ -36,7 +36,7 @@ engine = "orca"                            # "orca" (OrcaSlicer) or "cura" (Cura
 [slicer.orca]
 printer = "Bambu Lab P1S 0.4 nozzle"       # machine profile name
 process = "0.20mm Standard @BBL X1C"       # process/quality profile
-filaments = ["Generic PLA @base"]          # filament profiles (one per AMS slot)
+filaments = ["Generic PLA @base"]          # filament profiles (one per slot)
 
 # Per-slot filament mapping (alternative to filaments list):
 # [slicer.orca.slots]
@@ -444,7 +444,7 @@ class _MachineInfo:
 
 
 def _read_machine_info(profile_name: str, engine: str) -> _MachineInfo:
-    """Extract build plate size and AMS/multi-material capability from a machine profile."""
+    """Extract build plate size and multi-material capability from a machine profile."""
     info = _MachineInfo()
     try:
         from estampo.profiles import resolve_profile_data
@@ -463,7 +463,7 @@ def _read_machine_info(profile_name: str, engine: str) -> _MachineInfo:
             if max_x > 0 and max_y > 0:
                 info.plate_size = (max_x, max_y)
 
-        # AMS / multi-material support
+        # Multi-material support
         if data.get("single_extruder_multi_material"):
             info.multi_material = True
     except (OSError, KeyError, ValueError):
@@ -480,52 +480,6 @@ def _list_configured_printers() -> dict[str, dict]:
     except (OSError, ImportError):
         log.debug("Failed to list configured printers", exc_info=True)
         return {}
-
-
-def _query_ams_trays(configured: dict[str, dict]) -> list[dict]:
-    """Query a configured cloud printer for AMS tray info.
-
-    Returns list of tray dicts with 'type', 'color', 'phys_slot' keys,
-    or empty list if unavailable.
-    """
-    # Find the first bambu-cloud printer
-    for name, creds in configured.items():
-        if creds.get("type") != "bambu-cloud":
-            continue
-        serial = creds.get("serial")
-        if not serial:
-            continue
-        try:
-            from estampo.cloud import cloud_status, parse_ams_trays
-            from estampo.credentials import cloud_token_json
-
-            with cloud_token_json() as token_file:
-                status = cloud_status(serial, token_file)
-            return parse_ams_trays(status)
-        except (OSError, ImportError, KeyError):
-            log.debug("Failed to query AMS trays", exc_info=True)
-            return []
-    return []
-
-
-def _match_filament_profile(tray_type: str, profile_names: list[str]) -> str | None:
-    """Best-effort match an AMS tray type (e.g. 'PLA') to a slicer profile name.
-
-    Looks for 'Generic <type>' first, then any profile containing the type string.
-    """
-    tray_upper = tray_type.upper()
-    # Prefer "Generic PLA @base" style
-    for name in profile_names:
-        if name.upper().startswith(f"GENERIC {tray_upper}") and "@base" in name.lower():
-            return name
-    for name in profile_names:
-        if name.upper().startswith(f"GENERIC {tray_upper}"):
-            return name
-    # Fallback: any profile containing the type
-    for name in profile_names:
-        if tray_upper in name.upper():
-            return name
-    return None
 
 
 def _detect_orca_version() -> str | None:
@@ -810,9 +764,8 @@ def _wizard_pick_profiles(
 def _wizard_pick_filaments(
     profiles: dict[str, list[str]],
     machine_info: _MachineInfo,
-    ams_trays: list[dict],
 ) -> list[str]:
-    """Step 5: Collect AMS results and pick filament profiles.
+    """Pick filament profiles interactively.
 
     Returns a list of filament profile names.
     """
@@ -821,27 +774,10 @@ def _wizard_pick_filaments(
     filament_names: list[str] = []
     filament_options = sorted(profiles.get("filament", []))
 
-    # Try to pre-populate from AMS trays
-    ams_suggestions: list[str | None] = []
-    if ams_trays and filament_options:
-        ams_suggestions = [_match_filament_profile(t["type"], filament_options) for t in ams_trays]
-
-    if ams_suggestions and any(ams_suggestions):
-        # Show what we matched from AMS and let user confirm/edit
-        ui.heading("Filament Profiles (matched from AMS)")
-        for i, (tray, suggestion) in enumerate(zip(ams_trays, ams_suggestions)):
-            label = suggestion or "[dim]? (no match)[/dim]"
-            swatch = ui.color_swatch(tray["color"])
-            slot_num = tray["phys_slot"] + 1
-            ui.console.print(f"  Slot {slot_num}: {tray['type']} {swatch} \u2192 {label}")
-        if _prompt_yn("Use these filaments?"):
-            filament_names = [s for s in ams_suggestions if s]
-        ui.console.print()
-
-    if not filament_names and filament_options:
+    if filament_options:
         ui.heading("Filament Profile")
         if machine_info.multi_material:
-            ui.info("Printer supports multi-material (AMS). Pick a filament for each slot.")
+            ui.info("Printer supports multi-material. Pick a filament for each slot.")
             slot = 1
             while True:
                 chosen = _prompt_choice(f"Pick filament for slot {slot}", filament_options)
@@ -1080,20 +1016,11 @@ def run_wizard(output: Path | None = None) -> str:
 
     # --- Step 3: Printer connection (optional) ---
     printer_name = _wizard_pick_printer()
-    configured = _list_configured_printers() if printer_name else {}
 
     # Build pipeline stages — include "print" only if printer selected
     stages = list(DEFAULT_STAGES)
     if printer_name:
         stages.append("print")
-
-    # --- Query AMS trays in background while we continue ---
-    ams_future = None
-    if configured:
-        from concurrent.futures import ThreadPoolExecutor
-
-        _ams_pool = ThreadPoolExecutor(max_workers=1)
-        ams_future = _ams_pool.submit(_query_ams_trays, configured)
 
     # --- Discover profiles (needed for picker and machine info) ---
     if engine == "cura":
@@ -1144,17 +1071,8 @@ def run_wizard(output: Path | None = None) -> str:
     # --- Step 5: Slicer version ---
     slicer_version = _wizard_pick_slicer_version(engine)
 
-    # --- Step 6: Filaments (AMS auto-detect or manual) ---
-    ams_trays: list[dict] = []
-    if ams_future is not None:
-        try:
-            ams_trays = ams_future.result(timeout=30)
-        except (TimeoutError, OSError, ImportError, KeyError):
-            log.debug("AMS tray query failed", exc_info=True)
-        if ams_trays:
-            ui.info(f"AMS detected ({len(ams_trays)} slot(s))")
-
-    filament_names = _wizard_pick_filaments(profiles, machine_info, ams_trays)
+    # --- Step 6: Filaments ---
+    filament_names = _wizard_pick_filaments(profiles, machine_info)
 
     # --- Step 7: Assign filament slots to parts (if multiple filaments) ---
     _wizard_assign_filament_slots(parts_config, filament_names)
