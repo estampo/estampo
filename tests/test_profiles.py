@@ -53,7 +53,7 @@ def test_resolve_path_directly(tmp_path):
 
 def test_resolve_pinned_first(tmp_path):
     """Pinned profiles should take precedence over system profiles."""
-    pinned_dir = tmp_path / "profiles" / "machine"
+    pinned_dir = tmp_path / "profiles" / "orca" / "machine"
     pinned_dir.mkdir(parents=True)
     pinned = pinned_dir / "MyProfile.json"
     pinned.write_text("{}")
@@ -229,7 +229,7 @@ def test_discover_profile_names_system_first():
 
 def test_discover_profile_names_pinned_fallback(tmp_path):
     """Falls back to pinned profiles when system is empty."""
-    pinned_dir = tmp_path / "profiles" / "machine"
+    pinned_dir = tmp_path / "profiles" / "orca" / "machine"
     pinned_dir.mkdir(parents=True)
     (pinned_dir / "MyPrinter.json").write_text("{}")
 
@@ -344,7 +344,7 @@ def test_resolve_profile_data_docker_dir_fallback(tmp_path):
     """Parent profile is found in docker_profile_dir during chain walk."""
     # Set up: child in project pinned profiles, parent only in docker dir
     project = tmp_path / "project"
-    pinned = project / "profiles" / "process"
+    pinned = project / "profiles" / "orca" / "process"
     pinned.mkdir(parents=True)
     (pinned / "Child.json").write_text(json.dumps({"inherits": "DockerParent", "wall_loops": 4}))
 
@@ -372,7 +372,7 @@ def test_resolve_profile_data_warns_missing_parent(tmp_path, caplog):
     import logging
 
     project = tmp_path / "project"
-    pinned = project / "profiles" / "process"
+    pinned = project / "profiles" / "orca" / "process"
     pinned.mkdir(parents=True)
     (pinned / "Lonely.json").write_text(json.dumps({"inherits": "Ghost", "layer_height": 0.2}))
 
@@ -953,7 +953,7 @@ def test_load_cura_definition_map():
 
 def test_validate_override_keys_valid(tmp_path):
     """Known keys produce no warnings."""
-    profiles = tmp_path / "profiles" / "process"
+    profiles = tmp_path / "profiles" / "orca" / "process"
     profiles.mkdir(parents=True)
     (profiles / "Fast.json").write_text(
         json.dumps({"type": "process", "layer_height": "0.3", "wall_loops": "2"})
@@ -969,7 +969,7 @@ def test_validate_override_keys_valid(tmp_path):
 
 def test_validate_override_keys_unknown(tmp_path):
     """Unknown keys produce warnings."""
-    profiles = tmp_path / "profiles" / "process"
+    profiles = tmp_path / "profiles" / "orca" / "process"
     profiles.mkdir(parents=True)
     (profiles / "Fast.json").write_text(json.dumps({"type": "process", "layer_height": "0.3"}))
     warnings = validate_override_keys(
@@ -1008,10 +1008,10 @@ def test_validate_override_keys_unresolvable_profile():
 
 def test_pinned_profiles_version_reads_marker(tmp_path):
     """Reads version from .slicer-version marker file."""
-    profiles = tmp_path / "profiles"
-    profiles.mkdir()
+    profiles = tmp_path / "profiles" / "orca"
+    profiles.mkdir(parents=True)
     (profiles / ".slicer-version").write_text("2.3.2\n")
-    assert pinned_profiles_version(tmp_path) == "2.3.2"
+    assert pinned_profiles_version(tmp_path, engine="orca") == "2.3.2"
 
 
 def test_pinned_profiles_version_returns_none_without_marker(tmp_path):
@@ -1046,35 +1046,22 @@ class TestEngineNamespacedProfiles:
         assert source == "pinned"
         assert "MyPrinter" in names.get("machine", [])
 
-    def test_discover_names_legacy_fallback(self, tmp_path):
-        """Legacy profiles/<category>/ still found when no engine subdir."""
+    def test_discover_names_no_legacy_fallback(self, tmp_path):
+        """Profiles in legacy profiles/<category>/ (without engine subdir) are NOT found."""
         legacy_machine = tmp_path / "profiles" / "machine"
         legacy_machine.mkdir(parents=True)
         (legacy_machine / "OldPrinter.json").write_text('{"type": "machine"}')
 
-        with patch.dict("estampo.profiles.SYSTEM_DIRS", {}, clear=True):
+        with (
+            patch.dict("estampo.profiles.SYSTEM_DIRS", {}, clear=True),
+            patch(
+                "estampo.profiles.load_bundled_profiles",
+                return_value={"machine": [], "process": [], "filament": []},
+            ),
+        ):
             names, source = discover_profile_names("orca", project_dir=tmp_path)
 
-        assert source == "pinned"
-        assert "OldPrinter" in names.get("machine", [])
-
-    def test_discover_names_engine_takes_precedence(self, tmp_path):
-        """Engine-namespaced profiles take precedence over legacy flat."""
-        # Create both paths
-        (tmp_path / "profiles" / "orca" / "machine").mkdir(parents=True)
-        (tmp_path / "profiles" / "orca" / "machine" / "NewPrinter.json").write_text(
-            '{"type": "machine"}'
-        )
-        (tmp_path / "profiles" / "machine").mkdir(parents=True)
-        (tmp_path / "profiles" / "machine" / "OldPrinter.json").write_text('{"type": "machine"}')
-
-        with patch.dict("estampo.profiles.SYSTEM_DIRS", {}, clear=True):
-            names, source = discover_profile_names("orca", project_dir=tmp_path)
-
-        assert source == "pinned"
-        assert "NewPrinter" in names.get("machine", [])
-        # Legacy profile NOT included — engine-namespaced found first
-        assert "OldPrinter" not in names.get("machine", [])
+        assert source == "none"
 
     def test_resolve_profile_engine_namespaced(self, tmp_path):
         """resolve_profile finds profiles in profiles/<engine>/<category>/."""
@@ -1086,28 +1073,14 @@ class TestEngineNamespacedProfiles:
         result = resolve_profile("MyProcess", "orca", "process", tmp_path)
         assert result == expected
 
-    def test_resolve_profile_legacy_fallback(self, tmp_path):
-        """resolve_profile falls back to legacy profiles/<category>/."""
+    def test_resolve_profile_no_legacy_fallback(self, tmp_path):
+        """resolve_profile does NOT fall back to legacy profiles/<category>/."""
         legacy_process = tmp_path / "profiles" / "process"
         legacy_process.mkdir(parents=True)
-        expected = legacy_process / "OldProcess.json"
-        expected.write_text('{"type": "process"}')
+        (legacy_process / "OldProcess.json").write_text('{"type": "process"}')
 
-        result = resolve_profile("OldProcess", "orca", "process", tmp_path)
-        assert result == expected
-
-    def test_resolve_profile_engine_over_legacy(self, tmp_path):
-        """Engine-namespaced profile found before legacy."""
-        (tmp_path / "profiles" / "orca" / "process").mkdir(parents=True)
-        engine_path = tmp_path / "profiles" / "orca" / "process" / "MyProcess.json"
-        engine_path.write_text('{"layer_height": "0.12"}')
-
-        (tmp_path / "profiles" / "process").mkdir(parents=True)
-        legacy_path = tmp_path / "profiles" / "process" / "MyProcess.json"
-        legacy_path.write_text('{"layer_height": "0.20"}')
-
-        result = resolve_profile("MyProcess", "orca", "process", tmp_path)
-        assert result == engine_path
+        with pytest.raises(FileNotFoundError):
+            resolve_profile("OldProcess", "orca", "process", tmp_path)
 
     def test_pin_profiles_writes_engine_namespaced(self, tmp_path):
         """pin_profiles writes to profiles/<engine>/<category>/."""
@@ -1171,13 +1144,13 @@ class TestEngineNamespacedProfiles:
 
         assert pinned_profiles_version(tmp_path, engine="orca") == "2.3.2"
 
-    def test_pinned_profiles_version_legacy_fallback(self, tmp_path):
-        """pinned_profiles_version falls back to profiles/.slicer-version."""
+    def test_pinned_profiles_version_no_legacy_fallback(self, tmp_path):
+        """pinned_profiles_version does NOT fall back to profiles/.slicer-version."""
         profiles = tmp_path / "profiles"
         profiles.mkdir(parents=True)
         (profiles / ".slicer-version").write_text("2.3.1\n")
 
-        assert pinned_profiles_version(tmp_path, engine="orca") == "2.3.1"
+        assert pinned_profiles_version(tmp_path, engine="orca") is None
 
     def test_pinned_profiles_version_engine_over_legacy(self, tmp_path):
         """Engine-namespaced version marker takes precedence."""

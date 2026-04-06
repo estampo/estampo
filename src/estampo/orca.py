@@ -574,12 +574,8 @@ def orca_slice_plate(
     # Profiles pinned for one slicer version can crash a different version due
     # to schema changes (array sizes, removed/added keys).
     if project_dir and docker_version:
-        # Check both engine-namespaced and legacy paths for pinned profiles
         engine_pinned = project_dir / profiles_dir / "orca"
-        legacy_pinned = project_dir / profiles_dir
-        has_pinned = (engine_pinned.is_dir() and any(engine_pinned.rglob("*.json"))) or (
-            legacy_pinned.is_dir() and any(legacy_pinned.rglob("*.json"))
-        )
+        has_pinned = engine_pinned.is_dir() and any(engine_pinned.rglob("*.json"))
         if has_pinned:
             pinned_ver = pinned_profiles_version(project_dir, profiles_dir, "orca")
             if pinned_ver and pinned_ver != docker_version:
@@ -898,17 +894,6 @@ def _detect_orca_version() -> str | None:
     where launching OrcaSlicer --help may hang).
     """
     skip_detect = os.environ.get("ESTAMPO_SKIP_SLICER_DETECT")
-    if not skip_detect:
-        skip_detect = os.environ.get("FABPRINT_SKIP_SLICER_DETECT")
-        if skip_detect:
-            import warnings
-
-            warnings.warn(
-                "FABPRINT_SKIP_SLICER_DETECT is deprecated"
-                " — use ESTAMPO_SKIP_SLICER_DETECT instead",
-                DeprecationWarning,
-                stacklevel=2,
-            )
     if skip_detect:
         return None
     try:

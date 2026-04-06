@@ -356,12 +356,12 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
 
     def test_override_keys_valid_passes(self, tmp_path):
         """Valid override keys produce a pass message."""
-        profiles = tmp_path / "profiles" / "process"
+        profiles = tmp_path / "profiles" / "orca" / "process"
         profiles.mkdir(parents=True)
         (profiles / "MyProcess.json").write_text(
             '{"type": "process", "layer_height": "0.2", "wall_loops": "2"}'
         )
-        toml = tmp_path / "fabprint.toml"
+        toml = tmp_path / "estampo.toml"
         toml.write_text(f"""
 [slicer]
 engine = "orca"
@@ -381,10 +381,10 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
 
     def test_override_keys_unknown_warns(self, tmp_path):
         """Unknown override keys produce warnings."""
-        profiles = tmp_path / "profiles" / "process"
+        profiles = tmp_path / "profiles" / "orca" / "process"
         profiles.mkdir(parents=True)
         (profiles / "MyProcess.json").write_text('{"type": "process", "layer_height": "0.2"}')
-        toml = tmp_path / "fabprint.toml"
+        toml = tmp_path / "estampo.toml"
         toml.write_text(f"""
 [slicer]
 engine = "orca"

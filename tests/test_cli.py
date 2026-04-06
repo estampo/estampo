@@ -250,12 +250,12 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
 
 def test_run_warns_on_unknown_override_keys(tmp_path, capsys):
     """Run should warn when override keys don't exist in the process profile."""
-    profiles = tmp_path / "profiles" / "process"
+    profiles = tmp_path / "profiles" / "orca" / "process"
     profiles.mkdir(parents=True)
     (profiles / "MyProcess.json").write_text(
         '{"type": "process", "layer_height": "0.2", "wall_loops": "2"}'
     )
-    toml = tmp_path / "fabprint.toml"
+    toml = tmp_path / "estampo.toml"
     toml.write_text(f"""
 [plate]
 size = [256, 256]
@@ -473,15 +473,6 @@ def test_resolve_config_path_missing(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     with pytest.raises(EstampoError, match="No config file specified"):
         _resolve_config_path(None)
-
-
-def test_resolve_config_path_legacy_fabprint_toml(tmp_path, monkeypatch, capsys):
-    """Falls back to fabprint.toml with deprecation warning when estampo.toml is absent."""
-    monkeypatch.chdir(tmp_path)
-    (tmp_path / "fabprint.toml").write_text("[slicer]\n")
-    result = _resolve_config_path(None)
-    assert result == Path("fabprint.toml")
-    assert "fabprint.toml is deprecated" in capsys.readouterr().err
 
 
 # --- _resolve_status_printers ---

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import tomllib
-import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -267,35 +266,30 @@ def load_config(path: Path) -> EstampoConfig:
     if engine not in ("orca", "cura"):
         raise EstampoError(f"slicer.engine must be 'orca' or 'cura', got '{engine}'")
 
-    # Detect format: new engine-namespaced sections vs legacy flat keys.
-    # New format has [slicer.orca] and/or [slicer.cura] as dict sub-keys.
+    # Engine-namespaced sections: [slicer.orca] and/or [slicer.cura]
     orca_raw = slicer_raw.get("orca")
     cura_raw = slicer_raw.get("cura")
-    is_new_format = isinstance(orca_raw, dict) or isinstance(cura_raw, dict)
 
-    if is_new_format:
-        orca_cfg = _parse_orca_config(orca_raw or {})
-        cura_cfg = _parse_cura_config(cura_raw or {})
-    else:
-        # Legacy flat format — all keys live directly under [slicer]
-        # Emit deprecation warning if orca-specific keys are at top level
-        _legacy_keys = {
-            "printer",
-            "process",
-            "filaments",
-            "slots",
-            "machine_overrides",
-            "filament_overrides",
-        }
-        if _legacy_keys & slicer_raw.keys():
-            warnings.warn(
-                "Flat [slicer] config is deprecated — move engine-specific settings "
-                "to [slicer.orca] or [slicer.cura]. See 'estampo init' for the new format.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-        orca_cfg = _parse_orca_config(slicer_raw)
-        cura_cfg = _parse_cura_config(slicer_raw.get("cura", {}))
+    # Reject legacy flat format (keys directly under [slicer])
+    _legacy_keys = {
+        "printer",
+        "process",
+        "filaments",
+        "slots",
+        "machine_overrides",
+        "filament_overrides",
+    }
+    if _legacy_keys & slicer_raw.keys() and not (
+        isinstance(orca_raw, dict) or isinstance(cura_raw, dict)
+    ):
+        raise EstampoError(
+            "Flat [slicer] config format is no longer supported.\n"
+            "Move engine-specific settings to [slicer.orca] or [slicer.cura].\n"
+            "Run 'estampo init' to generate the new format."
+        )
+
+    orca_cfg = _parse_orca_config(orca_raw or {})
+    cura_cfg = _parse_cura_config(cura_raw or {})
 
     # Populate active-engine facade fields from the selected engine's sub-config
     if engine == "orca":

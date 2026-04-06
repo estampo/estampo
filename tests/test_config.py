@@ -29,6 +29,8 @@ padding = 3.0
 
 [slicer]
 engine = "orca"
+
+[slicer.orca]
 printer = "Bambu Lab P1S 0.4 nozzle"
 process = "0.20mm Standard @BBL X1C"
 filaments = ["Generic PLA @base"]
@@ -256,7 +258,7 @@ def test_overrides(tmp_path):
 [slicer]
 engine = "orca"
 
-[slicer.overrides]
+[slicer.orca.overrides]
 sparse_infill_density = "25%"
 wall_loops = 3
 
@@ -487,7 +489,7 @@ def test_filament_by_name_explicit_list(tmp_path):
     path = _write_toml(
         tmp_path,
         """
-[slicer]
+[slicer.orca]
 filaments = ["Generic PLA @base", "Generic PETG-CF @base"]
 
 [[parts]]
@@ -505,7 +507,7 @@ def test_filament_by_name_not_in_list(tmp_path):
     path = _write_toml(
         tmp_path,
         """
-[slicer]
+[slicer.orca]
 filaments = ["Generic PLA @base"]
 
 [[parts]]
@@ -542,7 +544,7 @@ def test_filament_int_backward_compat(tmp_path):
     path = _write_toml(
         tmp_path,
         """
-[slicer]
+[slicer.orca]
 filaments = ["Generic PLA @base", "Generic PETG-CF @base"]
 
 [[parts]]
@@ -578,7 +580,7 @@ def test_slots_direct_feed(tmp_path):
     path = _write_toml(
         tmp_path,
         """
-[slicer.slots]
+[slicer.orca.slots]
 5 = "Generic TPU @base"
 
 [[parts]]
@@ -604,7 +606,7 @@ def test_slots_int_ref_with_map(tmp_path):
     path = _write_toml(
         tmp_path,
         """
-[slicer.slots]
+[slicer.orca.slots]
 1 = "Generic PLA @base"
 3 = "Generic PETG-CF @base"
 
@@ -625,7 +627,7 @@ def test_slots_mixed_int_and_string(tmp_path):
     path = _write_toml(
         tmp_path,
         """
-[slicer.slots]
+[slicer.orca.slots]
 3 = "Generic PETG-CF @base"
 5 = "Generic TPU @base"
 
@@ -649,7 +651,7 @@ def test_slots_int_ref_not_in_map(tmp_path):
     path = _write_toml(
         tmp_path,
         """
-[slicer.slots]
+[slicer.orca.slots]
 1 = "Generic PLA @base"
 
 [[parts]]
@@ -667,7 +669,7 @@ def test_slots_bad_slot_number(tmp_path):
     path = _write_toml(
         tmp_path,
         """
-[slicer.slots]
+[slicer.orca.slots]
 0 = "Generic PLA @base"
 
 [[parts]]
@@ -685,7 +687,7 @@ def test_slots_duplicate_profile(tmp_path):
     path = _write_toml(
         tmp_path,
         """
-[slicer.slots]
+[slicer.orca.slots]
 1 = "Generic PETG-CF @base"
 3 = "Generic PETG-CF @base"
 
@@ -762,7 +764,7 @@ def test_object_filaments_with_explicit_list(tmp_path):
     path = _write_toml(
         tmp_path,
         """
-[slicer]
+[slicer.orca]
 filaments = ["Generic PETG-CF @base", "Bambu PLA Basic @BBL X1C"]
 
 [[parts]]
@@ -784,7 +786,7 @@ def test_object_filaments_not_in_list(tmp_path):
     path = _write_toml(
         tmp_path,
         """
-[slicer]
+[slicer.orca]
 filaments = ["Generic PLA @base"]
 
 [[parts]]
@@ -1125,8 +1127,8 @@ file = "cube.stl"
         assert cfg.slicer.orca.printer == "Bambu Lab P1S 0.4 nozzle"
         assert cfg.slicer.orca.filaments == ["Generic PETG"]
 
-    def test_legacy_flat_still_works(self, tmp_path):
-        """Legacy flat format without [slicer.orca] section still works."""
+    def test_legacy_flat_rejected(self, tmp_path):
+        """Legacy flat format without [slicer.orca] section is rejected."""
         path = _write_toml(
             tmp_path,
             """
@@ -1136,21 +1138,13 @@ printer = "Bambu Lab P1S 0.4 nozzle"
 process = "0.20mm Standard @BBL X1C"
 filaments = ["Generic PLA @base"]
 
-[slicer.overrides]
-sparse_infill_density = "25%"
-
 [[parts]]
 file = "cube.stl"
 """,
             create_files=["cube.stl"],
         )
-        with pytest.warns(DeprecationWarning, match="Flat.*slicer.*deprecated"):
-            cfg = load_config(path)
-        assert cfg.slicer.printer == "Bambu Lab P1S 0.4 nozzle"
-        assert cfg.slicer.filaments == ["Generic PLA @base"]
-        assert cfg.slicer.overrides == {"sparse_infill_density": "25%"}
-        # Legacy flat keys are also in the orca sub-config
-        assert cfg.slicer.orca.printer == "Bambu Lab P1S 0.4 nozzle"
+        with pytest.raises(EstampoError, match="no longer supported"):
+            load_config(path)
 
     def test_cura_namespaced_with_orca_machine_overrides(self, tmp_path):
         """Orca sub-config supports machine_overrides and filament_overrides."""

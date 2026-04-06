@@ -2,7 +2,7 @@
 
 These tests verify the full flow from TOML loading through config parsing,
 profile resolution, and slicer dispatch for both OrcaSlicer and CuraEngine,
-using both the new engine-namespaced format and the legacy flat format.
+using the engine-namespaced format.
 """
 
 from __future__ import annotations
@@ -13,6 +13,7 @@ from unittest.mock import patch
 
 import pytest
 
+from estampo import EstampoError
 from estampo.config import load_config
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -102,8 +103,8 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
         # Cura sub-config is empty (not configured)
         assert cfg.slicer.cura.overrides == {}
 
-    def test_legacy_format_emits_deprecation(self, tmp_path):
-        """Legacy flat format still works but emits a DeprecationWarning."""
+    def test_legacy_format_rejected(self, tmp_path):
+        """Legacy flat format is rejected with a clear error."""
         path = _write_toml(
             tmp_path,
             f"""
@@ -117,15 +118,8 @@ filaments = ["Generic PLA @base"]
 file = "{_posix(FIXTURES / "cube_10mm.stl")}"
 """,
         )
-        with pytest.warns(DeprecationWarning, match="Flat.*slicer.*deprecated"):
-            cfg = load_config(path)
-
-        # Legacy config still fully functional
-        assert cfg.slicer.printer == "Bambu Lab P1S 0.4 nozzle"
-        assert cfg.slicer.process == "0.20mm Standard @BBL X1C"
-        assert cfg.slicer.filaments == ["Generic PLA @base"]
-        # Also populated in orca sub-config
-        assert cfg.slicer.orca.printer == "Bambu Lab P1S 0.4 nozzle"
+        with pytest.raises(EstampoError, match="no longer supported"):
+            load_config(path)
 
     def test_legacy_minimal_no_warning(self, tmp_path):
         """Minimal config with only engine= does NOT emit deprecation."""
@@ -153,7 +147,7 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
     def test_orca_profile_resolution_with_pinned(self, tmp_path):
         """New-format config resolves pinned profiles via facade fields."""
         # Create pinned profile
-        profiles = tmp_path / "profiles" / "process"
+        profiles = tmp_path / "profiles" / "orca" / "process"
         profiles.mkdir(parents=True)
         (profiles / "MyProcess.json").write_text(
             json.dumps({"type": "process", "layer_height": "0.20", "wall_loops": "3"})
@@ -189,7 +183,7 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
 
     def test_orca_validate_overrides_new_format(self, tmp_path):
         """validate_override_keys works with new-format config facade."""
-        profiles = tmp_path / "profiles" / "process"
+        profiles = tmp_path / "profiles" / "orca" / "process"
         profiles.mkdir(parents=True)
         (profiles / "MyProcess.json").write_text(
             json.dumps({"type": "process", "layer_height": "0.20", "wall_loops": "3"})
@@ -465,18 +459,11 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
         assert not any("printer" in w.lower() and "not found" in w.lower() for w in result.warnings)
 
 
-class TestLegacyBackwardCompat:
-    """Legacy flat format backward compatibility through the full stack."""
+class TestLegacyRejection:
+    """Legacy flat format is rejected with a clear error."""
 
-    def test_legacy_orca_slice_dispatch(self, tmp_path):
-        """Legacy flat orca config dispatches to OrcaSlicer correctly."""
-        # Create a minimal pinned profile
-        profiles = tmp_path / "profiles" / "process"
-        profiles.mkdir(parents=True)
-        (profiles / "TestProcess.json").write_text(
-            json.dumps({"type": "process", "layer_height": "0.20"})
-        )
-
+    def test_legacy_orca_rejected(self, tmp_path):
+        """Legacy flat orca config is rejected."""
         path = _write_toml(
             tmp_path,
             f"""
@@ -485,27 +472,15 @@ engine = "orca"
 version = "2.3.2"
 process = "TestProcess"
 
-[slicer.overrides]
-wall_loops = 4
-
 [[parts]]
 file = "{_posix(FIXTURES / "cube_10mm.stl")}"
 """,
         )
-        with pytest.warns(DeprecationWarning, match="Flat.*slicer.*deprecated"):
-            cfg = load_config(path)
+        with pytest.raises(EstampoError, match="no longer supported"):
+            load_config(path)
 
-        # Legacy config values accessible via facade
-        assert cfg.slicer.process == "TestProcess"
-        assert cfg.slicer.overrides == {"wall_loops": 4}
-        # Also in orca sub-config
-        assert cfg.slicer.orca.process == "TestProcess"
-        assert cfg.slicer.orca.overrides == {"wall_loops": 4}
-
-    def test_legacy_cura_no_warning(self, tmp_path):
-        """engine=cura with no orca-specific keys emits no deprecation."""
-        import warnings as warn_mod
-
+    def test_cura_overrides_at_slicer_level_ok(self, tmp_path):
+        """engine=cura with [slicer.overrides] (not a legacy key) is fine."""
         path = _write_toml(
             tmp_path,
             f"""
@@ -513,17 +488,14 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
 engine = "cura"
 version = "5.12.0"
 
-[slicer.overrides]
+[slicer.cura]
+
+[slicer.cura.overrides]
 infill_sparse_density = 25
 
 [[parts]]
 file = "{_posix(FIXTURES / "cube_10mm.stl")}"
 """,
         )
-        # overrides without printer/process/filaments is ambiguous but not legacy-orca
-        # The warning only fires when orca-specific keys (printer, process, filaments) are present
-        with warn_mod.catch_warnings():
-            warn_mod.simplefilter("error", DeprecationWarning)
-            cfg = load_config(path)
-
+        cfg = load_config(path)
         assert cfg.slicer.engine == "cura"
