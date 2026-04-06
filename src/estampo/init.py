@@ -232,44 +232,48 @@ def validate_config(path: Path) -> ValidationResult:
         profiles_dir=cfg.slicer.profiles_dir,
     )
 
+    active = cfg.slicer.active
+    orca = cfg.slicer.orca if cfg.slicer.engine == "orca" else None
+
     profile_ok = True
     if source != "none":
-        if cfg.slicer.printer:
+        if active.printer:
             machines = profiles.get("machine", [])
-            if machines and cfg.slicer.printer not in machines:
-                close = _closest_match(cfg.slicer.printer, machines)
+            if machines and active.printer not in machines:
+                close = _closest_match(active.printer, machines)
                 hint = f" Did you mean '{close}'?" if close else ""
                 # Check if it's a machine_model (wrong type)
-                _is_model = _check_profile_type(cfg.slicer.printer, cfg.slicer.engine, "machine")
+                _is_model = _check_profile_type(active.printer, cfg.slicer.engine, "machine")
                 if _is_model == "machine_model":
                     warnings.append(
-                        f"slicer.printer '{cfg.slicer.printer}' is a printer model "
+                        f"slicer.printer '{active.printer}' is a printer model "
                         f"definition, not a slicer profile. Use the nozzle-specific "
-                        f"variant, e.g. '{cfg.slicer.printer} 0.4 nozzle'"
+                        f"variant, e.g. '{active.printer} 0.4 nozzle'"
                     )
                 else:
                     warnings.append(
-                        f"slicer.printer '{cfg.slicer.printer}' not found in "
+                        f"slicer.printer '{active.printer}' not found in "
                         f"{cfg.slicer.engine} profiles ({source}).{hint}"
                     )
                 profile_ok = False
 
-        if cfg.slicer.process:
+        if orca and orca.process:
             processes = profiles.get("process", [])
-            if processes and cfg.slicer.process not in processes:
-                close = _closest_match(cfg.slicer.process, processes)
+            if processes and orca.process not in processes:
+                close = _closest_match(orca.process, processes)
                 hint = f" Did you mean '{close}'?" if close else ""
                 warnings.append(
-                    f"slicer.process '{cfg.slicer.process}' not found in "
+                    f"slicer.process '{orca.process}' not found in "
                     f"{cfg.slicer.engine} profiles ({source}).{hint}"
                 )
                 profile_ok = False
 
-        filaments = profiles.get("filament", [])
-        if filaments:
-            for fil in cfg.slicer.filaments:
-                if fil not in filaments:
-                    close = _closest_match(fil, filaments)
+        filament_list = orca.filaments if orca else []
+        known_filaments = profiles.get("filament", [])
+        if known_filaments:
+            for fil in filament_list:
+                if fil not in known_filaments:
+                    close = _closest_match(fil, known_filaments)
                     hint = f" Did you mean '{close}'?" if close else ""
                     warnings.append(
                         f"slicer filament '{fil}' not found in "
@@ -288,17 +292,17 @@ def validate_config(path: Path) -> ValidationResult:
         )
 
     # Check slicer override keys against process profile
-    if cfg.slicer.overrides:
+    if active.overrides:
         override_warnings = validate_override_keys(
-            cfg.slicer.overrides,
+            active.overrides,
             cfg.slicer.engine,
-            cfg.slicer.process,
+            orca.process if orca else None,
             project_dir=cfg.base_dir,
         )
         if override_warnings:
             warnings.extend(override_warnings)
         else:
-            passes.append(f"Slicer override keys valid ({len(cfg.slicer.overrides)} override(s))")
+            passes.append(f"Slicer override keys valid ({len(active.overrides)} override(s))")
 
     # Check printer credentials reference
     if cfg.printer:

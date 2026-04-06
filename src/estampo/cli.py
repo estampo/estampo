@@ -309,13 +309,15 @@ def _run_pipeline(
     stages = cfg.pipeline.stages
 
     # Warn about unrecognised slicer override keys early
-    if cfg.slicer.overrides:
+    active = cfg.slicer.active
+    if active.overrides:
         from estampo.profiles import validate_override_keys
 
+        orca = cfg.slicer.orca if cfg.slicer.engine == "orca" else None
         override_warnings = validate_override_keys(
-            cfg.slicer.overrides,
+            active.overrides,
             cfg.slicer.engine,
-            cfg.slicer.process,
+            orca.process if orca else None,
             project_dir=cfg.base_dir,
         )
         if override_warnings:
@@ -831,11 +833,13 @@ def profiles_pin(
             raise typer.Exit(0)
         # else: overwrite
 
+    active = cfg.slicer.active
+    orca = cfg.slicer.orca if cfg.slicer.engine == "orca" else None
     pinned = pin_profiles(
         engine=cfg.slicer.engine,
-        printer=cfg.slicer.printer,
-        process=cfg.slicer.process,
-        filaments=cfg.slicer.filaments,
+        printer=active.printer,
+        process=orca.process if orca else None,
+        filaments=orca.filaments if orca else [],
         project_dir=cfg.base_dir,
         docker_version=cfg.slicer.version,
         profiles_dir=profiles_dir,

@@ -365,8 +365,9 @@ def resolved_filaments(
     elif loaded_parts.has_paint_colors:
         return ResolvedFilaments(filaments=None, filament_ids=loaded_parts.filament_ids)
     else:
+        orca = config.slicer.orca
         return ResolvedFilaments(
-            filaments=config.slicer.filaments or None,
+            filaments=orca.filaments or None,
             filament_ids=loaded_parts.filament_ids,
         )
 
@@ -382,17 +383,19 @@ def sliced_output_dir(
     """Slice the plate 3MF via the configured slicer engine."""
     from estampo.slicer import slice_plate
 
+    active = config.slicer.active
+    orca = config.slicer.orca if config.slicer.engine == "orca" else None
     return slice_plate(
         input_3mf=plate_3mf_path,
         engine=config.slicer.engine,
         output_dir=output_dir,
-        printer=config.slicer.printer,
-        process=config.slicer.process,
+        printer=active.printer,
+        process=orca.process if orca else None,
         filaments=resolved_filaments.filaments,
         filament_ids=resolved_filaments.filament_ids,
-        overrides=config.slicer.overrides or None,
-        machine_overrides=config.slicer.machine_overrides or None,
-        filament_overrides=config.slicer.filament_overrides or None,
+        overrides=active.overrides or None,
+        machine_overrides=orca.machine_overrides if orca else None,
+        filament_overrides=orca.filament_overrides if orca else None,
         project_dir=config.base_dir,
         local=slicer_local,
         docker_version=docker_version,
