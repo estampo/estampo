@@ -404,6 +404,73 @@ def _place_on_bed(
     return out
 
 
+def _safe_eval_arithmetic(expr: str) -> float:
+    """Safely evaluate a simple arithmetic expression (integers and +-*/).
+
+    Uses ``ast`` to parse the expression and only allows numeric literals
+    and basic binary operators.  Raises ``ValueError`` for anything else.
+    """
+    import ast
+    import operator
+
+    _OPS: dict[type, object] = {
+        ast.Add: operator.add,
+        ast.Sub: operator.sub,
+        ast.Mult: operator.mul,
+        ast.Div: operator.truediv,
+    }
+
+    def _eval_node(node: ast.AST) -> float:
+        if isinstance(node, ast.Expression):
+            return _eval_node(node.body)
+        if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+            return float(node.value)
+        if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.USub):
+            return -_eval_node(node.operand)
+        if isinstance(node, ast.BinOp) and type(node.op) in _OPS:
+            op = _OPS[type(node.op)]
+            return op(  # type: ignore[operator]
+                _eval_node(node.left), _eval_node(node.right)
+            )
+        raise ValueError(f"Unsupported expression node: {ast.dump(node)}")
+
+    tree = ast.parse(expr.strip(), mode="eval")
+    return _eval_node(tree)
+
+
+def _safe_eval_condition(expr: str) -> bool:
+    """Safely evaluate a simple comparison expression (string == string).
+
+    Uses ``ast`` to parse the expression and only allows string/numeric
+    literals and ``==`` / ``!=`` comparisons.  Raises ``ValueError`` for
+    anything else.
+    """
+    import ast
+
+    tree = ast.parse(expr.strip(), mode="eval")
+    node = tree.body
+
+    if not isinstance(node, ast.Compare):
+        raise ValueError(f"Expected comparison, got: {ast.dump(node)}")
+    if len(node.ops) != 1 or len(node.comparators) != 1:
+        raise ValueError(f"Only single comparisons supported: {ast.dump(node)}")
+
+    def _get_value(n: ast.AST) -> object:
+        if isinstance(n, ast.Constant):
+            return n.value
+        raise ValueError(f"Unsupported node in comparison: {ast.dump(n)}")
+
+    left = _get_value(node.left)
+    right = _get_value(node.comparators[0])
+    op = node.ops[0]
+
+    if isinstance(op, ast.Eq):
+        return left == right
+    if isinstance(op, ast.NotEq):
+        return left != right
+    raise ValueError(f"Unsupported comparison operator: {ast.dump(op)}")
+
+
 def _substitute_gcode_templates(gcode_path: Path, profile: CuraProfile) -> None:
     """Replace OrcaSlicer-style ``{variable}`` placeholders in G-code.
 
@@ -435,8 +502,8 @@ def _substitute_gcode_templates(gcode_path: Path, profile: CuraProfile) -> None:
         for k, v in replacements.items():
             expr = expr.replace(k, v)
         try:
-            return str(int(eval(expr)))  # noqa: S307
-        except Exception:
+            return str(int(_safe_eval_arithmetic(expr)))
+        except (ValueError, TypeError, SyntaxError):
             return m.group(0)
 
     text, n = re.subn(r"\{([^}]*\b(?:material_\w+)\b[^}]*)\}", _eval_expr, text)
@@ -455,9 +522,9 @@ def _substitute_gcode_templates(gcode_path: Path, profile: CuraProfile) -> None:
             repr(profile.bed_type.lower().replace(" ", "_")),
         )
         try:
-            if eval(cond_eval):  # noqa: S307
+            if _safe_eval_condition(cond_eval):
                 return body
-        except Exception:
+        except (ValueError, TypeError, SyntaxError):
             pass
         return ""
 
