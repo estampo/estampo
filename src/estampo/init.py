@@ -1014,8 +1014,13 @@ def run_wizard(output: Path | None = None) -> str:
     # --- Step 2: CAD files (copies, orient — filament slots assigned later) ---
     parts_config = _wizard_pick_parts(existing_parts=existing.parts if existing else None)
 
-    # --- Step 3: Printer connection (optional) ---
-    printer_name = _wizard_pick_printer()
+    # --- Step 3: Printer connection (optional, OrcaSlicer only) ---
+    printer_name = None
+    if engine == "orca":
+        printer_name = _wizard_pick_printer()
+    else:
+        ui.info("Printing is not yet supported for CuraEngine — skipping printer setup.")
+        ui.console.print()
 
     # Build pipeline stages — include "print" only if printer selected
     stages = list(DEFAULT_STAGES)
