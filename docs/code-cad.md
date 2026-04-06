@@ -34,10 +34,12 @@ name = "widget"
 [slicer]
 engine = "orca"
 version = "2.3.1"
+
+[slicer.orca]
 printer = "Bambu Lab P1S 0.4 nozzle"
 process = "0.20mm Standard @BBL X1C"
 
-[slicer.overrides]
+[slicer.orca.overrides]
 enable_support = 1
 
 [[parts]]
@@ -81,6 +83,8 @@ name = "widget"
 [slicer]
 engine = "orca"
 version = "2.3.1"
+
+[slicer.orca]
 printer = "Bambu Lab P1S 0.4 nozzle"
 process = "0.20mm Standard @BBL X1C"
 

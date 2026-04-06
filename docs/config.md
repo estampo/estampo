@@ -20,10 +20,12 @@ padding = 5.0
 [slicer]
 engine = "orca"
 version = "2.3.1"
+
+[slicer.orca]
 printer = "Bambu Lab P1S 0.4 nozzle"
 process = "0.20mm Standard @BBL X1C"
 
-[slicer.overrides]
+[slicer.orca.overrides]
 enable_support = 1
 curr_bed_type = "Textured PEI Plate"
 
@@ -146,23 +148,34 @@ Build plate dimensions for bin-packing.
 
 ## `[slicer]`
 
-Slicer engine and profile selection.
+Top-level slicer settings. Engine-specific fields go in `[slicer.orca]` or `[slicer.cura]`.
 
 | Key            | Type       | Default      | Description                                                |
 |----------------|------------|--------------|-------------------------------------------------------------|
-| `engine`       | `string`   | `"orca"`     | Slicer engine (`"orca"`)                                   |
-| `version`      | `string`   | —            | Required OrcaSlicer version (e.g. `"2.3.1"`)               |
-| `printer`      | `string`   | —            | Printer profile name                                       |
-| `process`      | `string`   | —            | Process profile name                                       |
-| `filaments`    | `[string]` | —            | Filament profiles (auto-derived from parts if omitted)     |
+| `engine`       | `string`   | `"orca"`     | Slicer engine: `"orca"` or `"cura"`                       |
+| `version`      | `string`   | —            | Required slicer version (e.g. `"2.3.1"`, `"5.12.0"`)      |
+| `bed_type`     | `string`   | —            | Bed surface (e.g. `"Textured PEI Plate"`)                  |
 | `profiles_dir` | `string`   | `"profiles"` | Directory for pinned profiles (relative to config file)    |
 
-### `[slicer.slots]`
+### `[slicer.orca]`
+
+OrcaSlicer-specific settings — profile chain and overrides.
+
+| Key                  | Type       | Default | Description                                           |
+|----------------------|------------|---------|-------------------------------------------------------|
+| `printer`            | `string`   | —       | Machine profile name                                  |
+| `process`            | `string`   | —       | Process profile name                                  |
+| `filaments`          | `[string]` | —       | Filament profiles (auto-derived from parts if omitted)|
+| `overrides`          | `{k = v}`  | —       | Process profile overrides                             |
+| `machine_overrides`  | `{k = v}`  | —       | Machine profile overrides                             |
+| `filament_overrides` | `{k = v}`  | —       | Filament profile overrides                            |
+
+### `[slicer.orca.slots]`
 
 Explicit AMS slot-to-filament mapping:
 
 ```toml
-[slicer.slots]
+[slicer.orca.slots]
 1 = "Generic PLA @base"
 3 = "Generic PETG-CF @base"
 5 = "Generic TPU @base"        # direct feed (bypass AMS)
@@ -170,18 +183,27 @@ Explicit AMS slot-to-filament mapping:
 
 Parts can reference slots by number (`filament = 3`) or by name (`filament = "Generic PLA @base"`).
 
-### `[slicer.overrides]`
+### `[slicer.cura]`
 
-Key-value pairs applied on top of the process profile:
+CuraEngine-specific settings — printer definition and overrides.
+
+| Key         | Type      | Default | Description                      |
+|-------------|-----------|---------|----------------------------------|
+| `printer`   | `string`  | —       | CuraEngine printer definition ID |
+| `overrides` | `{k = v}` | —      | Flat key-value setting overrides |
+
+### `[slicer.orca.overrides]` / `[slicer.cura.overrides]`
+
+Key-value pairs applied on top of the engine's default settings:
 
 ```toml
-[slicer.overrides]
+[slicer.orca.overrides]
 enable_support = 1
 wall_loops = 4
 curr_bed_type = "Textured PEI Plate"
 ```
 
-Keys are OrcaSlicer's internal names — you can find them in any OrcaSlicer process profile JSON. Here are the most commonly used overrides:
+For OrcaSlicer, keys are the slicer's internal names — you can find them in any OrcaSlicer process profile JSON. Here are the most commonly used overrides:
 
 | Key | Type | Description |
 |-----|------|-------------|
@@ -200,6 +222,27 @@ Keys are OrcaSlicer's internal names — you can find them in any OrcaSlicer pro
 | `print_sequence` | string | `"by layer"` or `"by object"` |
 | `timelapse_type` | int | 0 = off, 1 = traditional |
 
+## `[filaments]`
+
+Optional top-level table for material aliases. Maps human-readable names to slicer profile names, decoupling parts from specific profiles:
+
+```toml
+[filaments]
+structural = "Generic PETG-CF @BBL P1S"
+decorative = "Generic PLA @BBL P1S"
+flexible = "Generic TPU @base"
+
+[[parts]]
+file = "body.stl"
+filament = "structural"
+
+[[parts]]
+file = "cap.stl"
+filament = "decorative"
+```
+
+Aliases are resolved at config load time before slot assignment. Parts can still use direct profile names or integer slot indices.
+
 ## `[[parts]]`
 
 Each `[[parts]]` entry defines a mesh to include on the build plate. At least one is required.
@@ -210,7 +253,7 @@ Each `[[parts]]` entry defines a mesh to include on the build plate. At least on
 | `copies`   | `int`         | `1`      | Number of copies                                     |
 | `orient`   | `string`      | `"flat"` | `"flat"`, `"upright"`, or `"side"`                   |
 | `rotate`   | `[x, y, z]`   | —        | Custom rotation in degrees (overrides `orient`)      |
-| `filament` | `int\|string` | `1`      | Filament profile name or slot index                  |
+| `filament` | `int\|string` | `1`      | Material alias, profile name, or slot index          |
 | `scale`    | `float`       | `1.0`    | Uniform scale factor                                 |
 | `object`   | `string`      | —        | Select a named object from a multi-object 3MF        |
 | `sequence` | `int`         | `1`      | Print order for sequential printing                  |

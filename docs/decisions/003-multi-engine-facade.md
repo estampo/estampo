@@ -1,7 +1,7 @@
-# ADR-003: Multi-Engine Slicer Support via Config Facade
+# ADR-003: Multi-Engine Slicer Support via Engine Config Hierarchy
 
-**Status:** Accepted  
-**Date:** 2026-02  
+**Status:** Accepted (revised 2026-04)  
+**Date:** 2026-02 (original), 2026-04 (revised)
 
 ## Context
 
@@ -12,20 +12,18 @@ estampo originally targeted OrcaSlicer only. CuraEngine was added as a second ba
 
 We need both to coexist without forcing callers (pipeline.py, cli.py) to be aware of which engine is active.
 
-Options considered:
-1. **Separate code paths throughout** — engine-specific branches in every node and command
-2. **Shared interface via abc/Protocol** — formal abstract base class for slicer backends
-3. **Facade on SlicerConfig** — single config object populated from the active engine's sub-config; engine-specific code only in slicer.py and cura.py
-
 ## Decision
 
-Use a **facade pattern** on `SlicerConfig`. Both `[slicer.orca]` and `[slicer.cura]` sub-configs can coexist in `estampo.toml`. At load time, `load_config()` populates top-level facade fields (`printer`, `process`, `overrides`, `filaments`, etc.) from whichever engine is active. Pipeline nodes read only the facade fields and remain engine-agnostic.
+Use an **engine config hierarchy** with `EngineConfig` as a base class. Both `OrcaSlicerConfig` and `CuraSlicerConfig` inherit shared fields (`printer`, `overrides`) from `EngineConfig`. Engine-specific fields (`process`, `filaments`, `machine_overrides`, `filament_overrides`) live only on `OrcaSlicerConfig`.
 
-## Rationale
+`SlicerConfig` holds both sub-configs and exposes an `active` property that returns the sub-config for the selected engine. Callers use `config.slicer.active.printer` for shared fields and access engine-specific fields via `config.slicer.orca.process` where needed.
 
-- **Minimal blast radius:** Engine-specific logic stays in `slicer.py` (OrcaSlicer) and `cura.py` (CuraEngine). pipeline.py, cli.py, and adapters.py need no engine awareness.
-- **Backward compatibility:** TOML configs using the old flat `[slicer]` format (no engine sub-sections) still work — `load_config()` detects and migrates them.
-- **Coexistence:** A single `estampo.toml` can have both `[slicer.orca]` and `[slicer.cura]` sections. The active engine is selected by `engine = "orca"` or `engine = "cura"` in `[slicer]`.
+### Supersedes
+
+The original design used facade fields on `SlicerConfig` — duplicating the active engine's fields at the top level. This was removed because:
+- Callers couldn't tell whether to use `config.slicer.printer` (facade) or `config.slicer.orca.printer` (sub-config)
+- Engine-specific fields (`machine_overrides`, `filament_overrides`) existed on the shared facade despite being OrcaSlicer-only
+- The duplication made it unclear what the source of truth was
 
 ## Structure
 
@@ -43,18 +41,41 @@ filaments = ["Generic PLA @base"]
 printer = "BambuLab P1S"
 ```
 
-At runtime: `config.slicer.engine == "cura"`, `config.slicer.printer == "BambuLab P1S"` (populated from cura sub-config).
+At runtime: `config.slicer.engine == "cura"`, `config.slicer.active.printer == "BambuLab P1S"`.
+
+```python
+class EngineConfig:          # shared fields
+    printer: str | None
+    overrides: dict[str, object]
+
+class OrcaSlicerConfig(EngineConfig):   # orca-only fields
+    process: str | None
+    filaments: list[str]
+    machine_overrides: dict[str, object]
+    filament_overrides: dict[str, object]
+
+class CuraSlicerConfig(EngineConfig):   # inherits shared fields only
+    pass
+
+class SlicerConfig:
+    engine: str
+    orca: OrcaSlicerConfig
+    cura: CuraSlicerConfig
+
+    @property
+    def active(self) -> EngineConfig:
+        return self.orca if self.engine == "orca" else self.cura
+```
 
 ## Consequences
 
-- `SlicerConfig` has some redundancy — facade fields duplicate sub-config fields at runtime
-- Engine-specific features (e.g. OrcaSlicer process profiles, CuraEngine def chains) are only accessible via `config.slicer.orca.*` or `config.slicer.cura.*`
+- Pipeline nodes use `config.slicer.active.*` for shared fields — no engine `if/elif` needed
+- Engine-specific fields are accessed via the typed sub-config (e.g. `config.slicer.orca.process`)
 - `profiles.py` must handle engine-namespaced profile directories: `profiles/orca/` and `profiles/cura/`
-- New engines should follow the same pattern: add a sub-config dataclass, add facade population in `load_config()`, add an engine module (e.g. `prusaslicer.py`)
+- New engines subclass `EngineConfig`, add a sub-config field to `SlicerConfig`, and extend the `active` property
 
 ## Anti-patterns to avoid
 
-- Do not add engine `if/elif` branches in pipeline.py — the facade exists precisely to avoid this
-- Do not read `config.slicer.orca.*` from pipeline nodes — use the facade fields
-- Do not put CuraEngine logic in slicer.py or OrcaSlicer logic in cura.py
-- Do not create a new `SlicerConfig` subclass per engine — the facade pattern handles this without inheritance
+- Do not add engine `if/elif` branches in pipeline.py — use `active` or dispatch via slicer.py
+- Do not put CuraEngine logic in orca.py or OrcaSlicer logic in cura.py
+- Do not add OrcaSlicer-only fields to `EngineConfig` — they belong on `OrcaSlicerConfig`
