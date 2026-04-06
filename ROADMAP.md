@@ -55,10 +55,9 @@ The goal is for a user to be able to replace `engine = "orca"` with `engine = "c
 See `docs/decisions/005-vendor-agnostic-split.md` for the full rationale.  
 See `docs/architecture-roadmap.md` for slicer comparison research and template details.
 
-- Extract `bambu-3mf` as standalone library: BBL `.gcode.3mf` packaging + G-code templates (start/end/toolchange macros); `thumbnails.py` moves here
-- Extract `bambu-cloud` as standalone library: Bambu LAN/Cloud/Connect dispatch, AMS slot mapping; `cloud/` directory moves here
-- estampo depends on both as packages; no user-visible change
-- CuraEngine → Bambu printer workflow unblocked: Cura plain G-code → `bambu-3mf` → printer
+- Extract `bambox` as standalone library: BBL `.gcode.3mf` packaging, G-code templates, Bambu LAN/Cloud/Connect dispatch, AMS mapping, auth, credentials; `cloud/`, `auth.py`, `credentials.py`, `thumbnails.py` move here
+- estampo depends on `bambox` as a package; no user-visible change
+- CuraEngine → Bambu printer workflow unblocked: Cura plain G-code → `bambox` → printer
 - estampo core (pipeline.py, slicer.py, cura.py, gcode.py) has zero Bambu-specific imports after this milestone
 
 ---
@@ -67,7 +66,7 @@ See `docs/architecture-roadmap.md` for slicer comparison research and template d
 
 **Theme: Non-Bambu printer support and `pip install estampo[bambu]`.**
 
-- `bambu-3mf` and `bambu-cloud` become optional extras, not hard dependencies
+- `bambox` becomes an optional extra, not a hard dependency
 - Plain G-code send path for non-Bambu printers (Prusa, Voron, etc.)
 - OrcaSlicer 2.3.x stability improvements
 
@@ -88,12 +87,11 @@ Ideas that have come up and are not ruled out but have no active milestone:
 
 ## Architecture North Star
 
-Three independent projects, each owning one concern (see `docs/architecture-roadmap.md` for detail):
+Two projects, each owning one concern (see `docs/architecture-roadmap.md` for detail):
 
 ```
 estampo          → pipeline orchestrator, slicer-agnostic
-bambu-3mf        → BBL packaging + G-code templates  
-bambu-cloud      → printer communication
+bambox           → BBL packaging + G-code templates + printer communication
 ```
 
 Every feature decision should move toward this split, not away from it.

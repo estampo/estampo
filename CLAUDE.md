@@ -11,7 +11,7 @@ Every non-trivial piece of work should have a GitHub issue. Before starting:
 - Reference it in the PR body with `Closes #N` so it auto-closes on merge
 
 Issues live at: https://github.com/estampo/estampo/issues  
-Milestones: v0.3.0 (CuraEngine production-ready), v0.4.0 (bambu-3mf + bambu-cloud extraction)
+Milestones: v0.3.0 (CuraEngine production-ready), v0.4.0 (bambox extraction)
 
 ## Pre-PR Checklist (MANDATORY)
 Before pushing any PR branch, always run locally:
@@ -85,7 +85,7 @@ To prevent scope creep and re-invention:
 - **Not a printer firmware.** estampo sends files to printers via existing APIs (Bambu LAN, Bambu Cloud). Do not implement printer protocols from scratch.
 - **Not a CAD tool.** estampo loads meshes. The `build123d` integration is for code-CAD users who want to go straight from model to print — it is not a CAD kernel.
 - **Not a standalone G-code generator.** G-code comes from the slicer. estampo parses G-code metadata (print time, filament weight) but does not generate toolpaths.
-- **Not a Bambu-only tool.** Bambu Lab printer support is implemented in the separate `bambu-3mf` and `bambu-cloud` packages. Do not add new Bambu-specific logic to estampo core modules (pipeline.py, slicer.py, cura.py, gcode.py). See ADR-005.
+- **Not a Bambu-only tool.** Bambu Lab printer support is being extracted to the separate `bambox` package (packaging, printing, auth). Do not add new Bambu-specific logic to estampo core modules (pipeline.py, slicer.py, cura.py, gcode.py). See ADR-005.
 
 ## Architecture: Slicer Execution
 

@@ -22,15 +22,13 @@ This coupling means every OrcaSlicer CLI bug blocks the entire pipeline.
 
 ## Target Architecture
 
-Three independent projects, each owning one concern:
+Two projects, each owning one concern:
 
 ```
 estampo (pipeline + slicer backends)
     ↓ G-code
-bambu-3mf (packaging + G-code templates)
-    ↓ .gcode.3mf
-bambu-cloud (printer communication via Docker-based BNL bridge)
-    ↓ MQTT/FTP
+bambox (packaging + G-code templates + printer communication)
+    ↓ .gcode.3mf → MQTT/FTP
 Bambu printer
 ```
 
@@ -39,13 +37,12 @@ Bambu printer
 What it does today, minus the OrcaSlicer lock-in:
 - Plate arrangement, profile management, build automation
 - Slicer-agnostic: pluggable backends (OrcaSlicer, CuraEngine, others)
-- Delegates BBL-specific concerns to `bambu-3mf`
-- Delegates printer communication to `bambu-cloud`
+- Delegates all BBL-specific concerns to `bambox`
 - Could target non-BBL printers (Prusa, Voron, etc.) in the future
 
-### bambu-3mf — BBL Packaging & G-code Templates
+### bambox — BBL Packaging, Templates & Printing
 
-Two responsibilities:
+Three responsibilities:
 
 **1. `.gcode.3mf` packager** — takes plain G-code and produces a
 printer-ready BBL archive:
@@ -87,14 +84,15 @@ and OctoPrint. OrcaSlicer's custom template syntax maps almost 1:1:
 A thin translator (~50 lines of regex) can convert existing OrcaSlicer
 templates to Jinja2 format.
 
-### bambu-cloud — Printer Communication
-
-Wraps the Docker-based Bambu Network Library (BNL) bridge:
+**3. Printer communication** — wraps the Docker-based Bambu Network
+Library (BNL) bridge:
 - Estampo already uses Docker for slicing; same pattern for printing
 - BNL `.so` is preserved in the Docker image (insurance against Bambu
   pulling it)
 - Handles LAN and cloud printing workflows
 - Printer discovery, status monitoring, job management
+- AMS filament slot mapping
+- Bambu Cloud authentication
 
 **Why not replace BNL?** Repeated attempts to reverse-engineer the Bambu
 cloud protocol have failed. The BNL `.so` is the only reliable path for
@@ -109,8 +107,7 @@ demonstrates it) but cloud printing requires BNL.
 - Faster iteration — slicer upgrades don't break packaging/printing
 
 **For the broader community:**
-- `bambu-3mf` is useful standalone (anyone using CuraEngine + BBL printer)
-- `bambu-cloud` is useful standalone (Home Assistant, custom dashboards)
+- `bambox` is useful standalone (anyone using CuraEngine + BBL printer, Home Assistant, custom dashboards)
 - Each project is small, focused, and independently testable
 
 ## Slicer Comparison
@@ -132,7 +129,7 @@ as potential OrcaSlicer alternatives:
 - Purpose-built headless CLI, stable, actively maintained
 - JSON-based settings with ~1200 parameters
 - The missing pieces (BBL profiles, 3MF packaging) are exactly what
-  `bambu-3mf` would provide
+  `bambox` would provide
 
 **PrusaSlicer** is not viable — cannot produce `.gcode.3mf` and has no
 BBL profile ecosystem.
@@ -147,13 +144,11 @@ This is not a rewrite — it's a gradual decoupling:
 
 1. **Now**: Keep OrcaSlicer as the only backend. Pin stable versions,
    work around CLI bugs with overrides and retries.
-2. **Phase 1**: Extract `bambu-3mf` as a library. Estampo already
-   post-processes OrcaSlicer's 3MF output — formalize this into a
-   standalone package.
+2. **Phase 1**: Extract `bambox` as a library. Estampo already
+   post-processes OrcaSlicer's 3MF output — formalize packaging,
+   printing, and auth into a standalone package.
 3. **Phase 2**: Add CuraEngine as a second slicer backend. Use
-   `bambu-3mf` for packaging and G-code template injection.
-4. **Phase 3**: Extract `bambu-cloud` from estampo's printer
-   communication code into a standalone package.
+   `bambox` for packaging and G-code template injection.
 
 Each phase is independently useful and shippable. No big bang migration
 required.
