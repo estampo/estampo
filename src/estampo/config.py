@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from estampo import EstampoError
+from estampo.constants import DEFAULT_PLATE_SIZE
 
 log = logging.getLogger(__name__)
 
@@ -16,7 +17,7 @@ VALID_ORIENTS = {"flat", "upright", "side", "upside-down"}
 
 @dataclass
 class PlateConfig:
-    size: tuple[float, float] = (256.0, 256.0)
+    size: tuple[float, float] = DEFAULT_PLATE_SIZE
     padding: float = 5.0
 
 
@@ -255,7 +256,7 @@ def load_config(path: Path) -> EstampoConfig:
 
     # Plate config
     plate_raw = raw.get("plate", {})
-    size = tuple(plate_raw.get("size", [256.0, 256.0]))
+    size = tuple(plate_raw.get("size", list(DEFAULT_PLATE_SIZE)))
     if len(size) != 2 or any(s <= 0 for s in size):
         raise EstampoError(f"plate.size must be two positive numbers, got {size}")
     plate = PlateConfig(size=size, padding=float(plate_raw.get("padding", 5.0)))

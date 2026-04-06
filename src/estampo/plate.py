@@ -13,7 +13,7 @@ import trimesh
 from defusedxml import ElementTree as SafeET  # safe fromstring for untrusted 3MF XML
 
 from estampo.arrange import Placement
-from estampo.constants import NS_3MF
+from estampo.constants import DEFAULT_PLATE_SIZE, NS_3MF
 
 log = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ def _encode_paint_color(extruder_idx: int) -> str:
 
 def build_plate(
     placements: list[Placement],
-    plate_size: tuple[float, float] = (256.0, 256.0),
+    plate_size: tuple[float, float] = DEFAULT_PLATE_SIZE,
     include_bed: bool = False,
 ) -> trimesh.Scene:
     """Build a trimesh Scene from placed meshes.

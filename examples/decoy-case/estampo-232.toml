@@ -14,12 +14,14 @@ padding = 5.0
 [slicer]
 engine = "orca"
 version = "2.3.2"
+bed_type = "Textured PEI Plate"
+
+[slicer.orca]
 printer = "Bambu Lab P1S 0.4 nozzle"
 process = "0.20mm Standard @BBL X1C"
 filaments = ["Generic PETG"]
-bed_type = "Textured PEI Plate"
 
-[slicer.overrides]
+[slicer.orca.overrides]
 sparse_infill_density = "30%"
 sparse_infill_pattern = "gyroid"
 
