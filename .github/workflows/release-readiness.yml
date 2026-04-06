@@ -205,7 +205,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$BRANCH"
           git commit -m "Update bundled OrcaSlicer profiles (${{ matrix.orca_version }})"
-          git push origin "$BRANCH"
+          git push --force-with-lease origin "$BRANCH"
           gh pr create \
             --title "Update bundled OrcaSlicer ${{ matrix.orca_version }} profiles" \
             --body "Auto-extracted from estampo/estampo:orca-${{ matrix.orca_version }}-test." \
@@ -406,7 +406,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$BRANCH"
           git commit -m "Update bundled CuraEngine definitions (${{ matrix.cura_version }})"
-          git push origin "$BRANCH"
+          git push --force-with-lease origin "$BRANCH"
           gh pr create \
             --title "Update bundled CuraEngine ${{ matrix.cura_version }} definitions" \
             --body "Auto-extracted from estampo/estampo:cura-${{ matrix.cura_version }}-test." \
