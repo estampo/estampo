@@ -312,7 +312,7 @@ def test_slice_via_docker_command(tmp_path):
     filament_arg = None
 
     mock_result = MagicMock(returncode=0, stdout="", stderr="")
-    with patch("estampo.slicer.subprocess.run", return_value=mock_result) as mock_run:
+    with patch("estampo.orca.subprocess.run", return_value=mock_result) as mock_run:
         _slice_via_docker(
             input_3mf,
             output_dir,
@@ -355,7 +355,7 @@ def test_slice_via_docker_stages_input_in_output_dir(tmp_path):
             staged_content = staged.read_text()
         return mock_result
 
-    with patch("estampo.slicer.subprocess.run", side_effect=capture_staged):
+    with patch("estampo.orca.subprocess.run", side_effect=capture_staged):
         _slice_via_docker(input_3mf, output_dir, profile_dir, None, None, "estampo:latest")
 
     # Input was staged inside output_dir during Docker run
@@ -376,7 +376,7 @@ def test_slice_via_docker_preserves_file_extension(tmp_path):
     profile_dir.mkdir()
 
     mock_result = MagicMock(returncode=0, stdout="", stderr="")
-    with patch("estampo.slicer.subprocess.run", return_value=mock_result) as mock_run:
+    with patch("estampo.orca.subprocess.run", return_value=mock_result) as mock_run:
         _slice_via_docker(input_stl, output_dir, profile_dir, None, None, "estampo:latest")
 
     cmd = mock_run.call_args[0][0]
@@ -397,7 +397,7 @@ def test_slice_via_docker_single_volume_mount(tmp_path):
     profile_dir.mkdir()
 
     mock_result = MagicMock(returncode=0, stdout="", stderr="")
-    with patch("estampo.slicer.subprocess.run", return_value=mock_result) as mock_run:
+    with patch("estampo.orca.subprocess.run", return_value=mock_result) as mock_run:
         _slice_via_docker(input_3mf, output_dir, profile_dir, None, None, "estampo:latest")
 
     cmd = mock_run.call_args[0][0]
@@ -416,7 +416,7 @@ def test_slice_via_docker_cleans_staged_input_on_failure(tmp_path):
     profile_dir.mkdir()
 
     mock_result = MagicMock(returncode=1, stdout="", stderr="some error")
-    with patch("estampo.slicer.subprocess.run", return_value=mock_result):
+    with patch("estampo.orca.subprocess.run", return_value=mock_result):
         with pytest.raises(RuntimeError, match="Docker slicer failed"):
             _slice_via_docker(input_3mf, output_dir, profile_dir, None, None, "estampo:latest")
 
@@ -434,7 +434,7 @@ def test_slice_via_docker_failure(tmp_path):
     profile_dir.mkdir()
 
     mock_result = MagicMock(returncode=1, stdout="", stderr="some error")
-    with patch("estampo.slicer.subprocess.run", return_value=mock_result):
+    with patch("estampo.orca.subprocess.run", return_value=mock_result):
         with pytest.raises(RuntimeError, match="Docker slicer failed"):
             _slice_via_docker(
                 input_3mf,
@@ -467,8 +467,8 @@ def test_slice_plate_local_command(tmp_path):
 
     with (
         patch("estampo.slicer.find_slicer", return_value=slicer_path),
-        patch("estampo.slicer.resolve_profile_data", side_effect=_mock_resolve),
-        patch("estampo.slicer.subprocess.run", return_value=mock_result) as mock_run,
+        patch("estampo.profiles.resolve_profile_data", side_effect=_mock_resolve),
+        patch("estampo.orca.subprocess.run", return_value=mock_result) as mock_run,
     ):
         slice_plate(
             input_3mf,
@@ -501,8 +501,8 @@ def test_slice_plate_local_fallback(tmp_path):
     with (
         patch("estampo.slicer._ensure_docker_image", return_value=False),
         patch("estampo.slicer.find_slicer", return_value=slicer_path),
-        patch("estampo.slicer.resolve_profile_data", side_effect=_mock_resolve),
-        patch("estampo.slicer.subprocess.run", return_value=mock_result) as mock_run,
+        patch("estampo.profiles.resolve_profile_data", side_effect=_mock_resolve),
+        patch("estampo.orca.subprocess.run", return_value=mock_result) as mock_run,
     ):
         slice_plate(
             input_3mf,
@@ -525,8 +525,8 @@ def test_slice_plate_docker_default(tmp_path):
 
     with (
         patch("estampo.slicer._ensure_docker_image", return_value=True),
-        patch("estampo.slicer.resolve_profile_data", side_effect=_mock_resolve),
-        patch("estampo.slicer.subprocess.run", return_value=mock_result) as mock_run,
+        patch("estampo.profiles.resolve_profile_data", side_effect=_mock_resolve),
+        patch("estampo.orca.subprocess.run", return_value=mock_result) as mock_run,
     ):
         slice_plate(
             input_3mf,
@@ -550,8 +550,8 @@ def test_slice_plate_docker_version(tmp_path):
 
     with (
         patch("estampo.slicer._ensure_docker_image", return_value=True),
-        patch("estampo.slicer.resolve_profile_data", side_effect=_mock_resolve),
-        patch("estampo.slicer.subprocess.run", return_value=mock_result) as mock_run,
+        patch("estampo.profiles.resolve_profile_data", side_effect=_mock_resolve),
+        patch("estampo.orca.subprocess.run", return_value=mock_result) as mock_run,
     ):
         slice_plate(
             input_3mf,
@@ -595,8 +595,8 @@ def test_slice_plate_docker_fallback_to_local(tmp_path):
     with (
         patch("estampo.slicer._ensure_docker_image", return_value=False),
         patch("estampo.slicer.find_slicer", return_value=slicer_path),
-        patch("estampo.slicer.resolve_profile_data", side_effect=_mock_resolve),
-        patch("estampo.slicer.subprocess.run", return_value=mock_result) as mock_run,
+        patch("estampo.profiles.resolve_profile_data", side_effect=_mock_resolve),
+        patch("estampo.orca.subprocess.run", return_value=mock_result) as mock_run,
     ):
         slice_plate(
             input_3mf,
@@ -623,8 +623,8 @@ def test_slice_plate_allow_mix_temp_on_232(tmp_path):
 
     with (
         patch("estampo.slicer._ensure_docker_image", return_value=True),
-        patch("estampo.slicer.resolve_profile_data", side_effect=_mock_resolve),
-        patch("estampo.slicer.subprocess.run", return_value=mock_result) as mock_run,
+        patch("estampo.profiles.resolve_profile_data", side_effect=_mock_resolve),
+        patch("estampo.orca.subprocess.run", return_value=mock_result) as mock_run,
     ):
         slice_plate(
             input_3mf,
@@ -649,8 +649,8 @@ def test_slice_plate_no_allow_mix_temp_on_231(tmp_path):
 
     with (
         patch("estampo.slicer._ensure_docker_image", return_value=True),
-        patch("estampo.slicer.resolve_profile_data", side_effect=_mock_resolve),
-        patch("estampo.slicer.subprocess.run", return_value=mock_result) as mock_run,
+        patch("estampo.profiles.resolve_profile_data", side_effect=_mock_resolve),
+        patch("estampo.orca.subprocess.run", return_value=mock_result) as mock_run,
     ):
         slice_plate(
             input_3mf,
@@ -675,8 +675,8 @@ def test_slice_plate_allow_mix_temp_single_filament_232(tmp_path):
 
     with (
         patch("estampo.slicer._ensure_docker_image", return_value=True),
-        patch("estampo.slicer.resolve_profile_data", side_effect=_mock_resolve),
-        patch("estampo.slicer.subprocess.run", return_value=mock_result) as mock_run,
+        patch("estampo.profiles.resolve_profile_data", side_effect=_mock_resolve),
+        patch("estampo.orca.subprocess.run", return_value=mock_result) as mock_run,
     ):
         slice_plate(
             input_3mf,
@@ -755,9 +755,9 @@ def test_slice_plate_ok_with_matching_version(tmp_path):
 
     with (
         patch("estampo.slicer._ensure_docker_image", return_value=True),
-        patch("estampo.slicer._slice_via_docker", return_value=output_dir) as mock_docker,
-        patch("estampo.slicer._fix_sliced_3mf"),
-        patch("estampo.profiles.extract_docker_profiles", return_value=tmp_path / "docker"),
+        patch("estampo.orca._slice_via_docker", return_value=output_dir) as mock_docker,
+        patch("estampo.orca._fix_sliced_3mf"),
+        patch("estampo.orca.extract_docker_profiles", return_value=tmp_path / "docker"),
     ):
         slice_plate(
             input_3mf,
