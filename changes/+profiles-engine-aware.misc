@@ -1,1 +1,0 @@
-Profile system now handles CuraEngine gracefully — ``profiles list --engine cura`` explains that CuraEngine uses inline settings instead of showing empty results.

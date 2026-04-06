@@ -1,1 +1,0 @@
-Move CuraEngine definition pinning and profile logic from ``profiles.py`` into ``cura.py`` engine module.

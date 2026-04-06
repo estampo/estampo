@@ -1,1 +1,0 @@
-Remove legacy flat ``[slicer]`` config format, ``fabprint.toml`` alias, ``FABPRINT_*`` env vars, and ``~/.config/fabprint`` migration.

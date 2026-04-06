@@ -1,1 +1,0 @@
-Use ``RELEASE_PAT`` in prepare-release workflow so CI triggers on release PRs automatically
