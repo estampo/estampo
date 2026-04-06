@@ -1,1 +1,0 @@
-Pass ``--allow-mix-temp`` unconditionally on OrcaSlicer 2.3.2+ to fix grouping errors; gate the flag off for older versions.

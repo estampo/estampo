@@ -1,1 +1,0 @@
-Fix CuraEngine reporting zero filament usage — CuraEngine CLI writes placeholder G-code header values that are not updated after slicing; patch with real values from stderr and fall back to E-value analysis.

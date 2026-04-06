@@ -1,1 +1,0 @@
-Fix CuraEngine Docker image breaking Python by isolating bundled libssl/libcrypto

@@ -1,1 +1,0 @@
-Fix ``ValueError`` when CuraEngine override values include a ``%`` suffix (e.g. ``sparse_infill_density = "35%"``).

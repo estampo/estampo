@@ -1,1 +1,0 @@
-Fix CuraEngine slicing: place mesh on bed, resolve G-code template variables, fix header patching

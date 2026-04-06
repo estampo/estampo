@@ -1,1 +1,0 @@
-CuraEngine machine definitions are now stored as JSON files (bundled ``Bambu Lab P1S 0.4 nozzle.json``); add custom printers via ``estampo profiles add``; ``profiles pin`` and ``profiles add`` no longer misroute Cura profiles; override values from config are now coerced to the correct type.

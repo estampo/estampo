@@ -1,1 +1,0 @@
-Set ``infill_line_distance`` directly so CuraEngine respects infill density overrides

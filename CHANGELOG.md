@@ -4,6 +4,93 @@ All notable changes to this project are documented here.
 
 <!-- towncrier release notes start -->
 
+## 0.3.0 — 2026-04-06
+
+### Features
+
+- Add CuraEngine slicer backend (``engine = "cura"``) as alternative to OrcaSlicer ([#282](https://github.com/estampo/estampo/pull/282))
+- Build CuraEngine from source instead of extracting from AppImage, eliminating placeholder G-code header issue ([#299](https://github.com/estampo/estampo/pull/299))
+- Add Bambu Lab P1S machine definition for CuraEngine with proper start/end G-code ([#301](https://github.com/estampo/estampo/pull/301))
+- Add OrcaSlicer 2.3.2 Docker image builds alongside 2.3.1
+- Add ``--engine cura`` support to profile extraction script and CI workflow for automated CuraEngine printer definition discovery
+- Add ``EngineConfig`` base class, ``SlicerConfig.active`` property, top-level ``[filaments]`` table for material aliases, and ``PartConfig.material`` field; remove facade fields from ``SlicerConfig``
+- Add ``[slicer.filament_overrides]`` to patch all filament profiles (e.g. ``required_nozzle_HRC``)
+- Add ``[slicer.machine_overrides]`` for overriding machine profile settings (e.g. ``nozzle_type = "hardened_steel"`` for carbon-fiber filaments).
+- Add ``bed_type`` config option to set plate type for filament compatibility
+- CuraEngine machine definitions are now stored as JSON files (bundled ``Bambu Lab P1S 0.4 nozzle.json``); add custom printers via ``estampo profiles add``; ``profiles pin`` and ``profiles add`` no longer misroute Cura profiles; override values from config are now coerced to the correct type.
+- CuraEngine printer definitions: discoverable selection during ``estampo init``, configurable via ``[slicer.cura] printer``, and dynamic definition resolution at slice time
+- Engine-namespaced TOML config: ``[slicer.orca]`` and ``[slicer.cura]`` sections for per-engine settings with backward-compatible legacy format support
+- Engine-namespaced profile directories: ``profiles/<engine>/<category>/`` with backward-compatible legacy path fallback
+- Extract Bambu Connect 3MF fixup into a ``packaged_output`` pipeline stage so printer-specific packaging is explicit and only runs for Bambu printers
+- Show animated status spinners during slow Docker operations (image pull, profile extraction)
+- Support CuraEngine in local slicer discovery (``find_slicer``) for all platforms
+- ``estampo init`` wizard now prompts for slicer engine (OrcaSlicer or CuraEngine) and adapts version detection and profile discovery accordingly.
+
+### Bugfixes
+
+- Fix CuraEngine Docker image breaking Python by isolating bundled libssl/libcrypto ([#283](https://github.com/estampo/estampo/pull/283))
+- Fix CuraEngine Docker image Python access for unprivileged estampo user ([#286](https://github.com/estampo/estampo/pull/286))
+- Show CuraEngine error output instead of suppressing stderr ([#288](https://github.com/estampo/estampo/pull/288))
+- Show rich UI output (checkmarks, print summary) alongside debug logs in verbose mode ([#300](https://github.com/estampo/estampo/pull/300))
+- Fix ``ValueError`` when CuraEngine override values include a ``%`` suffix (e.g. ``sparse_infill_density = "35%"``). ([#310](https://github.com/estampo/estampo/pull/310))
+- Fix ``profiles pin`` failing for CuraEngine when printer name includes nozzle suffix or different casing ([#340](https://github.com/estampo/estampo/pull/340))
+- Fix CuraEngine slice failing when no separate machine profile JSON exists for the printer ([#345](https://github.com/estampo/estampo/pull/345))
+- Fix CuraEngine squashed definitions preserving ``inherits`` for unresolved base definitions like ``fdmprinter`` ([#347](https://github.com/estampo/estampo/pull/347))
+- Fix profile extraction push failure when bot-managed branch already exists ([#363](https://github.com/estampo/estampo/pull/363))
+- Remove Bambu-specific AMS auto-detect from ``estampo init`` wizard ([#367](https://github.com/estampo/estampo/pull/367))
+- Skip printer setup and print stage for CuraEngine in ``estampo init`` ([#380](https://github.com/estampo/estampo/pull/380))
+- Broadcast scalar machine overrides to arrays when profile has per-extruder fields
+- Error when pinned profiles don't match the target slicer version instead of silently crashing
+- Fix CuraEngine binary "not found" by patching ELF interpreter and replace missing ``bambu_3mf`` dependency with inline G-code generation
+- Fix CuraEngine reporting zero filament usage — CuraEngine CLI writes placeholder G-code header values that are not updated after slicing; patch with real values from stderr and fall back to E-value analysis.
+- Fix CuraEngine slicing by converting 3MF model data to STL before passing to the engine
+- Fix CuraEngine slicing: place mesh on bed, resolve G-code template variables, fix header patching
+- Fix CuraEngine: disable default brim, center mesh on build plate
+- Fix OrcaSlicer 2.3.2 segfault in Docker on Colima by preventing Wayland GL init
+- Fix TestPyPI dev version collisions by using git commit count instead of workflow run number.
+- Fix filament weight reporting: correct multi-value regex, M83 relative extrusion support, newest-file selection, and layer count in output summary.
+- Fix profile extraction push failure when branch already exists from earlier run
+- Fix release workflow checkout ref that prevented manual release dispatch
+- Fix release workflow job skip cascade on manual dispatch
+- Fix release workflow tag-check that used curl flags with ``gh api``
+- Narrow bare ``except Exception`` handlers to specific exception types for better debuggability.
+- Pass ``--allow-mix-temp`` for multi-filament AMS configurations on OrcaSlicer 2.3.2
+- Pass ``--allow-mix-temp`` unconditionally on OrcaSlicer 2.3.2+ to fix grouping errors; gate the flag off for older versions.
+- Replace unsafe ``eval()`` in CuraEngine G-code template substitution with AST-based safe evaluators.
+- Revert ``xvfb-run`` wrapping that caused OrcaSlicer 2.3.2 to segfault on GL init.
+- Set ``infill_line_distance`` directly so CuraEngine respects infill density overrides
+- Stage Docker slicer input inside output directory and preserve file extension to fix bind-mount issues
+
+### Misc
+
+- Run e2e slice test from host to match real user flow (Docker-based slicing). ([#275](https://github.com/estampo/estampo/pull/275))
+- Fix lint errors in ``scripts/bambu_cloud_login.py`` and ``scripts/test_cloud_print.py`` ([#331](https://github.com/estampo/estampo/pull/331))
+- Populate bundled CuraEngine 5.12.0 printer definition manifest with full machine list extracted from Docker image ([#354](https://github.com/estampo/estampo/pull/354))
+- Add ADR-006 defining the slicer plugin protocol: each engine is a self-contained module; top-level files are pure dispatch layers; clear contract for adding new slicers
+- Add Architecture Decision Records, ROADMAP.md, and module ownership table to CLAUDE.md for long-term architectural coherence
+- Add GitHub issue templates, labels, and milestones for structured backlog tracking
+- Add ``scripts/compare_engines.py`` utility to compare OrcaSlicer vs CuraEngine G-code output
+- Add automatic Claude PR review workflow — checks ADR compliance, exception handling, eval() usage, and missing changelog fragments on every PR
+- Add slicer engine research doc: Bambu P1S multi-material support across CuraEngine, PrusaSlicer, and Kiri:Moto.
+- Consolidate ``bambu-3mf`` + ``bambu-cloud`` into single ``bambox`` package in docs and ADR-005
+- Disable OrcaSlicer 2.3.2 builds (segfaults on slice); re-enable when upstream fixes it
+- Extract OrcaSlicer-specific logic from ``slicer.py``, ``profiles.py``, and ``init.py`` into new ``orca.py`` engine module per ADR-006.
+- Extract shared magic numbers into ``constants.py`` and migrate example configs to engine-namespaced ``[slicer.orca]``/``[slicer.cura]`` format
+- Fix Claude PR review workflow: add missing id-token: write permission for OIDC authentication
+- Fix Claude PR review workflow: raise max-turns to 8 and add continue-on-error so turn limit never blocks a merge
+- Fix release-readiness jobs skipping on manual dispatch and nightly schedule
+- Improve CuraEngine error reporting to include both stdout and stderr
+- Mark all ``todo-slicer.md`` items as resolved — slicer-agnostic work is complete.
+- Move CuraEngine definition pinning and profile logic from ``profiles.py`` into ``cura.py`` engine module.
+- Profile system now handles CuraEngine gracefully — ``profiles list --engine cura`` explains that CuraEngine uses inline settings instead of showing empty results.
+- Remove Claude PR review workflow — not working reliably
+- Remove legacy flat ``[slicer]`` config format, ``fabprint.toml`` alias, ``FABPRINT_*`` env vars, and ``~/.config/fabprint`` migration.
+- Replace hardcoded OrcaSlicer references with engine-agnostic text in CLI help, error messages, and 3MF metadata
+- Speed up CI with uv dependency caching, concurrency groups, and conditional bridge builds
+- Update docs and README to use engine-namespaced ``[slicer.orca]``/``[slicer.cura]`` config format and document ``[filaments]`` table
+- Use ``RELEASE_PAT`` in prepare-release workflow so CI triggers on release PRs automatically
+
+
 ## 0.2.3 — 2026-03-31
 
 ### Features

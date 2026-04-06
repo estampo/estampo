@@ -1,1 +1,0 @@
-Fix CuraEngine squashed definitions preserving ``inherits`` for unresolved base definitions like ``fdmprinter``

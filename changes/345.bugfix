@@ -1,1 +1,0 @@
-Fix CuraEngine slice failing when no separate machine profile JSON exists for the printer
