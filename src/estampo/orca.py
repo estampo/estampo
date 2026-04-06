@@ -917,7 +917,7 @@ def _detect_orca_version() -> str | None:
         slicer = SLICER_PATHS.get("orca")
         if slicer and slicer.exists():
             return _detect_slicer_version(slicer)
-    except Exception:
+    except (OSError, ImportError):
         log.debug("Failed to detect OrcaSlicer version", exc_info=True)
     return None
 
@@ -931,7 +931,7 @@ def _fetch_available_versions() -> list[str]:
     versions_file = Path(__file__).parent / "docker_versions.json"
     try:
         return json.loads(versions_file.read_text())
-    except Exception:
+    except (OSError, json.JSONDecodeError):
         log.debug("Failed to read docker_versions.json", exc_info=True)
         return []
 

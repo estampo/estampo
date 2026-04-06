@@ -18,7 +18,7 @@ def generate_plate_thumbnail(
     if plate_3mf is not None:
         try:
             return _render_plate_thumbnail(width, height, plate_3mf)
-        except Exception:
+        except (ImportError, OSError, ValueError):
             log.debug("Thumbnail rendering failed, using placeholder", exc_info=True)
     return placeholder_thumbnail(width, height)
 

@@ -116,7 +116,8 @@ def _load_existing(path: Path) -> _ExistingConfig | None:
     try:
         with open(path, "rb") as f:
             raw = tomllib.load(f)
-    except Exception:
+    except (OSError, tomllib.TOMLDecodeError):
+        log.debug("Failed to read existing config %s", path, exc_info=True)
         return None
 
     slicer = raw.get("slicer", {})
@@ -473,7 +474,7 @@ def _read_machine_info(profile_name: str, engine: str) -> _MachineInfo:
         # AMS / multi-material support
         if data.get("single_extruder_multi_material"):
             info.multi_material = True
-    except Exception:
+    except (OSError, KeyError, ValueError):
         log.debug("Failed to read machine info", exc_info=True)
     return info
 
@@ -484,7 +485,7 @@ def _list_configured_printers() -> dict[str, dict]:
         from estampo.credentials import list_printers
 
         return list_printers() or {}
-    except Exception:
+    except (OSError, ImportError):
         log.debug("Failed to list configured printers", exc_info=True)
         return {}
 
@@ -509,7 +510,7 @@ def _query_ams_trays(configured: dict[str, dict]) -> list[dict]:
             with cloud_token_json() as token_file:
                 status = cloud_status(serial, token_file)
             return parse_ams_trays(status)
-        except Exception:
+        except (OSError, ImportError, KeyError):
             log.debug("Failed to query AMS trays", exc_info=True)
             return []
     return []
@@ -1131,7 +1132,7 @@ def run_wizard(output: Path | None = None) -> str:
 
             w, d = resolve_cura_bed_size(printer_profile or "")
             machine_info.plate_size = (int(w), int(d))
-        except Exception:
+        except (OSError, ImportError, ValueError):
             log.debug("Failed to read CuraEngine bed size", exc_info=True)
         plate_x, plate_y = _wizard_pick_plate(machine_info)
     else:
@@ -1156,7 +1157,7 @@ def run_wizard(output: Path | None = None) -> str:
     if ams_future is not None:
         try:
             ams_trays = ams_future.result(timeout=30)
-        except Exception:
+        except (TimeoutError, OSError, ImportError, KeyError):
             log.debug("AMS tray query failed", exc_info=True)
         if ams_trays:
             ui.info(f"AMS detected ({len(ams_trays)} slot(s))")

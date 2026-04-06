@@ -916,7 +916,7 @@ def profiles_add(
         config_path = _resolve_config_path(None)
         raw = tomllib.loads(config_path.read_text())
         engine = raw.get("slicer", {}).get("engine", "orca")
-    except Exception:
+    except (EstampoError, OSError, tomllib.TOMLDecodeError, KeyError):
         pass
     dest = add_profile(source, project_dir, category=category, name=name, engine=engine)
     print(f"Added profile: {dest}")
