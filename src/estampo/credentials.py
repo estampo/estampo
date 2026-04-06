@@ -350,7 +350,7 @@ def _pick_cloud_printer(cloud: dict | None) -> str | None:
         from estampo.auth import _get_devices
 
         devices = _get_devices(cloud["token"])
-    except Exception:
+    except (OSError, ImportError, KeyError):
         log.debug("Failed to get cloud printer list", exc_info=True)
         return None
     if not devices:
@@ -396,7 +396,7 @@ def _cloud_login_flow(existing: dict) -> None:
             _show_devices(cloud["token"])
             if not ui.prompt_yn("Re-login anyway?", default=False):
                 return
-        except Exception:
+        except (OSError, KeyError, ImportError):
             ui.warn("Cached token is invalid or expired.")
 
     # Accept env vars or prompt

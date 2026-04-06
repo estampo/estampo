@@ -421,8 +421,11 @@ def packaged_output(
         try:
             creds = load_printer_credentials(config.printer.name)
             printer_type = creds.get("type")
-        except Exception:
-            log.debug("Could not load printer credentials for packaging", exc_info=True)
+        except (FileNotFoundError, KeyError, OSError):
+            log.warning(
+                "Could not load printer credentials for '%s' — packaging as generic gcode",
+                config.printer.name,
+            )
 
     package_for_printer(sliced_output_dir, plate_3mf_path, printer_type)
     return sliced_output_dir

@@ -1,0 +1,1 @@
+Narrow bare ``except Exception`` handlers to specific exception types for better debuggability.
