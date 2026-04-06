@@ -2,7 +2,2574 @@
   "engine": "cura",
   "version": "5.12.0",
   "machine": [
-    {"name": "BambuLab P1S", "id": "bambulab_p1s"}
+    {
+      "name": "101Hero",
+      "id": "101Hero"
+    },
+    {
+      "name": "3DI D300",
+      "id": "3di_d300"
+    },
+    {
+      "name": "3DMaker Starter",
+      "id": "maker_starter"
+    },
+    {
+      "name": "3DTech Semi-Professional",
+      "id": "3dtech_semi_professional"
+    },
+    {
+      "name": "3Dator",
+      "id": "3dator"
+    },
+    {
+      "name": "Abax PRi3",
+      "id": "abax_pri3"
+    },
+    {
+      "name": "Abax PRi5",
+      "id": "abax_pri5"
+    },
+    {
+      "name": "Abax Titan",
+      "id": "abax_titan"
+    },
+    {
+      "name": "Adventurer 3",
+      "id": "flashforge_adventurer3"
+    },
+    {
+      "name": "Adventurer 3C",
+      "id": "flashforge_adventurer3c"
+    },
+    {
+      "name": "Adventurer 4",
+      "id": "flashforge_adventurer4"
+    },
+    {
+      "name": "Adventurer 4 Lite",
+      "id": "flashforge_adventurer4lite"
+    },
+    {
+      "name": "Alfawise U20",
+      "id": "alfawise_u20"
+    },
+    {
+      "name": "Alfawise U30",
+      "id": "alfawise_u30"
+    },
+    {
+      "name": "Alya",
+      "id": "alya3dp"
+    },
+    {
+      "name": "Alya NX",
+      "id": "alyanx3dp"
+    },
+    {
+      "name": "Anet A2",
+      "id": "anet3d_a2"
+    },
+    {
+      "name": "Anet A2 Plus",
+      "id": "anet3d_a2_plus"
+    },
+    {
+      "name": "Anet A6",
+      "id": "anet3d_a6"
+    },
+    {
+      "name": "Anet A8",
+      "id": "anet3d_a8"
+    },
+    {
+      "name": "Anet A8 Plus",
+      "id": "anet3d_a8_plus"
+    },
+    {
+      "name": "Anet E10",
+      "id": "anet3d_e10"
+    },
+    {
+      "name": "Anet E12",
+      "id": "anet3d_e12"
+    },
+    {
+      "name": "Anet E16",
+      "id": "anet3d_e16"
+    },
+    {
+      "name": "Anet ET4",
+      "id": "anet3d_et4"
+    },
+    {
+      "name": "Anet ET4 Pro",
+      "id": "anet3d_et4_pro"
+    },
+    {
+      "name": "Anet ET4 X",
+      "id": "anet3d_et4_x"
+    },
+    {
+      "name": "Anet ET5",
+      "id": "anet3d_et5"
+    },
+    {
+      "name": "Anet ET5 X",
+      "id": "anet3d_et5_x"
+    },
+    {
+      "name": "AnkerMake M5",
+      "id": "ankermake_m5"
+    },
+    {
+      "name": "AnkerMake M5C",
+      "id": "ankermake_m5c"
+    },
+    {
+      "name": "Anycubic 4Max",
+      "id": "anycubic_4max"
+    },
+    {
+      "name": "Anycubic Chiron",
+      "id": "anycubic_chiron"
+    },
+    {
+      "name": "Anycubic Kobra",
+      "id": "anycubic_kobra"
+    },
+    {
+      "name": "Anycubic Kobra 2",
+      "id": "anycubic_kobra2"
+    },
+    {
+      "name": "Anycubic Kobra 3 v2",
+      "id": "anycubic_kobra3v2"
+    },
+    {
+      "name": "Anycubic Kobra 3 v2 ACE PRO",
+      "id": "anycubic_kobra3v2_ACE_PRO"
+    },
+    {
+      "name": "Anycubic Kobra Go",
+      "id": "anycubic_kobra_go"
+    },
+    {
+      "name": "Anycubic Kobra Max",
+      "id": "anycubic_kobra_max"
+    },
+    {
+      "name": "Anycubic Kobra Plus",
+      "id": "anycubic_kobra_plus"
+    },
+    {
+      "name": "Anycubic Kobra S1",
+      "id": "anycubic_kobra_s1"
+    },
+    {
+      "name": "Anycubic Kossel Linear Plus",
+      "id": "anycubic_kossel_linear_plus"
+    },
+    {
+      "name": "Anycubic Kossel Pulley",
+      "id": "anycubic_kossel_pulley"
+    },
+    {
+      "name": "Anycubic Mega Zero",
+      "id": "anycubic_mega_zero"
+    },
+    {
+      "name": "Anycubic Predator",
+      "id": "predator"
+    },
+    {
+      "name": "Anycubic Vyper",
+      "id": "anycubic_vyper"
+    },
+    {
+      "name": "Anycubic i3 Mega",
+      "id": "anycubic_i3_mega"
+    },
+    {
+      "name": "Anycubic i3 Mega S/Pro",
+      "id": "anycubic_i3_mega_s"
+    },
+    {
+      "name": "Anycubic i3 Mega X",
+      "id": "anycubic_i3_mega_x"
+    },
+    {
+      "name": "Arjun 300",
+      "id": "arjun300"
+    },
+    {
+      "name": "Arjun 300 Duplication",
+      "id": "arjun_duplication"
+    },
+    {
+      "name": "Arjun 300 Mirror",
+      "id": "arjun_mirrored"
+    },
+    {
+      "name": "Arjun Pro 300",
+      "id": "arjunpro300"
+    },
+    {
+      "name": "Arjun Pro 300 Duplication",
+      "id": "arjunpro_duplication"
+    },
+    {
+      "name": "Arjun Pro 300 Mirror",
+      "id": "arjunpro_mirrored"
+    },
+    {
+      "name": "Artillery Genius",
+      "id": "artillery_genius"
+    },
+    {
+      "name": "Artillery Hornet",
+      "id": "artillery_hornet"
+    },
+    {
+      "name": "Artillery Sidewinder X1",
+      "id": "artillery_sidewinder_x1"
+    },
+    {
+      "name": "Asterion",
+      "id": "atmat_asterion"
+    },
+    {
+      "name": "Asterion HT",
+      "id": "atmat_asterion_ht"
+    },
+    {
+      "name": "Atom 2",
+      "id": "atom2"
+    },
+    {
+      "name": "Atom 3",
+      "id": "atom3"
+    },
+    {
+      "name": "Atom 3 Lite",
+      "id": "atom3_lite"
+    },
+    {
+      "name": "BFB",
+      "id": "bfb"
+    },
+    {
+      "name": "BLV MGN Cube 300",
+      "id": "blv_mgn_cube_300"
+    },
+    {
+      "name": "BLV MGN Cube 350",
+      "id": "blv_mgn_cube_350"
+    },
+    {
+      "name": "BQ Hephestos 2",
+      "id": "bq_hephestos_2"
+    },
+    {
+      "name": "BQ Prusa i3 Hephestos",
+      "id": "bq_hephestos"
+    },
+    {
+      "name": "BQ Prusa i3 Hephestos XL",
+      "id": "bq_hephestos_xl"
+    },
+    {
+      "name": "BQ Witbox",
+      "id": "bq_witbox"
+    },
+    {
+      "name": "BQ Witbox 2",
+      "id": "bq_witbox_2"
+    },
+    {
+      "name": "BambuLab P1S",
+      "id": "bambulab_p1s"
+    },
+    {
+      "name": "BeamUp L",
+      "id": "beamup_l"
+    },
+    {
+      "name": "BeamUp S",
+      "id": "beamup_s"
+    },
+    {
+      "name": "Bibo 2 dual",
+      "id": "bibo2_dual"
+    },
+    {
+      "name": "Biqu B1",
+      "id": "biqu_b1"
+    },
+    {
+      "name": "Biqu B1 ABL",
+      "id": "biqu_b1_abl"
+    },
+    {
+      "name": "Biqu B2",
+      "id": "biqu_b2"
+    },
+    {
+      "name": "Biqu BX",
+      "id": "biqu_bx_abl"
+    },
+    {
+      "name": "Biqu Hurakan",
+      "id": "biqu_hurakan"
+    },
+    {
+      "name": "Blocks One",
+      "id": "blocks_one"
+    },
+    {
+      "name": "Blocks One MKII",
+      "id": "blocks_mkii"
+    },
+    {
+      "name": "Blocks Pro S100",
+      "id": "blocks_pros100"
+    },
+    {
+      "name": "Blocks Pro S30",
+      "id": "blocks_pros30"
+    },
+    {
+      "name": "Blocks R21",
+      "id": "blocks_r21"
+    },
+    {
+      "name": "Blocks RD50",
+      "id": "blocks_rd50"
+    },
+    {
+      "name": "Blocks RD50 - Duplication Mode",
+      "id": "blocks_rd50duplicate"
+    },
+    {
+      "name": "Blocks RD50 - Mirror Mode",
+      "id": "blocks_rd50mirror"
+    },
+    {
+      "name": "Blocks Zero",
+      "id": "blocks_zero"
+    },
+    {
+      "name": "Builder Premium Large",
+      "id": "builder_premium_large"
+    },
+    {
+      "name": "Builder Premium Medium",
+      "id": "builder_premium_medium"
+    },
+    {
+      "name": "Builder Premium Small",
+      "id": "builder_premium_small"
+    },
+    {
+      "name": "Cambrian Max E175",
+      "id": "atomstack_cambrianmaxe175"
+    },
+    {
+      "name": "Cambrian Max E285",
+      "id": "atomstack_cambrianmaxe285"
+    },
+    {
+      "name": "Cambrian Pro E175",
+      "id": "atomstack_cambrianproe175"
+    },
+    {
+      "name": "Cambrian Pro E285",
+      "id": "atomstack_cambrianproe285"
+    },
+    {
+      "name": "Cartesio",
+      "id": "cartesio"
+    },
+    {
+      "name": "Cocoon Create",
+      "id": "cocoon_create"
+    },
+    {
+      "name": "Cocoon Create ModelMaker",
+      "id": "cocoon_create_modelmaker"
+    },
+    {
+      "name": "Cocoon Create Touch",
+      "id": "cocoon_create_touch"
+    },
+    {
+      "name": "Crazy3DPrint CZ-300",
+      "id": "crazy3dprint_cz_300"
+    },
+    {
+      "name": "Creality CR-10",
+      "id": "creality_cr10"
+    },
+    {
+      "name": "Creality CR-10 Max",
+      "id": "creality_cr10max"
+    },
+    {
+      "name": "Creality CR-10 Mini",
+      "id": "creality_cr10mini"
+    },
+    {
+      "name": "Creality CR-10 Smart",
+      "id": "creality_cr10smart"
+    },
+    {
+      "name": "Creality CR-100",
+      "id": "creality_cr100"
+    },
+    {
+      "name": "Creality CR-10S",
+      "id": "creality_cr10s"
+    },
+    {
+      "name": "Creality CR-10S Pro",
+      "id": "creality_cr10spro"
+    },
+    {
+      "name": "Creality CR-10S4",
+      "id": "creality_cr10s4"
+    },
+    {
+      "name": "Creality CR-10S5",
+      "id": "creality_cr10s5"
+    },
+    {
+      "name": "Creality CR-20",
+      "id": "creality_cr20"
+    },
+    {
+      "name": "Creality CR-20 Pro",
+      "id": "creality_cr20pro"
+    },
+    {
+      "name": "Creality CR-6 SE",
+      "id": "creality_cr6se"
+    },
+    {
+      "name": "Creality CR-M4",
+      "id": "creality_crm4"
+    },
+    {
+      "name": "Creality CR-X",
+      "id": "creality_cr-x"
+    },
+    {
+      "name": "Creality Ender-2",
+      "id": "creality_ender2"
+    },
+    {
+      "name": "Creality Ender-3 / Ender-3 v2",
+      "id": "creality_ender3"
+    },
+    {
+      "name": "Creality Ender-3 Max",
+      "id": "creality_ender3max"
+    },
+    {
+      "name": "Creality Ender-3 Pro",
+      "id": "creality_ender3pro"
+    },
+    {
+      "name": "Creality Ender-3 S1",
+      "id": "creality_ender3s1"
+    },
+    {
+      "name": "Creality Ender-3 S1 Plus",
+      "id": "creality_ender3s1plus"
+    },
+    {
+      "name": "Creality Ender-3 S1 Pro",
+      "id": "creality_ender3s1pro"
+    },
+    {
+      "name": "Creality Ender-3 V3 KE",
+      "id": "creality_ender3v3ke"
+    },
+    {
+      "name": "Creality Ender-3 V3 SE",
+      "id": "creality_ender3v3se"
+    },
+    {
+      "name": "Creality Ender-3 v2 Neo",
+      "id": "creality_ender3v2neo"
+    },
+    {
+      "name": "Creality Ender-4",
+      "id": "creality_ender4"
+    },
+    {
+      "name": "Creality Ender-5",
+      "id": "creality_ender5"
+    },
+    {
+      "name": "Creality Ender-5 Plus",
+      "id": "creality_ender5plus"
+    },
+    {
+      "name": "Creality Ender-5 S1",
+      "id": "creality_ender5s1"
+    },
+    {
+      "name": "Creality Ender-6",
+      "id": "creality_ender6"
+    },
+    {
+      "name": "Creality K1 Max",
+      "id": "creality_k1max"
+    },
+    {
+      "name": "Creality Sermoon D1",
+      "id": "creality_sermoond1"
+    },
+    {
+      "name": "Creality Sermoon V1 & V1 Pro",
+      "id": "creality_sermoonv1"
+    },
+    {
+      "name": "Creasee CS20",
+      "id": "creasee_cs20"
+    },
+    {
+      "name": "Creasee CS30",
+      "id": "creasee_cs30"
+    },
+    {
+      "name": "Creasee CS50s Pro",
+      "id": "creasee_cs50spro"
+    },
+    {
+      "name": "Creasee Phoenix",
+      "id": "creasee_phoenix"
+    },
+    {
+      "name": "Creasee Skywalker",
+      "id": "creasee_skywalker"
+    },
+    {
+      "name": "Creatable D3",
+      "id": "creatable_d3"
+    },
+    {
+      "name": "Cremaker M V1",
+      "id": "cremaker_m_v1"
+    },
+    {
+      "name": "Cremaker M V2",
+      "id": "cremaker_m_v2"
+    },
+    {
+      "name": "Cremaker S V1",
+      "id": "cremaker_s_v1"
+    },
+    {
+      "name": "Cubicon Dual Pro-A30",
+      "id": "cubicon_dual_pro_a30"
+    },
+    {
+      "name": "Cubicon Single",
+      "id": "cubicon_3dp_110f"
+    },
+    {
+      "name": "Cubicon Single Plus",
+      "id": "cubicon_3dp_310f"
+    },
+    {
+      "name": "Cubicon Style",
+      "id": "cubicon_3dp_210f"
+    },
+    {
+      "name": "Cubicon Style Neo-A22",
+      "id": "cubicon_style_neo_a22"
+    },
+    {
+      "name": "Cubicon Style Neo-A31",
+      "id": "cubicon_style_neo_a31"
+    },
+    {
+      "name": "Cubicon Style Plus-A15",
+      "id": "cubicon_style_plus_a15"
+    },
+    {
+      "name": "Custom FFF printer",
+      "id": "custom"
+    },
+    {
+      "name": "DUAL600",
+      "id": "strateo3d"
+    },
+    {
+      "name": "DXU",
+      "id": "dxu"
+    },
+    {
+      "name": "DXU Dual",
+      "id": "dxu_dual"
+    },
+    {
+      "name": "Dagoma DiscoEasy200",
+      "id": "dagoma_discoeasy200"
+    },
+    {
+      "name": "Dagoma DiscoEasy200 Bicolor",
+      "id": "dagoma_discoeasy200_bicolor"
+    },
+    {
+      "name": "Dagoma DiscoUltimate",
+      "id": "dagoma_discoultimate"
+    },
+    {
+      "name": "Dagoma DiscoUltimate Bicolor",
+      "id": "dagoma_discoultimate_bicolor"
+    },
+    {
+      "name": "Dagoma Magis",
+      "id": "dagoma_magis"
+    },
+    {
+      "name": "Dagoma Neva",
+      "id": "dagoma_neva"
+    },
+    {
+      "name": "Dagoma PRO 430 Bowden",
+      "id": "dagoma_pro_430_bowden"
+    },
+    {
+      "name": "Dagoma PRO 430 Direct Drive",
+      "id": "dagoma_pro_430_directdrive"
+    },
+    {
+      "name": "Dagoma PRO 430 Dual",
+      "id": "dagoma_pro_430_dual"
+    },
+    {
+      "name": "Dagoma Sigma",
+      "id": "dagoma_sigma"
+    },
+    {
+      "name": "Dagoma Sigma Pro 500Z",
+      "id": "dagoma_sigma_pro"
+    },
+    {
+      "name": "Dagoma Sigma Pro 500Z Dual",
+      "id": "dagoma_sigma_pro_dual"
+    },
+    {
+      "name": "Delta Go",
+      "id": "delta_go"
+    },
+    {
+      "name": "Deltacomb DC-20",
+      "id": "deltacomb_dc20"
+    },
+    {
+      "name": "Deltacomb DC-20 Dual",
+      "id": "deltacomb_dc20dual"
+    },
+    {
+      "name": "Deltacomb DC-20 Flux",
+      "id": "deltacomb_dc20flux"
+    },
+    {
+      "name": "Deltacomb DC-21",
+      "id": "deltacomb_dc21"
+    },
+    {
+      "name": "Deltacomb DC-21 Dual",
+      "id": "deltacomb_dc21dual"
+    },
+    {
+      "name": "Deltacomb DC-21 Flux",
+      "id": "deltacomb_dc21flux"
+    },
+    {
+      "name": "Deltacomb DC-30",
+      "id": "deltacomb_dc30"
+    },
+    {
+      "name": "Deltacomb DC-30 Dual",
+      "id": "deltacomb_dc30dual"
+    },
+    {
+      "name": "Deltacomb DC-30 Flux",
+      "id": "deltacomb_dc30flux"
+    },
+    {
+      "name": "Discov3ry Complete",
+      "id": "structur3d_discov3ry1_complete_um2plus"
+    },
+    {
+      "name": "Diytech 220",
+      "id": "diy220"
+    },
+    {
+      "name": "Dreamer NX",
+      "id": "flashforge_dreamer_nx"
+    },
+    {
+      "name": "ELEGOO Base Printer",
+      "id": "elegoo_base"
+    },
+    {
+      "name": "ELEGOO Centauri Carbon",
+      "id": "elegoo_centauri_carbon"
+    },
+    {
+      "name": "ELEGOO NEPTUNE",
+      "id": "elegoo_neptune_1"
+    },
+    {
+      "name": "ELEGOO NEPTUNE 2S",
+      "id": "elegoo_neptune_2s"
+    },
+    {
+      "name": "ELEGOO NEPTUNE 3",
+      "id": "elegoo_neptune_3"
+    },
+    {
+      "name": "ELEGOO NEPTUNE 3 Max",
+      "id": "elegoo_neptune_3max"
+    },
+    {
+      "name": "ELEGOO NEPTUNE 3 Plus",
+      "id": "elegoo_neptune_3plus"
+    },
+    {
+      "name": "ELEGOO NEPTUNE 3 Pro",
+      "id": "elegoo_neptune_3pro"
+    },
+    {
+      "name": "ELEGOO NEPTUNE 4",
+      "id": "elegoo_neptune_4"
+    },
+    {
+      "name": "ELEGOO NEPTUNE 4 Max",
+      "id": "elegoo_neptune_4max"
+    },
+    {
+      "name": "ELEGOO NEPTUNE 4 Plus",
+      "id": "elegoo_neptune_4plus"
+    },
+    {
+      "name": "ELEGOO NEPTUNE 4 Pro",
+      "id": "elegoo_neptune_4pro"
+    },
+    {
+      "name": "ELEGOO NEPTUNE X",
+      "id": "elegoo_neptune_x"
+    },
+    {
+      "name": "ENTINA TINA2",
+      "id": "entina_tina2"
+    },
+    {
+      "name": "ENTINA TINA2S",
+      "id": "entina_tina2s"
+    },
+    {
+      "name": "EasyArts Ares",
+      "id": "easyarts_ares"
+    },
+    {
+      "name": "Eazao M500",
+      "id": "eazao_m500"
+    },
+    {
+      "name": "Eazao M600",
+      "id": "eazao_m600"
+    },
+    {
+      "name": "Eazao M700",
+      "id": "eazao_m700"
+    },
+    {
+      "name": "Eazao Potter",
+      "id": "eazao_potter"
+    },
+    {
+      "name": "Eazao Zero",
+      "id": "eazao_zero"
+    },
+    {
+      "name": "Eryone ER20",
+      "id": "eryone_er20"
+    },
+    {
+      "name": "Eryone Thinker DirectDrive",
+      "id": "eryone_thinker_direct"
+    },
+    {
+      "name": "Eryone Thinker Series",
+      "id": "eryone_thinker"
+    },
+    {
+      "name": "Erzay3D",
+      "id": "erzay3d"
+    },
+    {
+      "name": "FF300",
+      "id": "fusedform_300"
+    },
+    {
+      "name": "FF300 Doppia",
+      "id": "fusedform_300_doppia"
+    },
+    {
+      "name": "FF600",
+      "id": "fusedform_600"
+    },
+    {
+      "name": "FF600 Doppia",
+      "id": "fusedform_600_doppia"
+    },
+    {
+      "name": "FF600plus",
+      "id": "fusedform_600plus"
+    },
+    {
+      "name": "FF600plus Doppia",
+      "id": "fusedform_600plus_doppia"
+    },
+    {
+      "name": "FFSTD",
+      "id": "fusedform_std"
+    },
+    {
+      "name": "FFSTD Doppia",
+      "id": "fusedform_std_doppia"
+    },
+    {
+      "name": "FFmini",
+      "id": "fusedform_mini"
+    },
+    {
+      "name": "FabX Pro",
+      "id": "fabxpro"
+    },
+    {
+      "name": "Fabtotum Personal Fabricator",
+      "id": "fabtotum"
+    },
+    {
+      "name": "Farm 2",
+      "id": "farm2"
+    },
+    {
+      "name": "Farm 2CE",
+      "id": "farm2_ce"
+    },
+    {
+      "name": "Felix Pro 2 Dual",
+      "id": "felixpro2dual"
+    },
+    {
+      "name": "Felix Tec 4 Dual",
+      "id": "felixtec4dual"
+    },
+    {
+      "name": "Flsun Q5",
+      "id": "flsun_q5"
+    },
+    {
+      "name": "Flsun QQ",
+      "id": "flsun_qq"
+    },
+    {
+      "name": "Flsun QQ-S",
+      "id": "flsun_qq_s"
+    },
+    {
+      "name": "Flsun Super Racer",
+      "id": "flsun_sr"
+    },
+    {
+      "name": "Flsun V400",
+      "id": "flsun_v400"
+    },
+    {
+      "name": "Flying Bear Ghost 4S",
+      "id": "flyingbear_ghost_4s"
+    },
+    {
+      "name": "Flying Bear Ghost 5",
+      "id": "flyingbear_ghost_5"
+    },
+    {
+      "name": "Flying Bear Ghost 6",
+      "id": "flyingbear_ghost_6"
+    },
+    {
+      "name": "Folger Tech FT-5",
+      "id": "folgertech_FT-5"
+    },
+    {
+      "name": "Fusion3 F410",
+      "id": "fusion3_f410"
+    },
+    {
+      "name": "G-ZERO",
+      "id": "gutenberg_gzero"
+    },
+    {
+      "name": "Galaxy 500",
+      "id": "atmat_galaxy_500"
+    },
+    {
+      "name": "Galaxy 600",
+      "id": "atmat_galaxy_600"
+    },
+    {
+      "name": "Geeetech A10",
+      "id": "geeetech_A10"
+    },
+    {
+      "name": "Geeetech A10M",
+      "id": "geeetech_A10M"
+    },
+    {
+      "name": "Geeetech A10Pro",
+      "id": "geeetech_A10Pro"
+    },
+    {
+      "name": "Geeetech A10T",
+      "id": "geeetech_A10T"
+    },
+    {
+      "name": "Geeetech A20",
+      "id": "geeetech_A20"
+    },
+    {
+      "name": "Geeetech A20M",
+      "id": "geeetech_A20M"
+    },
+    {
+      "name": "Geeetech A20T",
+      "id": "geeetech_A20T"
+    },
+    {
+      "name": "Geeetech A30",
+      "id": "geeetech_a30"
+    },
+    {
+      "name": "Geeetech A30M",
+      "id": "geeetech_A30M"
+    },
+    {
+      "name": "Geeetech A30Pro",
+      "id": "geeetech_A30Pro"
+    },
+    {
+      "name": "Geeetech A30T",
+      "id": "geeetech_A30T"
+    },
+    {
+      "name": "Geeetech E180",
+      "id": "geeetech_E180"
+    },
+    {
+      "name": "Geeetech GiantArmD200",
+      "id": "geeetech_GiantArmD200"
+    },
+    {
+      "name": "Geeetech I3ProB",
+      "id": "geeetech_I3ProB"
+    },
+    {
+      "name": "Geeetech I3ProC",
+      "id": "geeetech_I3ProC"
+    },
+    {
+      "name": "Geeetech I3ProW",
+      "id": "geeetech_I3ProW"
+    },
+    {
+      "name": "Geeetech M1",
+      "id": "geeetech_M1"
+    },
+    {
+      "name": "Geeetech M1S",
+      "id": "geeetech_M1S"
+    },
+    {
+      "name": "Geeetech MeCreator",
+      "id": "geeetech_MeCreator"
+    },
+    {
+      "name": "Geeetech MeCreator2",
+      "id": "geeetech_MeCreator2"
+    },
+    {
+      "name": "Geeetech MeDucer",
+      "id": "geeetech_MeDucer"
+    },
+    {
+      "name": "Geeetech Mizar",
+      "id": "geeetech_Mizar"
+    },
+    {
+      "name": "Geeetech MizarM",
+      "id": "geeetech_MizarM"
+    },
+    {
+      "name": "Geeetech MizarMax",
+      "id": "geeetech_MizarMax"
+    },
+    {
+      "name": "Geeetech MizarPro",
+      "id": "geeetech_MizarPro"
+    },
+    {
+      "name": "Geeetech MizarS",
+      "id": "geeetech_MizarS"
+    },
+    {
+      "name": "Geeetech Mizar_S (legacy)",
+      "id": "geeetech_Mizar_S"
+    },
+    {
+      "name": "Geeetech Thunder",
+      "id": "geeetech_Thunder"
+    },
+    {
+      "name": "German RepRap Neo",
+      "id": "grr_neo"
+    },
+    {
+      "name": "Goofoo Cube",
+      "id": "goofoo_cube"
+    },
+    {
+      "name": "Goofoo E-one",
+      "id": "goofoo_e-one"
+    },
+    {
+      "name": "Goofoo Gemini",
+      "id": "goofoo_gemini"
+    },
+    {
+      "name": "Goofoo Giant",
+      "id": "goofoo_giant"
+    },
+    {
+      "name": "Goofoo Max",
+      "id": "goofoo_max"
+    },
+    {
+      "name": "Goofoo Mido",
+      "id": "goofoo_mido"
+    },
+    {
+      "name": "Goofoo Mini+",
+      "id": "goofoo_miniplus"
+    },
+    {
+      "name": "Goofoo Nova",
+      "id": "goofoo_nova"
+    },
+    {
+      "name": "Goofoo Plus",
+      "id": "goofoo_plus"
+    },
+    {
+      "name": "Goofoo T-one",
+      "id": "goofoo_t-one"
+    },
+    {
+      "name": "Goofoo Tiny",
+      "id": "goofoo_tiny"
+    },
+    {
+      "name": "Goofoo Tiny+",
+      "id": "goofoo_tinyplus"
+    },
+    {
+      "name": "HCTECH_HC300-M1&M1H",
+      "id": "hctech_hc300-m1&m1h"
+    },
+    {
+      "name": "HCTECH_HC300-M2H",
+      "id": "hctech_hc300-m2h"
+    },
+    {
+      "name": "HCTECH_HC300-M3",
+      "id": "hctech_hc300-m3"
+    },
+    {
+      "name": "HMS434",
+      "id": "hms434"
+    },
+    {
+      "name": "HardPrint Hozo iX",
+      "id": "hardprint_hozo_ix"
+    },
+    {
+      "name": "HardPrint Hozo, Hozo",
+      "id": "hardprint_hozo"
+    },
+    {
+      "name": "Hellbot Adonis",
+      "id": "hellbot_adonis"
+    },
+    {
+      "name": "Hellbot Hidra",
+      "id": "hellbot_hidra"
+    },
+    {
+      "name": "Hellbot Hidra Plus",
+      "id": "hellbot_hidra_plus"
+    },
+    {
+      "name": "Hellbot Magna 1",
+      "id": "hellbot_magna_I"
+    },
+    {
+      "name": "Hellbot Magna 2 230",
+      "id": "hellbot_magna_2_230"
+    },
+    {
+      "name": "Hellbot Magna 2 230 dual",
+      "id": "hellbot_magna_2_230_dual"
+    },
+    {
+      "name": "Hellbot Magna 2 300",
+      "id": "hellbot_magna_2_300"
+    },
+    {
+      "name": "Hellbot Magna 2 300 dual",
+      "id": "hellbot_magna_2_300_dual"
+    },
+    {
+      "name": "Hellbot Magna 2 400",
+      "id": "hellbot_magna_2_400"
+    },
+    {
+      "name": "Hellbot Magna 2 400 dual",
+      "id": "hellbot_magna_2_400_dual"
+    },
+    {
+      "name": "Hellbot Magna 2 500",
+      "id": "hellbot_magna_2_500"
+    },
+    {
+      "name": "Hellbot Magna 2 500 dual",
+      "id": "hellbot_magna_2_500_dual"
+    },
+    {
+      "name": "Hellbot Magna Dual",
+      "id": "hellbot_magna_dual"
+    },
+    {
+      "name": "Hellbot Magna SE",
+      "id": "hellbot_magna_SE"
+    },
+    {
+      "name": "Hellbot Magna SE 300",
+      "id": "hellbot_magna_SE_300"
+    },
+    {
+      "name": "Hellbot Magna SE Pro",
+      "id": "hellbot_magna_SE_Pro"
+    },
+    {
+      "name": "Hello Bee Prusa",
+      "id": "helloBEEprusa"
+    },
+    {
+      "name": "Hyper K",
+      "id": "mixware_hyper_k"
+    },
+    {
+      "name": "Hyper S",
+      "id": "mixware_hyper_s"
+    },
+    {
+      "name": "I3 Metal Motion",
+      "id": "I3MetalMotion"
+    },
+    {
+      "name": "IDEX420",
+      "id": "strateo3d_IDEX420"
+    },
+    {
+      "name": "IDEX420 Duplicate",
+      "id": "strateo3d_IDEX420_duplicate"
+    },
+    {
+      "name": "IDEX420 Mirror",
+      "id": "strateo3d_IDEX420_mirror"
+    },
+    {
+      "name": "Ideagen3D Sapphire Plus",
+      "id": "ideagen3D_sapphire_plus"
+    },
+    {
+      "name": "Imade3D JellyBOX 2",
+      "id": "imade3d_jellybox_2"
+    },
+    {
+      "name": "Imade3D JellyBOX Original",
+      "id": "imade3d_jellybox"
+    },
+    {
+      "name": "Innovo Inventor",
+      "id": "innovo_inventor"
+    },
+    {
+      "name": "JGAurora A1",
+      "id": "jgaurora_a1"
+    },
+    {
+      "name": "JGAurora A3S",
+      "id": "jgaurora_a3s"
+    },
+    {
+      "name": "JGAurora A5 & A5S",
+      "id": "jgaurora_a5"
+    },
+    {
+      "name": "JGAurora A6",
+      "id": "jgaurora_a6"
+    },
+    {
+      "name": "JGAurora JGMaker Magic",
+      "id": "jgaurora_jgmaker_magic"
+    },
+    {
+      "name": "JGAurora Z-603S",
+      "id": "jgaurora_z_603s"
+    },
+    {
+      "name": "Julia",
+      "id": "julia"
+    },
+    {
+      "name": "KLEMA 180",
+      "id": "klema_180"
+    },
+    {
+      "name": "KLEMA 250",
+      "id": "klema_250"
+    },
+    {
+      "name": "KLEMA 250 Pro",
+      "id": "klema_250_pro"
+    },
+    {
+      "name": "KLEMA 250 Twin",
+      "id": "klema_250_twin"
+    },
+    {
+      "name": "KLEMA 500",
+      "id": "klema_500"
+    },
+    {
+      "name": "Kemiq Q2 Beta",
+      "id": "kemiq_q2_beta"
+    },
+    {
+      "name": "Kemiq Q2 Gama",
+      "id": "kemiq_q2_gama"
+    },
+    {
+      "name": "Kingroon KP3",
+      "id": "kingroon_kp3"
+    },
+    {
+      "name": "Kingroon KP3S",
+      "id": "kingroon_kp3s"
+    },
+    {
+      "name": "Kingroon KP3S Pro",
+      "id": "kingroon_kp3s_pro"
+    },
+    {
+      "name": "Koonovo Elf",
+      "id": "koonovo_elf"
+    },
+    {
+      "name": "Koonovo KN3 Idex",
+      "id": "koonovo_kn3"
+    },
+    {
+      "name": "Koonovo KN5 Idex",
+      "id": "koonovo_kn5"
+    },
+    {
+      "name": "Koonovo Pyramid",
+      "id": "koonovo_pyramid"
+    },
+    {
+      "name": "Kosher",
+      "id": "kosher"
+    },
+    {
+      "name": "Kosher Duplication",
+      "id": "kosher_duplication"
+    },
+    {
+      "name": "Kosher Mirror",
+      "id": "kosher_mirror"
+    },
+    {
+      "name": "Kossel Mini",
+      "id": "kossel_mini"
+    },
+    {
+      "name": "Kossel Pro",
+      "id": "kossel_pro"
+    },
+    {
+      "name": "Kupido",
+      "id": "kupido"
+    },
+    {
+      "name": "LNL3D D3",
+      "id": "lnl3d_d3"
+    },
+    {
+      "name": "LNL3D D3 Vulcan",
+      "id": "lnl3d_d3_vulcan"
+    },
+    {
+      "name": "LNL3D D5",
+      "id": "lnl3d_d5"
+    },
+    {
+      "name": "LNL3D D6",
+      "id": "lnl3d_d6"
+    },
+    {
+      "name": "LNL3D Printer",
+      "id": "lnl3d_base"
+    },
+    {
+      "name": "Leapfrog Bolt Pro",
+      "id": "leapfrog_bolt_pro"
+    },
+    {
+      "name": "Leapfrog Creatr HS",
+      "id": "leapfrog_creatr_hs"
+    },
+    {
+      "name": "Leapfrog Creatr HS XL",
+      "id": "leapfrog_creatr_hs_xl"
+    },
+    {
+      "name": "Liquid",
+      "id": "liquid"
+    },
+    {
+      "name": "Longer Cube2",
+      "id": "longer_cube2"
+    },
+    {
+      "name": "Longer LK1",
+      "id": "longer_lk1"
+    },
+    {
+      "name": "Longer LK1 Plus",
+      "id": "longer_lk1plus"
+    },
+    {
+      "name": "Longer LK1 Pro",
+      "id": "longer_lk1pro"
+    },
+    {
+      "name": "Longer LK4",
+      "id": "longer_lk4"
+    },
+    {
+      "name": "Longer LK4 Pro",
+      "id": "longer_lk4pro"
+    },
+    {
+      "name": "Longer LK4 X",
+      "id": "longer_lk4x"
+    },
+    {
+      "name": "Longer LK5",
+      "id": "longer_lk5"
+    },
+    {
+      "name": "Longer LK5 Pro",
+      "id": "longer_lk5pro"
+    },
+    {
+      "name": "Lotmaxx SC-10",
+      "id": "lotmaxx_sc10"
+    },
+    {
+      "name": "Lotmaxx SC-20",
+      "id": "lotmaxx_sc20"
+    },
+    {
+      "name": "Lotmaxx Shark",
+      "id": "lotmaxx_sc60"
+    },
+    {
+      "name": "Lulzbot Mini 2 | SE | 0.5 mm",
+      "id": "lulzbot_mini_2_se"
+    },
+    {
+      "name": "Lulzbot Mini 2 | SL | 0.25 mm (Micro)",
+      "id": "lulzbot_mini_2_sl"
+    },
+    {
+      "name": "Lulzbot TAZ Pro Dual Extruder",
+      "id": "lulzbot_taz_pro_dual"
+    },
+    {
+      "name": "MBot3D Grid 2+",
+      "id": "mbot3d_grid2plus"
+    },
+    {
+      "name": "MBot3D Grid 2+ Dual",
+      "id": "mbot3d_grid2plus_dual"
+    },
+    {
+      "name": "MBot3D Grid 4",
+      "id": "mbot3d_grid4"
+    },
+    {
+      "name": "MBot3D Grid 4 Dual",
+      "id": "mbot3d_grid4_dual"
+    },
+    {
+      "name": "MP Mini Delta",
+      "id": "mp_mini_delta"
+    },
+    {
+      "name": "MP Mini Delta V2",
+      "id": "mp_mini_delta_v2"
+    },
+    {
+      "name": "Makeblock mCreate",
+      "id": "makeblock_mcreate"
+    },
+    {
+      "name": "Makeit Pro-L",
+      "id": "makeit_pro_l"
+    },
+    {
+      "name": "Makeit Pro-M",
+      "id": "makeit_pro_m"
+    },
+    {
+      "name": "Makeit Pro-MX",
+      "id": "makeit_pro_mx"
+    },
+    {
+      "name": "Maker Made 300x",
+      "id": "maker_made_300x"
+    },
+    {
+      "name": "Maker Pegasus",
+      "id": "makeR_pegasus"
+    },
+    {
+      "name": "Maker Prusa Tairona i3",
+      "id": "makeR_prusa_tairona_i3"
+    },
+    {
+      "name": "MakerBot Replicator+",
+      "id": "ultimaker_replicator_plus"
+    },
+    {
+      "name": "MakerBot Sketch",
+      "id": "ultimaker_sketch"
+    },
+    {
+      "name": "MakerBot Sketch Large",
+      "id": "ultimaker_sketch_large"
+    },
+    {
+      "name": "MakerBot Sketch Sprint",
+      "id": "ultimaker_sketch_sprint"
+    },
+    {
+      "name": "MakerBotReplicator",
+      "id": "makerbotreplicator"
+    },
+    {
+      "name": "MakerGear M2",
+      "id": "makergear_m2"
+    },
+    {
+      "name": "Malyan M180",
+      "id": "malyan_m180"
+    },
+    {
+      "name": "Malyan M200",
+      "id": "malyan_m200"
+    },
+    {
+      "name": "Mankati Fullscale XT Plus",
+      "id": "mankati_fullscale_xt_plus"
+    },
+    {
+      "name": "Mark2 for Ultimaker2",
+      "id": "Mark2_for_Ultimaker2"
+    },
+    {
+      "name": "Mendel90",
+      "id": "mendel90"
+    },
+    {
+      "name": "Mingda 1000Pro",
+      "id": "mingda_1000pro"
+    },
+    {
+      "name": "Mingda 4H",
+      "id": "mingda_4h"
+    },
+    {
+      "name": "Mingda 600Pro",
+      "id": "mingda_600pro"
+    },
+    {
+      "name": "Mingda 6H",
+      "id": "mingda_6h"
+    },
+    {
+      "name": "Mingda D2",
+      "id": "mingda_d2"
+    },
+    {
+      "name": "Mingda D3/Pro",
+      "id": "mingda_d3pro"
+    },
+    {
+      "name": "Mingda D4 Pro",
+      "id": "mingda_d4pro"
+    },
+    {
+      "name": "Mingda Magician Max",
+      "id": "mingda_magician_max"
+    },
+    {
+      "name": "Mingda Magician Pro",
+      "id": "mingda_magician_pro"
+    },
+    {
+      "name": "Mingda Magician X",
+      "id": "mingda_magician_x"
+    },
+    {
+      "name": "Mingda Rock3/Pro",
+      "id": "mingda_rock3"
+    },
+    {
+      "name": "Modix Base Printer",
+      "id": "modix_v3_base"
+    },
+    {
+      "name": "Modix Base Printer",
+      "id": "modix_v4_base"
+    },
+    {
+      "name": "Modix V3 BIG-120X",
+      "id": "modix_v3_big120X"
+    },
+    {
+      "name": "Modix V3 BIG-120Z",
+      "id": "modix_v3_big120Z"
+    },
+    {
+      "name": "Modix V3 BIG-180X",
+      "id": "modix_v3_big180X"
+    },
+    {
+      "name": "Modix V3 BIG-40",
+      "id": "modix_v3_big40"
+    },
+    {
+      "name": "Modix V3 BIG-60",
+      "id": "modix_v3_big60"
+    },
+    {
+      "name": "Modix V3 BIG-Meter",
+      "id": "modix_v3_big_meter"
+    },
+    {
+      "name": "Modix V4 BIG-120X",
+      "id": "modix_v4_big120X"
+    },
+    {
+      "name": "Modix V4 BIG-120Z",
+      "id": "modix_v4_big120Z"
+    },
+    {
+      "name": "Modix V4 BIG-180X",
+      "id": "modix_v4_big180X"
+    },
+    {
+      "name": "Modix V4 BIG-60",
+      "id": "modix_v4_big60"
+    },
+    {
+      "name": "Modix V4 BIG-Meter",
+      "id": "modix_v4_big_meter"
+    },
+    {
+      "name": "Monoprice Select Mini V1",
+      "id": "monoprice_select_mini_v1"
+    },
+    {
+      "name": "Monoprice Select Mini V2 (E3D)",
+      "id": "monoprice_select_mini_v2"
+    },
+    {
+      "name": "Monoprice Ultimate",
+      "id": "monoprice_ultimate"
+    },
+    {
+      "name": "Multicomp Pro MCPI-200",
+      "id": "multicomp_mcpi200"
+    },
+    {
+      "name": "Neptune 2",
+      "id": "elegoo_neptune_2"
+    },
+    {
+      "name": "Neptune 2D",
+      "id": "elegoo_neptune_2D"
+    },
+    {
+      "name": "Nwa3D A31",
+      "id": "nwa3d_a31"
+    },
+    {
+      "name": "Nwa3D A5",
+      "id": "nwa3d_a5"
+    },
+    {
+      "name": "PBR 3D Gen-I",
+      "id": "pbr3d_g1"
+    },
+    {
+      "name": "PastePrinter",
+      "id": "fablabbcn_pasteprinter"
+    },
+    {
+      "name": "Peopoly Moai",
+      "id": "peopoly_moai"
+    },
+    {
+      "name": "Printrbot Play",
+      "id": "printrbot_play"
+    },
+    {
+      "name": "Printrbot Play (Heated Bed)",
+      "id": "printrbot_play_heated"
+    },
+    {
+      "name": "Printrbot Simple",
+      "id": "printrbot_simple"
+    },
+    {
+      "name": "Printrbot Simple Maker's Kit (1405)",
+      "id": "printrbot_simple_makers_kit"
+    },
+    {
+      "name": "Printrbot Simple Metal Extended",
+      "id": "printrbot_simple_extended"
+    },
+    {
+      "name": "Proton X Rail",
+      "id": "inat_proton_x_rail"
+    },
+    {
+      "name": "Proton X Rod",
+      "id": "inat_proton_x_rod"
+    },
+    {
+      "name": "Prusa i3",
+      "id": "prusa_i3"
+    },
+    {
+      "name": "Prusa i3 Mk2",
+      "id": "prusa_i3_mk2"
+    },
+    {
+      "name": "Prusa i3 Mk3/Mk3s",
+      "id": "prusa_i3_mk3"
+    },
+    {
+      "name": "Prusa i3 xl",
+      "id": "prusa_i3_xl"
+    },
+    {
+      "name": "Pulse XE E-444M",
+      "id": "matterhackers_pulsexe_e444m"
+    },
+    {
+      "name": "Punchtec Connect XL",
+      "id": "punchtec_connect_xl"
+    },
+    {
+      "name": "Raise3D N2 Dual",
+      "id": "raise3D_N2_dual"
+    },
+    {
+      "name": "Raise3D N2 Plus Dual",
+      "id": "raise3D_N2_plus_dual"
+    },
+    {
+      "name": "Raise3D N2 Plus Single",
+      "id": "raise3D_N2_plus_single"
+    },
+    {
+      "name": "Raise3D N2 Single",
+      "id": "raise3D_N2_single"
+    },
+    {
+      "name": "RatRig V-Core 3 200mm",
+      "id": "ratrig_vcore3_200"
+    },
+    {
+      "name": "RatRig V-Core 3 300mm",
+      "id": "ratrig_vcore3_300"
+    },
+    {
+      "name": "RatRig V-Core 3 400mm",
+      "id": "ratrig_vcore3_400"
+    },
+    {
+      "name": "RatRig V-Core 3 500mm",
+      "id": "ratrig_vcore3_500"
+    },
+    {
+      "name": "RatRig V-Minion",
+      "id": "ratrig_vminion"
+    },
+    {
+      "name": "Renkforce Basic 3",
+      "id": "renkforce_basic3"
+    },
+    {
+      "name": "Renkforce Cube One",
+      "id": "renkforce_cubeone"
+    },
+    {
+      "name": "Renkforce Pro 10+",
+      "id": "renkforce_pro10plus"
+    },
+    {
+      "name": "Renkforce Pro 3",
+      "id": "renkforce_pro3"
+    },
+    {
+      "name": "Renkforce Pro 6",
+      "id": "renkforce_pro6"
+    },
+    {
+      "name": "Renkforce Pro 6+",
+      "id": "renkforce_pro6plus"
+    },
+    {
+      "name": "Renkforce Pro7 Dual",
+      "id": "renkforce_pro7dual"
+    },
+    {
+      "name": "Renkforce RF100",
+      "id": "renkforce_rf100"
+    },
+    {
+      "name": "Renkforce RF100 V2",
+      "id": "renkforce_rf100_v2"
+    },
+    {
+      "name": "Renkforce RF100 XL",
+      "id": "renkforce_rf100_xl"
+    },
+    {
+      "name": "Rigid3D 2. Nesil",
+      "id": "rigid3d"
+    },
+    {
+      "name": "Rigid3D 3. Nesil",
+      "id": "rigid3d_3rdgen"
+    },
+    {
+      "name": "Rigid3D Hobby",
+      "id": "rigid3d_hobby"
+    },
+    {
+      "name": "Rigid3D Mucit",
+      "id": "rigid3d_mucit"
+    },
+    {
+      "name": "Rigid3D Mucit2",
+      "id": "rigid3d_mucit2"
+    },
+    {
+      "name": "Rigid3D Zero",
+      "id": "rigid3d_zero"
+    },
+    {
+      "name": "Rigid3D Zero2",
+      "id": "rigid3d_zero2"
+    },
+    {
+      "name": "Rigid3D Zero3",
+      "id": "rigid3d_zero3"
+    },
+    {
+      "name": "RigidBot",
+      "id": "rigidbot"
+    },
+    {
+      "name": "RigidBotBig",
+      "id": "rigidbot_big"
+    },
+    {
+      "name": "RoVa3D",
+      "id": "ord"
+    },
+    {
+      "name": "Robo 3D R1",
+      "id": "robo_3d_r1"
+    },
+    {
+      "name": "SecKit SK-Go",
+      "id": "seckit_skgo"
+    },
+    {
+      "name": "SecKit SK-Tank",
+      "id": "seckit_sktank"
+    },
+    {
+      "name": "SeeMeCNC Artemis",
+      "id": "seemecnc_artemis"
+    },
+    {
+      "name": "SeeMeCNC Rostock Max V3.2",
+      "id": "seemecnc_v32"
+    },
+    {
+      "name": "Series 1 2014",
+      "id": "tam"
+    },
+    {
+      "name": "Signal Pro 300 v1",
+      "id": "atmat_signal_pro_300_v1"
+    },
+    {
+      "name": "Signal Pro 300 v2",
+      "id": "atmat_signal_pro_300_v2"
+    },
+    {
+      "name": "Signal Pro 400 v1",
+      "id": "atmat_signal_pro_400_v1"
+    },
+    {
+      "name": "Signal Pro 400 v2",
+      "id": "atmat_signal_pro_400_v2"
+    },
+    {
+      "name": "Signal Pro 500 v1",
+      "id": "atmat_signal_pro_500_v1"
+    },
+    {
+      "name": "Signal Pro 500 v2",
+      "id": "atmat_signal_pro_500_v2"
+    },
+    {
+      "name": "Signal XL",
+      "id": "atmat_signal_xl"
+    },
+    {
+      "name": "Signal XXL",
+      "id": "atmat_signal_xxl"
+    },
+    {
+      "name": "Signal XXXL",
+      "id": "atmat_signal_xxxl"
+    },
+    {
+      "name": "Skriware 2",
+      "id": "skriware_2"
+    },
+    {
+      "name": "Smoothie Custom Printer",
+      "id": "smoothie"
+    },
+    {
+      "name": "SnakeOil Standard 180",
+      "id": "snakeoil_standard_180"
+    },
+    {
+      "name": "SnakeOil Standard 250",
+      "id": "snakeoil_standard_250"
+    },
+    {
+      "name": "Snapmaker 2 A150",
+      "id": "snapmaker2_A150"
+    },
+    {
+      "name": "Snapmaker 2 A150 Dual Extruder",
+      "id": "snapmaker2_A150_dual"
+    },
+    {
+      "name": "Snapmaker 2 A250",
+      "id": "snapmaker2_A250"
+    },
+    {
+      "name": "Snapmaker 2 A250 Dual Extruder",
+      "id": "snapmaker2_A250_dual"
+    },
+    {
+      "name": "Snapmaker 2 A350",
+      "id": "snapmaker2_A350"
+    },
+    {
+      "name": "Snapmaker 2 A350 Dual Extruder",
+      "id": "snapmaker2_A350_dual"
+    },
+    {
+      "name": "Sovol Base Bowden Printer",
+      "id": "sovol_base_bowden"
+    },
+    {
+      "name": "Sovol Base Planetary Printer",
+      "id": "sovol_base_planetary"
+    },
+    {
+      "name": "Sovol Base Titan Printer",
+      "id": "sovol_base_titan"
+    },
+    {
+      "name": "Sovol SV01",
+      "id": "sovol_sv01"
+    },
+    {
+      "name": "Sovol SV01PRO",
+      "id": "sovol_sv01pro"
+    },
+    {
+      "name": "Sovol SV03",
+      "id": "sovol_sv03"
+    },
+    {
+      "name": "Sovol SV04 Copy Mode",
+      "id": "sovol_sv04_copy_mode"
+    },
+    {
+      "name": "Sovol SV04 Dual Mode",
+      "id": "sovol_sv04_dual_mode"
+    },
+    {
+      "name": "Sovol SV04 Mirror Mode",
+      "id": "sovol_sv04_mirror_mode"
+    },
+    {
+      "name": "Sovol SV04 Single Mode 01",
+      "id": "sovol_sv04_single_mode_1"
+    },
+    {
+      "name": "Sovol SV04 Single Mode 02",
+      "id": "sovol_sv04_single_mode_2"
+    },
+    {
+      "name": "Sovol SV05",
+      "id": "sovol_sv05"
+    },
+    {
+      "name": "Sovol SV06",
+      "id": "sovol_sv06"
+    },
+    {
+      "name": "Sovol SV08",
+      "id": "sovol_sv08"
+    },
+    {
+      "name": "Sovol-SV01 (Legacy)",
+      "id": "SV01"
+    },
+    {
+      "name": "Sovol-SV02 (Legacy)",
+      "id": "SV02"
+    },
+    {
+      "name": "Sovol-SV03 (Legacy)",
+      "id": "SV03"
+    },
+    {
+      "name": "Sovol-SV06 Plus",
+      "id": "sovol_sv06_plus"
+    },
+    {
+      "name": "Stereotech STE320",
+      "id": "stereotech_ste320"
+    },
+    {
+      "name": "Stereotech Start",
+      "id": "stereotech_start"
+    },
+    {
+      "name": "SyndaverAxi",
+      "id": "syndaveraxi"
+    },
+    {
+      "name": "SyndaverAxi2",
+      "id": "syndaveraxi2"
+    },
+    {
+      "name": "Tank M3",
+      "id": "tank_m3"
+    },
+    {
+      "name": "Tank M3 Max",
+      "id": "tank_m3_max"
+    },
+    {
+      "name": "Tevo Black Widow",
+      "id": "tevo_blackwidow"
+    },
+    {
+      "name": "Tevo Tarantula",
+      "id": "tevo_tarantula"
+    },
+    {
+      "name": "Tevo Tarantula Pro",
+      "id": "tevo_tarantula_pro"
+    },
+    {
+      "name": "Tevo Tornado",
+      "id": "tevo_tornado"
+    },
+    {
+      "name": "TinyBoy E10/J10/L10/M10",
+      "id": "tinyboy_e10"
+    },
+    {
+      "name": "TinyBoy E16/L16/M16",
+      "id": "tinyboy_e16"
+    },
+    {
+      "name": "TinyBoy Fabrikator Mini 1.5",
+      "id": "tinyboy_fabrikator15"
+    },
+    {
+      "name": "TinyBoy RA20",
+      "id": "tinyboy_ra20"
+    },
+    {
+      "name": "Tizyx Evy",
+      "id": "tizyx_evy"
+    },
+    {
+      "name": "Tizyx Evy Dual",
+      "id": "tizyx_evy_dual"
+    },
+    {
+      "name": "Tizyx K25",
+      "id": "tizyx_k25"
+    },
+    {
+      "name": "Toybox Alpha One/Two/Three",
+      "id": "toybox_alpha_one_two"
+    },
+    {
+      "name": "Trimaker Cosmos II",
+      "id": "trimaker_cosmosII"
+    },
+    {
+      "name": "Trimaker Nebula",
+      "id": "trimaker_nebula"
+    },
+    {
+      "name": "Trimaker Nebula Plus",
+      "id": "trimaker_nebula_plus"
+    },
+    {
+      "name": "Tronxy D01",
+      "id": "tronxy_d01"
+    },
+    {
+      "name": "Tronxy X5SA/X5ST/Pro/2E 400mm",
+      "id": "tronxy_x5sa_400"
+    },
+    {
+      "name": "Tronxy X5SA/X5ST/Pro/2E 500mm",
+      "id": "tronxy_x5sa_500"
+    },
+    {
+      "name": "Tronxy X5SA/X5ST/Pro/2E/D01 Plus",
+      "id": "tronxy_x5sa"
+    },
+    {
+      "name": "Tronxy XY-2",
+      "id": "tronxy_xy2"
+    },
+    {
+      "name": "Tronxy XY-2 Pro/Pro 2E/XY3 SE",
+      "id": "tronxy_xy2pro"
+    },
+    {
+      "name": "Tronxy XY-3 Pro V2",
+      "id": "tronxy_xy3proV2"
+    },
+    {
+      "name": "Tronxy XY-3/Pro",
+      "id": "tronxy_xy3"
+    },
+    {
+      "name": "Two Trees Bluer",
+      "id": "two_trees_bluer"
+    },
+    {
+      "name": "Two Trees Bluer Plus",
+      "id": "two_trees_bluerplus"
+    },
+    {
+      "name": "Two Trees Sapphire Plus",
+      "id": "two_trees_sapphireplus"
+    },
+    {
+      "name": "Two Trees Sapphire Pro",
+      "id": "two_trees_sapphirepro"
+    },
+    {
+      "name": "Tyro",
+      "id": "key3d_tyro"
+    },
+    {
+      "name": "UMO+ DXU",
+      "id": "dxu_umo"
+    },
+    {
+      "name": "UMO+ DXU Dual",
+      "id": "dxu_umo_dual"
+    },
+    {
+      "name": "UltiMaker Factor 4",
+      "id": "ultimaker_factor4"
+    },
+    {
+      "name": "UltiMaker Method",
+      "id": "ultimaker_method"
+    },
+    {
+      "name": "UltiMaker Method X",
+      "id": "ultimaker_methodx"
+    },
+    {
+      "name": "UltiMaker Method XL",
+      "id": "ultimaker_methodxl"
+    },
+    {
+      "name": "UltiMaker S3",
+      "id": "ultimaker_s3"
+    },
+    {
+      "name": "UltiMaker S5",
+      "id": "ultimaker_s5"
+    },
+    {
+      "name": "UltiMaker S6",
+      "id": "ultimaker_s6"
+    },
+    {
+      "name": "UltiMaker S7",
+      "id": "ultimaker_s7"
+    },
+    {
+      "name": "UltiMaker S8",
+      "id": "ultimaker_s8"
+    },
+    {
+      "name": "Ultimaker 2",
+      "id": "ultimaker2"
+    },
+    {
+      "name": "Ultimaker 2 Extended",
+      "id": "ultimaker2_extended"
+    },
+    {
+      "name": "Ultimaker 2 Extended with Olsson",
+      "id": "ultimaker2_extended_olsson"
+    },
+    {
+      "name": "Ultimaker 2 Extended+",
+      "id": "ultimaker2_extended_plus"
+    },
+    {
+      "name": "Ultimaker 2 Go",
+      "id": "ultimaker2_go"
+    },
+    {
+      "name": "Ultimaker 2 with Olsson Block",
+      "id": "ultimaker2_olsson"
+    },
+    {
+      "name": "Ultimaker 2+",
+      "id": "ultimaker2_plus"
+    },
+    {
+      "name": "Ultimaker 2+ Connect",
+      "id": "ultimaker2_plus_connect"
+    },
+    {
+      "name": "Ultimaker 3",
+      "id": "ultimaker3"
+    },
+    {
+      "name": "Ultimaker 3 Extended",
+      "id": "ultimaker3_extended"
+    },
+    {
+      "name": "Ultimaker Original",
+      "id": "ultimaker_original"
+    },
+    {
+      "name": "Ultimaker Original Dual Extrusion",
+      "id": "ultimaker_original_dual"
+    },
+    {
+      "name": "Ultimaker Original+",
+      "id": "ultimaker_original_plus"
+    },
+    {
+      "name": "Uni 200",
+      "id": "uni_200"
+    },
+    {
+      "name": "Uni 250",
+      "id": "uni_250"
+    },
+    {
+      "name": "Uni 300",
+      "id": "uni_300"
+    },
+    {
+      "name": "Uni Mini",
+      "id": "uni_mini"
+    },
+    {
+      "name": "Uni-Print-3D",
+      "id": "uni_print_3d"
+    },
+    {
+      "name": "Uniqbot",
+      "id": "uniqbot_one"
+    },
+    {
+      "name": "Vertex Delta K8800",
+      "id": "vertex_delta_k8800"
+    },
+    {
+      "name": "Vertex K8400",
+      "id": "vertex_k8400"
+    },
+    {
+      "name": "Vertex K8400 Dual",
+      "id": "vertex_k8400_dual"
+    },
+    {
+      "name": "Vertex K8600",
+      "id": "vertex_nano_k8600"
+    },
+    {
+      "name": "Vivedino T-REX 2+",
+      "id": "vivedino_trex2plus"
+    },
+    {
+      "name": "Vivedino T-REX 3",
+      "id": "vivedino_trex3"
+    },
+    {
+      "name": "Volumic SH65",
+      "id": "sh65"
+    },
+    {
+      "name": "Volumic Stream20Dual MK2",
+      "id": "stream20dual_mk2"
+    },
+    {
+      "name": "Volumic Stream20Pro MK2",
+      "id": "stream20pro_mk2"
+    },
+    {
+      "name": "Volumic Stream30Dual MK2",
+      "id": "stream30dual_mk2"
+    },
+    {
+      "name": "Volumic Stream30Pro MK2",
+      "id": "stream30pro_mk2"
+    },
+    {
+      "name": "Volumic Stream30Pro MK3",
+      "id": "stream30mk3"
+    },
+    {
+      "name": "Volumic Stream30Ultra",
+      "id": "stream30ultra"
+    },
+    {
+      "name": "Volumic Stream30Ultra SC",
+      "id": "stream30ultrasc"
+    },
+    {
+      "name": "Volumic Stream30Ultra SC2",
+      "id": "stream30ultrasc2"
+    },
+    {
+      "name": "Voron 0",
+      "id": "voron0_120"
+    },
+    {
+      "name": "Voron Trident 250",
+      "id": "voron_trident_250"
+    },
+    {
+      "name": "Voron Trident 300",
+      "id": "voron_trident_300"
+    },
+    {
+      "name": "Voron Trident 350",
+      "id": "voron_trident_350"
+    },
+    {
+      "name": "Voron2 250",
+      "id": "voron2_250"
+    },
+    {
+      "name": "Voron2 300",
+      "id": "voron2_300"
+    },
+    {
+      "name": "Voron2 350",
+      "id": "voron2_350"
+    },
+    {
+      "name": "Voron2 Custom",
+      "id": "voron2_custom"
+    },
+    {
+      "name": "Voron2 StealthChanger 250",
+      "id": "voron2_stealthchanger_250"
+    },
+    {
+      "name": "Voron2 StealthChanger 300",
+      "id": "voron2_stealthchanger_300"
+    },
+    {
+      "name": "Voron2 StealthChanger 350",
+      "id": "voron2_stealthchanger_350"
+    },
+    {
+      "name": "Vulcan",
+      "id": "mixware_vulcan"
+    },
+    {
+      "name": "VzBot 235",
+      "id": "vzbot_235"
+    },
+    {
+      "name": "VzBot 330",
+      "id": "vzbot_330"
+    },
+    {
+      "name": "VzBot Custom",
+      "id": "vzbot_custom"
+    },
+    {
+      "name": "WEEDO F150S",
+      "id": "weedo_f150s"
+    },
+    {
+      "name": "WEEDO F152S",
+      "id": "weedo_f152s"
+    },
+    {
+      "name": "WEEDO F370",
+      "id": "weedo_f370"
+    },
+    {
+      "name": "WEEDO ME40",
+      "id": "weedo_me40"
+    },
+    {
+      "name": "WEEDO ME40 Lite",
+      "id": "weedo_me40_lite"
+    },
+    {
+      "name": "WEEDO TINA2",
+      "id": "weedo_tina2"
+    },
+    {
+      "name": "WEEDO TINA2S",
+      "id": "weedo_tina2s"
+    },
+    {
+      "name": "WEEDO X40 V3+",
+      "id": "weedo_x40v3"
+    },
+    {
+      "name": "WEEFUN TINA2",
+      "id": "weefun_tina2"
+    },
+    {
+      "name": "WEEFUN TINA2S",
+      "id": "weefun_tina2s"
+    },
+    {
+      "name": "Wand",
+      "id": "mixware_wand"
+    },
+    {
+      "name": "Wanhao Duplicator 4S",
+      "id": "wanhao_d4s"
+    },
+    {
+      "name": "Wanhao Duplicator 5S",
+      "id": "wanhao_duplicator5S"
+    },
+    {
+      "name": "Wanhao Duplicator 5S Mini",
+      "id": "wanhao_duplicator5Smini"
+    },
+    {
+      "name": "Wanhao Duplicator 6",
+      "id": "wanhao_d6"
+    },
+    {
+      "name": "Wanhao Duplicator 6 Plus",
+      "id": "wanhao_d6_plus"
+    },
+    {
+      "name": "Wanhao Duplicator 9",
+      "id": "wanhao_d9"
+    },
+    {
+      "name": "Wanhao Duplicator i3",
+      "id": "wanhao_i3"
+    },
+    {
+      "name": "Wanhao Duplicator i3 Mini",
+      "id": "wanhao_i3mini"
+    },
+    {
+      "name": "Wanhao Duplicator i3 Plus",
+      "id": "wanhao_i3plus"
+    },
+    {
+      "name": "Weedo X40",
+      "id": "weedo_x40"
+    },
+    {
+      "name": "Winbo Dragon(L)4",
+      "id": "winbo_dragonl4"
+    },
+    {
+      "name": "Winbo Mini2",
+      "id": "winbo_mini2"
+    },
+    {
+      "name": "Winbo Super Helper 105",
+      "id": "winbo_superhelper105"
+    },
+    {
+      "name": "Winbo Super Helper 155",
+      "id": "winbo_superhelper155"
+    },
+    {
+      "name": "XYZprinting da Vinci 1.0 Pro",
+      "id": "xyzprinting_da_vinci_1p0_pro"
+    },
+    {
+      "name": "XYZprinting da Vinci Jr. 1.0A Pro",
+      "id": "xyzprinting_da_vinci_jr_1p0a_pro"
+    },
+    {
+      "name": "XYZprinting da Vinci Jr. Pro X+",
+      "id": "xyzprinting_da_vinci_jr_pro_xplus"
+    },
+    {
+      "name": "XYZprinting da Vinci Jr. Pro Xe+",
+      "id": "xyzprinting_da_vinci_jr_pro_xeplus"
+    },
+    {
+      "name": "XYZprinting da Vinci Jr. WiFi Pro",
+      "id": "xyzprinting_da_vinci_jr_w_pro"
+    },
+    {
+      "name": "XYZprinting da Vinci Pro EVO",
+      "id": "xyzprinting_da_vinci_pro_evo"
+    },
+    {
+      "name": "XYZprinting da Vinci Super",
+      "id": "xyzprinting_da_vinci_super"
+    },
+    {
+      "name": "Z-Bolt Classic",
+      "id": "z-bolt_classic"
+    },
+    {
+      "name": "Z-Bolt Plus",
+      "id": "z-bolt_plus"
+    },
+    {
+      "name": "ZYYX Pro",
+      "id": "zyyx_pro"
+    },
+    {
+      "name": "ZYYX+",
+      "id": "zyyx_plus"
+    },
+    {
+      "name": "Zav Big",
+      "id": "zav_big"
+    },
+    {
+      "name": "Zav Big+",
+      "id": "zav_bigplus"
+    },
+    {
+      "name": "Zav L Family Printer",
+      "id": "zav_l"
+    },
+    {
+      "name": "Zav Max",
+      "id": "zav_max"
+    },
+    {
+      "name": "Zav Mini",
+      "id": "zav_mini"
+    },
+    {
+      "name": "Zav Pro",
+      "id": "zav_maxpro"
+    },
+    {
+      "name": "Zone3d Printer",
+      "id": "zone3d_printer"
+    },
+    {
+      "name": "gMax 1.5 Plus",
+      "id": "gmax15plus"
+    },
+    {
+      "name": "gMax 1.5 Plus Dual Extruder",
+      "id": "gmax15plus_dual"
+    },
+    {
+      "name": "nps",
+      "id": "nps"
+    },
+    {
+      "name": "uBuild-3D Mr Bot 280",
+      "id": "ubuild-3d_mr_bot_280"
+    }
   ],
   "process": [],
   "filament": []
