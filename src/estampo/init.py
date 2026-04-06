@@ -536,84 +536,24 @@ def _match_filament_profile(tray_type: str, profile_names: list[str]) -> str | N
 
 
 def _detect_orca_version() -> str | None:
-    """Try to detect the installed OrcaSlicer version.
+    """Try to detect the installed OrcaSlicer version."""
+    from estampo.orca import _detect_orca_version as _impl
 
-    Set ESTAMPO_SKIP_SLICER_DETECT=1 to skip (useful in headless environments
-    where launching OrcaSlicer --help may hang).
-    """
-    skip_detect = os.environ.get("ESTAMPO_SKIP_SLICER_DETECT")
-    if not skip_detect:
-        skip_detect = os.environ.get("FABPRINT_SKIP_SLICER_DETECT")
-        if skip_detect:
-            import warnings
-
-            warnings.warn(
-                "FABPRINT_SKIP_SLICER_DETECT is deprecated"
-                " — use ESTAMPO_SKIP_SLICER_DETECT instead",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-    if skip_detect:
-        return None
-    try:
-        from estampo.slicer import SLICER_PATHS, _detect_slicer_version
-
-        slicer = SLICER_PATHS.get("orca")
-        if slicer and slicer.exists():
-            return _detect_slicer_version(slicer)
-    except Exception:
-        log.debug("Failed to detect OrcaSlicer version", exc_info=True)
-    return None
+    return _impl()
 
 
 def _fetch_available_versions() -> list[str]:
-    """Return OrcaSlicer versions available as Docker images.
+    """Return OrcaSlicer versions available as Docker images."""
+    from estampo.orca import _fetch_available_versions as _impl
 
-    Reads from the bundled docker_versions.json (updated at release time
-    by scripts/update_docker_versions.py). No network call at runtime.
-    """
-    import json
-
-    versions_file = Path(__file__).parent / "docker_versions.json"
-    try:
-        return json.loads(versions_file.read_text())
-    except Exception:
-        log.debug("Failed to read docker_versions.json", exc_info=True)
-        return []
+    return _impl()
 
 
 def _prompt_slicer_version() -> str | None:
     """Prompt for OrcaSlicer version, offering available Docker image versions."""
-    from estampo import ui
+    from estampo.orca import _prompt_slicer_version as _impl
 
-    detected = _detect_orca_version()
-    available = _fetch_available_versions()
-
-    if available:
-        options = list(available) + ["Skip (don't pin version)"]
-        # Pre-select detected version if it's in the list
-        default_idx = 1
-        if detected and detected in available:
-            default_idx = available.index(detected) + 1
-
-        ui.choice_table(
-            [(v,) for v in options],
-            ["Available versions"],
-        )
-        pick = _prompt_int("Pick version", default_idx)
-        idx = pick - 1
-        if 0 <= idx < len(available):
-            version = available[idx]
-            ui.success(f"OrcaSlicer v{version}")
-            return version
-        return None
-
-    # Fallback: no Docker images found, prompt manually
-    if detected:
-        version = _prompt_str("OrcaSlicer version to pin (leave blank to skip)", detected)
-    else:
-        version = _prompt_str("OrcaSlicer version to pin (leave blank to skip)")
-    return version or None
+    return _impl()
 
 
 def _prompt_choice(prompt: str, options: list[str], allow_multi: bool = False) -> list[int]:
@@ -1433,117 +1373,9 @@ def _build_toml(
 # Extract config from OrcaSlicer 3MF
 # ---------------------------------------------------------------------------
 
-# Machine profile keys worth comparing for overrides.
-# Only keys the user is likely to customise on their physical printer.
-_MACHINE_OVERRIDE_KEYS = [
-    "nozzle_type",
-    "nozzle_hrc",
-]
-
-# Default nozzle_type values from OrcaSlicer base machine profiles.
-# If the 3MF declares a different value we emit a machine_override.
-_DEFAULT_NOZZLE_TYPES = {
-    "undefine",
-    "stainless_steel",
-    "brass",
-}
-
 
 def extract_from_3mf(path: Path) -> str:
-    """Read an OrcaSlicer 3MF and generate an estampo.toml.
+    """Read an OrcaSlicer 3MF and generate an estampo.toml."""
+    from estampo.orca import extract_from_3mf as _impl
 
-    The 3MF must contain ``Metadata/project_settings.config`` (present in
-    any project saved or sliced by OrcaSlicer).
-    """
-    import json
-    import zipfile
-
-    from estampo import EstampoError
-
-    if not path.exists():
-        raise EstampoError(f"File not found: {path}")
-
-    with zipfile.ZipFile(path) as zf:
-        if "Metadata/project_settings.config" not in zf.namelist():
-            raise EstampoError(
-                f"{path.name} does not contain Metadata/project_settings.config — "
-                "open it in OrcaSlicer and re-save the project"
-            )
-        settings = json.loads(zf.read("Metadata/project_settings.config"))
-
-    # --- Extract profile names ---
-    printer_profile = settings.get("printer_settings_id")
-    process_profile = settings.get("print_settings_id")
-    bed_type = settings.get("curr_bed_type")
-
-    # Filaments: deduplicate while preserving order
-    raw_filaments = settings.get("filament_settings_id", [])
-    if isinstance(raw_filaments, str):
-        raw_filaments = [raw_filaments]
-    seen: set[str] = set()
-    filaments: list[str] = []
-    for f in raw_filaments:
-        if f and f not in seen:
-            filaments.append(f)
-            seen.add(f)
-
-    # --- Detect machine overrides ---
-    machine_overrides: dict[str, str] = {}
-    nozzle_type = settings.get("nozzle_type")
-    if isinstance(nozzle_type, list):
-        nozzle_type = nozzle_type[0] if nozzle_type else None
-    if nozzle_type and nozzle_type not in _DEFAULT_NOZZLE_TYPES:
-        machine_overrides["nozzle_type"] = nozzle_type
-
-    # --- Detect slicer version from image if available ---
-    # The 3MF doesn't store the OrcaSlicer version directly, so we leave
-    # it for the user to fill in.  We add a comment hint.
-
-    # --- Plate size from printable_area ---
-    plate_size = (256, 256)  # fallback
-    printable_area = settings.get("printable_area")
-    if isinstance(printable_area, list) and len(printable_area) >= 3:
-        # printable_area is ["0x0", "256x0", "256x256", "0x256"]
-        try:
-            x, y = printable_area[2].split("x")
-            plate_size = (int(float(x)), int(float(y)))
-        except (ValueError, AttributeError):
-            pass
-
-    project_name = path.stem if path.stem != "estampo" else path.parent.name
-
-    # --- Discover CAD files in the working directory ---
-    cwd = Path.cwd()
-    cad_files = sorted(
-        p.name
-        for ext in ("*.stl", "*.3mf", "*.step", "*.STL", "*.3MF", "*.STEP")
-        for p in cwd.glob(ext)
-        if p != path  # exclude the source 3MF itself
-    )
-    if cad_files:
-        parts = [{"file": f} for f in cad_files]
-    else:
-        parts = [{"file": "# TODO: add your .stl/.step/.3mf files"}]
-
-    toml = _build_toml(
-        project_name=project_name,
-        engine="orca",
-        printer_profile=printer_profile,
-        process_profile=process_profile,
-        filament_names=filaments,
-        parts=parts,
-        plate_size=plate_size,
-        slicer_version=None,  # user should pin this
-        stages=list(DEFAULT_STAGES),
-        printer_name=None,
-        bed_type=bed_type,
-        machine_overrides=machine_overrides or None,
-    )
-
-    # Add a version comment hint
-    toml = toml.replace(
-        'engine = "orca"',
-        'engine = "orca"\n# version = "2.3.2"  # uncomment and set your OrcaSlicer version',
-    )
-
-    return toml
+    return _impl(path)

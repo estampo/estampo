@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import logging
 import subprocess
-import sys
 import tempfile
 from pathlib import Path
 from urllib.error import URLError
@@ -13,30 +12,17 @@ from urllib.request import urlopen
 
 from estampo import EstampoError
 
+# Re-export OrcaSlicer profile symbols for backward compatibility.
+from estampo.orca import (  # noqa: F401
+    SYSTEM_DIRS,
+    _resolve_profile_data_from_dir,
+    _system_dirs,
+    extract_docker_profiles,
+)
+
 log = logging.getLogger(__name__)
 
 CATEGORIES = ("machine", "process", "filament")
-
-
-def _system_dirs() -> dict[str, Path]:
-    """Return slicer system profile directories for the current platform."""
-    if sys.platform == "darwin":
-        return {
-            "orca": Path.home() / "Library/Application Support/OrcaSlicer/system/BBL",
-        }
-    elif sys.platform == "win32":
-        appdata = Path.home() / "AppData/Roaming"
-        return {
-            "orca": appdata / "OrcaSlicer/system/BBL",
-        }
-    else:  # Linux and other Unix
-        config = Path.home() / ".config"
-        return {
-            "orca": config / "OrcaSlicer/system/BBL",
-        }
-
-
-SYSTEM_DIRS = _system_dirs()
 
 
 def _is_path(value: str) -> bool:
@@ -233,162 +219,6 @@ def discover_profile_names(
         return bundled, "bundled"
 
     return {cat: [] for cat in CATEGORIES}, "none"
-
-
-# ---------------------------------------------------------------------------
-# Docker profile extraction
-# ---------------------------------------------------------------------------
-
-# Profile path inside the OrcaSlicer Docker container
-_DOCKER_PROFILE_ROOT = "/opt/orca-slicer/resources/profiles/BBL"
-
-
-def _docker_image_for_version(version: str | None) -> str:
-    """Build the Docker image name for a given OrcaSlicer version."""
-    from estampo.slicer import docker_image
-
-    return docker_image(version)
-
-
-def extract_docker_profiles(
-    version: str | None = None,
-    image: str | None = None,
-) -> Path:
-    """Extract OrcaSlicer profiles from a Docker image to a temp directory.
-
-    Uses ``docker create`` + ``docker cp`` + ``docker rm`` to avoid
-    starting the container (no Xvfb needed).
-
-    Returns a Path to a temporary directory structured as
-    ``<tmpdir>/{machine,process,filament}/*.json``.
-    The caller is responsible for cleanup.
-    """
-    if not image:
-        image = _docker_image_for_version(version)
-
-    # Ensure image is available
-    from estampo.slicer import _ensure_docker_image
-
-    if not _ensure_docker_image(image):
-        raise EstampoError(
-            f"Docker image {image} is not available and could not be pulled. "
-            "Check your Docker setup or install the slicer locally."
-        )
-
-    from estampo import ui
-
-    tmp_dir = Path(tempfile.mkdtemp(prefix="estampo_profiles_"))
-    container_id = None
-    try:
-        with ui.status("Extracting profiles from Docker image"):
-            # Create a stopped container (does not start it)
-            result = subprocess.run(
-                ["docker", "create", "--platform", "linux/amd64", image, "true"],
-                capture_output=True,
-                text=True,
-                timeout=30,
-            )
-            if result.returncode != 0:
-                raise EstampoError(f"docker create failed: {result.stderr.strip()}")
-            container_id = result.stdout.strip()
-
-            # Copy the entire BBL profile tree (includes root-level base profiles
-            # that category profiles may inherit from).
-            # docker cp copies directory contents into the destination, so
-            # the result is bbl_dest/{machine,process,filament,...}
-            bbl_dest = tmp_dir / "_bbl"
-            cp_result = subprocess.run(
-                ["docker", "cp", f"{container_id}:{_DOCKER_PROFILE_ROOT}/.", str(bbl_dest)],
-                capture_output=True,
-                text=True,
-                timeout=30,
-            )
-            if cp_result.returncode == 0 and bbl_dest.is_dir():
-                # Move category dirs up to tmp_dir for backwards compatibility
-                for category in CATEGORIES:
-                    src_cat = bbl_dest / category
-                    dest_cat = tmp_dir / category
-                    if src_cat.is_dir():
-                        src_cat.rename(dest_cat)
-                # Move any remaining files/dirs (root-level base profiles, common/, etc.)
-                for item in list(bbl_dest.iterdir()):
-                    item.rename(tmp_dir / item.name)
-                if not any(bbl_dest.iterdir()):
-                    bbl_dest.rmdir()
-            else:
-                log.debug(
-                    "Bulk docker cp failed, falling back to per-category copy: %s",
-                    cp_result.stderr.strip(),
-                )
-                for category in CATEGORIES:
-                    src = f"{container_id}:{_DOCKER_PROFILE_ROOT}/{category}"
-                    dest = tmp_dir / category
-                    cat_result = subprocess.run(
-                        ["docker", "cp", src, str(dest)],
-                        capture_output=True,
-                        text=True,
-                        timeout=30,
-                    )
-                    if cat_result.returncode != 0:
-                        log.debug("docker cp %s failed: %s", category, cat_result.stderr.strip())
-
-    finally:
-        # Clean up the container
-        if container_id:
-            subprocess.run(
-                ["docker", "rm", container_id],
-                capture_output=True,
-                timeout=10,
-            )
-
-    return tmp_dir
-
-
-def _resolve_profile_data_from_dir(
-    name: str,
-    category: str,
-    base_dir: Path,
-) -> dict:
-    """Resolve and flatten a profile from a directory, walking the inheritance chain."""
-    profile_path = base_dir / category / f"{name}.json"
-    if not profile_path.exists():
-        raise FileNotFoundError(f"Profile '{name}' not found in {base_dir / category}")
-
-    chain = []
-    current = profile_path
-    seen: set[str] = set()
-    while current:
-        if str(current) in seen:
-            break
-        seen.add(str(current))
-        with open(current) as f:
-            data = json.load(f)
-        chain.append(data)
-        parent_name = data.get("inherits")
-        if not parent_name:
-            break
-        # Check sibling directory first, then base_dir/category as fallback
-        sibling = current.parent / f"{parent_name}.json"
-        fallback = base_dir / category / f"{parent_name}.json"
-        if sibling.exists():
-            current = sibling
-        elif fallback != sibling and fallback.exists():
-            current = fallback
-        else:
-            log.warning(
-                "Profile '%s' inherits from '%s' but parent not found in %s",
-                current.stem,
-                parent_name,
-                base_dir,
-            )
-            break
-
-    # Merge root-first so leaf values override parents
-    merged: dict = {}
-    for data in reversed(chain):
-        merged.update(data)
-    merged.pop("inherits", None)
-    return merged
 
 
 # ---------------------------------------------------------------------------
