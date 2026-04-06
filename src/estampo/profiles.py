@@ -4,15 +4,20 @@ from __future__ import annotations
 
 import json
 import logging
-import subprocess
-import tempfile
 from pathlib import Path
 from urllib.error import URLError
 from urllib.request import urlopen
 
 from estampo import EstampoError
+from estampo.cura import (  # noqa: F401
+    _deep_merge_cura_overrides,
+    _squash_cura_def,
+    extract_cura_docker_defs,
+    load_cura_definition_map,
+    pin_cura_definitions,
+)
 
-# Re-export OrcaSlicer profile symbols for backward compatibility.
+# Re-export engine-specific profile symbols for backward compatibility.
 from estampo.orca import (  # noqa: F401
     SYSTEM_DIRS,
     _resolve_profile_data_from_dir,
@@ -132,21 +137,6 @@ def _extract_names(items: list) -> list[str]:
         elif isinstance(item, dict) and "name" in item:
             names.append(item["name"])
     return names
-
-
-def load_cura_definition_map(version: str | None = None) -> dict[str, str]:
-    """Load a mapping of CuraEngine definition names to IDs.
-
-    Returns ``{"BambuLab P1S": "bambulab_p1s", ...}``.
-    """
-    data = _load_bundled_manifest("cura", version)
-    if not data:
-        return {}
-    result: dict[str, str] = {}
-    for item in data.get("machine", []):
-        if isinstance(item, dict) and "name" in item and "id" in item:
-            result[item["name"]] = item["id"]
-    return result
 
 
 def discover_profile_names(
@@ -389,206 +379,6 @@ def validate_override_keys(
         f"— it will be injected but may be ignored by the slicer"
         for k in unknown
     ]
-
-
-# ---------------------------------------------------------------------------
-# CuraEngine definition pinning (inheritance squashing)
-# ---------------------------------------------------------------------------
-
-_CURA_DOCKER_DEFS_DIR = "/opt/cura/definitions"
-
-
-def _deep_merge_cura_overrides(base: dict, child: dict) -> dict:
-    """Deep-merge CuraEngine overrides dicts.
-
-    Each key maps to a sub-dict like ``{"value": X, "default_value": Y}``.
-    Child values override parent values at the per-setting sub-dict level.
-    """
-    merged = dict(base)
-    for key, val in child.items():
-        if key in merged and isinstance(merged[key], dict) and isinstance(val, dict):
-            merged[key] = {**merged[key], **val}
-        else:
-            merged[key] = val
-    return merged
-
-
-def extract_cura_docker_defs(
-    version: str | None = None,
-    image: str | None = None,
-) -> Path:
-    """Extract CuraEngine definitions from a Docker image to a temp directory.
-
-    Returns a Path to a temporary directory containing ``*.def.json`` files.
-    The caller is responsible for cleanup.
-    """
-    if not image:
-        from estampo.cura import cura_docker_image
-
-        image = cura_docker_image(version)
-
-    from estampo.slicer import _ensure_docker_image
-
-    if not _ensure_docker_image(image):
-        raise EstampoError(f"Docker image {image} is not available and could not be pulled.")
-
-    from estampo import ui
-
-    tmp_dir = Path(tempfile.mkdtemp(prefix="estampo_cura_defs_"))
-    container_id = None
-    try:
-        with ui.status("Extracting CuraEngine definitions from Docker image"):
-            result = subprocess.run(
-                ["docker", "create", "--platform", "linux/amd64", image, "true"],
-                capture_output=True,
-                text=True,
-                timeout=30,
-            )
-            if result.returncode != 0:
-                raise EstampoError(f"docker create failed: {result.stderr.strip()}")
-            container_id = result.stdout.strip()
-
-            cp_result = subprocess.run(
-                [
-                    "docker",
-                    "cp",
-                    f"{container_id}:{_CURA_DOCKER_DEFS_DIR}/.",
-                    str(tmp_dir),
-                ],
-                capture_output=True,
-                text=True,
-                timeout=60,
-            )
-            if cp_result.returncode != 0:
-                raise EstampoError(
-                    f"Failed to copy definitions from Docker: {cp_result.stderr.strip()}"
-                )
-    finally:
-        if container_id:
-            subprocess.run(
-                ["docker", "rm", "-f", container_id],
-                capture_output=True,
-                timeout=15,
-            )
-
-    return tmp_dir
-
-
-def _squash_cura_def(def_id: str, defs_dir: Path) -> dict:
-    """Walk the inheritance chain for a CuraEngine definition and squash it.
-
-    Reads ``*.def.json`` files from *defs_dir*, follows ``inherits`` links,
-    and deep-merges overrides from root to leaf.  If the chain ends at an
-    unresolved parent (e.g. ``fdmprinter`` which ships inside the CuraEngine
-    Docker image), ``inherits`` is preserved so CuraEngine can resolve it
-    at runtime via its ``-d`` search path.
-    """
-    chain: list[dict] = []
-    current_id: str | None = def_id
-    seen: set[str] = set()
-    unresolved_parent: str | None = None
-
-    while current_id and current_id not in seen:
-        seen.add(current_id)
-        path = defs_dir / f"{current_id}.def.json"
-        if not path.exists():
-            # Parent not available locally — CuraEngine resolves it at runtime
-            unresolved_parent = current_id
-            break
-        with open(path) as f:
-            data = json.load(f)
-        chain.append(data)
-        parent = data.get("inherits")
-        current_id = parent if isinstance(parent, str) else None
-
-    if not chain:
-        raise EstampoError(f"CuraEngine definition '{def_id}' not found in {defs_dir}")
-
-    # Merge root-first so leaf overrides take precedence
-    merged_overrides: dict = {}
-    merged_metadata: dict = {}
-    for data in reversed(chain):
-        merged_overrides = _deep_merge_cura_overrides(merged_overrides, data.get("overrides", {}))
-        merged_metadata.update(data.get("metadata", {}))
-
-    # Build squashed result from the leaf definition
-    leaf = chain[0]
-    squashed: dict = {
-        "version": leaf.get("version", 2),
-        "name": leaf.get("name", def_id),
-        "metadata": merged_metadata,
-        "overrides": merged_overrides,
-    }
-    if unresolved_parent:
-        squashed["inherits"] = unresolved_parent
-    return squashed
-
-
-def pin_cura_definitions(
-    printer: str | None,
-    project_dir: Path,
-    docker_version: str | None = None,
-    profiles_dir: str = "profiles",
-) -> list[Path]:
-    """Pin (squash) a CuraEngine printer definition for reproducible builds.
-
-    Extracts definitions from the Docker image, walks the inheritance chain,
-    deep-merges overrides, and writes a standalone ``.def.json`` file.
-
-    Returns list of pinned file paths.
-    """
-    import shutil
-
-    if not printer:
-        log.info("No CuraEngine printer specified — nothing to pin.")
-        return []
-
-    from estampo.cura import _resolve_def_name
-
-    def_id = _resolve_def_name(printer)
-
-    # Try to squash from bundled definitions first
-    from estampo.cura import _DATA_DIR
-
-    bundled_def = _DATA_DIR / f"{def_id}.def.json"
-    defs_dir: Path | None = None
-    cleanup_dir: Path | None = None
-
-    try:
-        if bundled_def.exists():
-            # Use bundled defs directory
-            defs_dir = _DATA_DIR
-        elif docker_version:
-            # Extract from Docker
-            defs_dir = extract_cura_docker_defs(docker_version)
-            cleanup_dir = defs_dir
-        else:
-            raise EstampoError(
-                f"CuraEngine definition '{def_id}' not found in bundled data. "
-                "Set slicer.version to extract from the Docker image."
-            )
-
-        squashed = _squash_cura_def(def_id, defs_dir)
-
-        # Write to profiles/cura/definitions/
-        dest_dir = project_dir / profiles_dir / "cura" / "definitions"
-        dest_dir.mkdir(parents=True, exist_ok=True)
-        dest = dest_dir / f"{def_id}.def.json"
-
-        with open(dest, "w") as fh:
-            json.dump(squashed, fh, indent=4)
-        log.info("Pinned CuraEngine definition %s → %s (squashed)", printer, dest)
-
-        # Write version marker
-        if docker_version:
-            marker = project_dir / profiles_dir / "cura" / ".slicer-version"
-            marker.parent.mkdir(parents=True, exist_ok=True)
-            marker.write_text(docker_version + "\n")
-
-        return [dest]
-    finally:
-        if cleanup_dir:
-            shutil.rmtree(cleanup_dir, ignore_errors=True)
 
 
 def pin_profiles(
