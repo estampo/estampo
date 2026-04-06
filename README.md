@@ -48,11 +48,13 @@ filament = 2                    # AMS slot 2: PLA
 [slicer]
 engine = "orca"
 version = "2.3.1"               # pinned for reproducibility
+
+[slicer.orca]
 printer = "Bambu Lab P1S 0.4 nozzle"
 process = "0.20mm Standard @BBL X1C"
 filaments = ["Generic PETG-CF @base", "Generic PLA @base"]
 
-[slicer.overrides]
+[slicer.orca.overrides]
 sparse_infill_density = "25%"
 enable_support = 1
 brim_type = "auto_brim"
@@ -128,6 +130,7 @@ If you mostly want interactive print setup in a GUI, use OrcaSlicer directly.
 
 ### Experimental
 
+- CuraEngine as alternative slicer backend (`engine = "cura"`)
 - Bambu LAN printing
 - Moonraker printing
 
@@ -168,10 +171,12 @@ padding = 5.0
 [slicer]
 engine = "orca"
 version = "2.3.1"       # pin OrcaSlicer version for reproducibility
+
+[slicer.orca]
 printer = "Bambu Lab P1S 0.4 nozzle"
 process = "0.20mm Standard @BBL X1C"
 
-[slicer.overrides]      # simple way to define print settings without editing JSON
+[slicer.orca.overrides]  # simple way to define print settings without editing JSON
 sparse_infill_density = "30%"       # stronger infill
 wall_loops = 3                       # extra wall strength
 enable_support = 1

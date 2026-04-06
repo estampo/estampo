@@ -1,0 +1,1 @@
+Update docs and README to use engine-namespaced ``[slicer.orca]``/``[slicer.cura]`` config format and document ``[filaments]`` table
