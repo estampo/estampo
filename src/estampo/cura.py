@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from estampo import EstampoError
+from estampo.constants import DEFAULT_PLATE_SIZE
 
 log = logging.getLogger(__name__)
 
@@ -183,7 +184,7 @@ def resolve_cura_bed_size(
         except (json.JSONDecodeError, OSError):
             continue
 
-    return (width or 256.0, depth or 256.0)
+    return (width or DEFAULT_PLATE_SIZE[0], depth or DEFAULT_PLATE_SIZE[1])
 
 
 def cura_docker_image(version: str | None = None) -> str:
@@ -593,7 +594,10 @@ def _patch_gcode_header(gcode_path: Path, stderr: str) -> None:
 
 
 def _place_on_bed(
-    stl_path: Path, staging_dir: Path, bed_width: float = 256, bed_depth: float = 256
+    stl_path: Path,
+    staging_dir: Path,
+    bed_width: float = DEFAULT_PLATE_SIZE[0],
+    bed_depth: float = DEFAULT_PLATE_SIZE[1],
 ) -> Path:
     """Copy STL into staging, ensuring the mesh sits on the bed (Z>=0)
     and is centered on the build plate.

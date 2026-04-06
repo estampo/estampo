@@ -5,11 +5,15 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+from estampo.constants import DEFAULT_THUMBNAIL_SIZE
+
 log = logging.getLogger(__name__)
 
 
 def generate_plate_thumbnail(
-    width: int = 256, height: int = 256, plate_3mf: Path | None = None
+    width: int = DEFAULT_THUMBNAIL_SIZE,
+    height: int = DEFAULT_THUMBNAIL_SIZE,
+    plate_3mf: Path | None = None,
 ) -> bytes:
     """Render an isometric thumbnail of the plate using trimesh + Pillow.
 
@@ -156,7 +160,10 @@ def _render_plate_thumbnail(width: int, height: int, plate_3mf: Path) -> bytes:
     return buf.getvalue()
 
 
-def placeholder_thumbnail(width: int = 256, height: int = 256) -> bytes:
+def placeholder_thumbnail(
+    width: int = DEFAULT_THUMBNAIL_SIZE,
+    height: int = DEFAULT_THUMBNAIL_SIZE,
+) -> bytes:
     """Generate a minimal branded placeholder PNG (no mesh data needed)."""
     import struct
     import zlib as _zlib

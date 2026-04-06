@@ -17,6 +17,11 @@ import tempfile
 from pathlib import Path
 
 from estampo import EstampoError
+from estampo.constants import (
+    DEFAULT_PLATE_SIZE,
+    DEFAULT_THUMBNAIL_SIZE,
+    MIN_FILAMENT_SLOTS,
+)
 
 log = logging.getLogger(__name__)
 
@@ -327,10 +332,7 @@ _BC_DEFAULT_KEYS: dict[str, object] = {
     "thumbnails_format": "BTT_TFT",
 }
 
-# Minimum array length for filament-related settings in project_settings.
-# Bambu Connect rejects files where these arrays are shorter than the
-# printer's AMS slot count. 5 covers P1S (4-slot AMS + external spool).
-_MIN_FILAMENT_SLOTS = 5
+_MIN_FILAMENT_SLOTS = MIN_FILAMENT_SLOTS  # backward-compat alias
 
 
 def _fix_sliced_3mf(path: Path, plate_3mf: Path | None = None) -> None:
@@ -408,10 +410,11 @@ def _fix_sliced_3mf(path: Path, plate_3mf: Path | None = None) -> None:
         # A valid PNG is > 1KB; broken headless ones are empty or tiny.
         _THUMB_MIN_SIZE = 1024
         thumbnail_overrides: dict[str, bytes] = {}
+        _ts = DEFAULT_THUMBNAIL_SIZE
         thumb_files = {
-            "Metadata/plate_1.png": (256, 256),
-            "Metadata/plate_no_light_1.png": (256, 256),
-            "Metadata/plate_1_small.png": (128, 128),
+            "Metadata/plate_1.png": (_ts, _ts),
+            "Metadata/plate_no_light_1.png": (_ts, _ts),
+            "Metadata/plate_1_small.png": (_ts // 2, _ts // 2),
         }
         for fname, (w, h) in thumb_files.items():
             try:
@@ -1012,7 +1015,7 @@ def extract_from_3mf(path: Path) -> str:
         machine_overrides["nozzle_type"] = nozzle_type
 
     # --- Plate size from printable_area ---
-    plate_size = (256, 256)  # fallback
+    plate_size = (int(DEFAULT_PLATE_SIZE[0]), int(DEFAULT_PLATE_SIZE[1]))
     printable_area = settings.get("printable_area")
     if isinstance(printable_area, list) and len(printable_area) >= 3:
         # printable_area is ["0x0", "256x0", "256x256", "0x256"]

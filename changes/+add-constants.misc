@@ -1,0 +1,1 @@
+Extract shared magic numbers into ``constants.py`` and migrate example configs to engine-namespaced ``[slicer.orca]``/``[slicer.cura]`` format

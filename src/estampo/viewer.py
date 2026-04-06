@@ -8,13 +8,15 @@ from pathlib import Path
 
 import trimesh
 
+from estampo.constants import DEFAULT_PLATE_SIZE
+
 log = logging.getLogger(__name__)
 
 
 def show_plate(
     meshes: list[trimesh.Trimesh],
     names: list[str] | None = None,
-    plate_size: tuple[float, float] = (256, 256),
+    plate_size: tuple[float, float] = DEFAULT_PLATE_SIZE,
 ) -> None:
     """Display arranged meshes, trying ocp_vscode first, then trimesh viewer."""
     if _try_ocp(meshes, names, plate_size):
