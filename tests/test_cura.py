@@ -10,6 +10,8 @@ from estampo.cura import (
     _patch_gcode_header,
     _place_on_bed,
     _resolve_def_name,
+    _safe_eval_arithmetic,
+    _safe_eval_condition,
     _settings_flags,
     _substitute_gcode_templates,
     cura_docker_image,
@@ -506,3 +508,45 @@ def test_substitute_no_change(tmp_path):
     profile = CuraProfile()
     _substitute_gcode_templates(gcode, profile)
     assert gcode.read_text() == original
+
+
+# --- _safe_eval_arithmetic ---
+
+
+def test_safe_eval_arithmetic_basic():
+    assert _safe_eval_arithmetic("260 - 20") == 240.0
+    assert _safe_eval_arithmetic("100 + 50") == 150.0
+    assert _safe_eval_arithmetic("10 * 3") == 30.0
+    assert _safe_eval_arithmetic("100 / 4") == 25.0
+
+
+def test_safe_eval_arithmetic_negative():
+    assert _safe_eval_arithmetic("-5") == -5.0
+
+
+def test_safe_eval_arithmetic_rejects_function_calls():
+    with pytest.raises(ValueError, match="Unsupported"):
+        _safe_eval_arithmetic("__import__('os').system('rm -rf /')")
+
+
+def test_safe_eval_arithmetic_rejects_names():
+    with pytest.raises(ValueError, match="Unsupported"):
+        _safe_eval_arithmetic("x + 1")
+
+
+# --- _safe_eval_condition ---
+
+
+def test_safe_eval_condition_string_eq():
+    assert _safe_eval_condition("'foo' == 'foo'") is True
+    assert _safe_eval_condition("'foo' == 'bar'") is False
+
+
+def test_safe_eval_condition_string_neq():
+    assert _safe_eval_condition("'foo' != 'bar'") is True
+    assert _safe_eval_condition("'foo' != 'foo'") is False
+
+
+def test_safe_eval_condition_rejects_function_calls():
+    with pytest.raises(ValueError):
+        _safe_eval_condition("__import__('os').system('id') == ''")
