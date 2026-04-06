@@ -130,6 +130,7 @@ If you mostly want interactive print setup in a GUI, use OrcaSlicer directly.
 
 ### Experimental
 
+- CuraEngine as alternative slicer backend (`engine = "cura"`)
 - Bambu LAN printing
 - Moonraker printing
 
