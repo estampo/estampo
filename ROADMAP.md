@@ -19,32 +19,24 @@ OrcaSlicer-first foundation with full automation pipeline.
 
 ---
 
-## v0.3.0 — In Progress (target: 2026-04)
+## v0.3.0 — Done (2026-04-06)
 
 **Theme: CuraEngine as a production-ready alternative backend.**
 
-The goal is for a user to be able to replace `engine = "orca"` with `engine = "cura"` in their `estampo.toml` and get a comparable end-to-end experience: init wizard picks printer, slicing works, G-code stats are accurate, output is sent to printer.
-
-### In scope
-
-- [x] CuraEngine Docker image (built from source, v5.12.0)
-- [x] CuraEngine backend in `cura.py` — invokes engine, parses output
-- [x] Engine-namespaced config (`[slicer.orca]` / `[slicer.cura]`) and profile dirs
-- [x] Machine definition files (`.def.json`) for Bambu P1S with proper start/end G-code
-- [x] Bundled machine profiles (JSON) for nozzle/material overrides
-- [x] `estampo init` wizard for CuraEngine (engine picker, machine profile picker)
-- [x] CuraEngine printer definition discovery via def file manifest (PR #313)
-- [x] Accurate filament weight and layer count in post-slice summary
-- [ ] Printer definition pinning (squash inheritance chain for reproducible builds)
-- [ ] Full CuraEngine def manifest extracted from Docker image (currently only P1S bundled)
-- [ ] CI workflow for automated CuraEngine manifest extraction
-
-### Out of scope for 0.3.0
-
-- PrusaSlicer backend
-- CuraEngine multi-extruder / AMS support
-- Cloud print via CuraEngine (Bambu Connect packaging for Cura output)
-- Profile editing UI
+- CuraEngine Docker image (built from source, v5.12.0)
+- CuraEngine backend in `cura.py` — invokes engine, parses output
+- Engine-namespaced config (`[slicer.orca]` / `[slicer.cura]`) and profile dirs
+- Machine definition files (`.def.json`) for Bambu P1S with proper start/end G-code
+- Bundled machine profiles (JSON) for nozzle/material overrides
+- `estampo init` wizard for CuraEngine (engine picker, machine profile picker)
+- CuraEngine printer definition discovery via def file manifest
+- Accurate filament weight and layer count in post-slice summary
+- Printer definition pinning (squash inheritance chain for reproducible builds)
+- Full CuraEngine def manifest extracted from Docker image
+- CI workflow for automated CuraEngine manifest extraction
+- Material-centric filament assignment (`[filaments]` table)
+- EngineConfig hierarchy replacing facade pattern
+- Removed AMS auto-detect from init wizard
 
 ---
 
@@ -55,7 +47,16 @@ The goal is for a user to be able to replace `engine = "orca"` with `engine = "c
 See `docs/decisions/005-vendor-agnostic-split.md` for the full rationale.  
 See `docs/architecture-roadmap.md` for slicer comparison research and template details.
 
-- Extract `bambox` as standalone library: BBL `.gcode.3mf` packaging, G-code templates, Bambu LAN/Cloud/Connect dispatch, AMS mapping, auth, credentials; `cloud/`, `auth.py`, `credentials.py`, `thumbnails.py` move here
+Coordinates with bambox v0.3.0 (absorb printer code). bambox's Rust bridge daemon (v0.2.0) ships first.
+
+- Remove Bambu-specific defaults from init.py and cura.py (#373, #374)
+- Update constants.py comments to be vendor-agnostic (#377)
+- Migrate `cloud/`, `auth.py`, `credentials.py`, `printer.py` to bambox (#369, #370)
+- Migrate `thumbnails.py`, `bambu_connect_fixup()` to bambox (#371, #372)
+- Move AMS CLI flags and Bambu stage IDs to bambox (#375)
+- Move Bambu Connect 3MF patching from slicer.py to bambox (#376)
+- Move plate.py BambuStudio 3MF metadata to bambox (#378)
+- Stabilise `_fix_sliced_3mf` before extraction (#336)
 - estampo depends on `bambox` as a package; no user-visible change
 - CuraEngine → Bambu printer workflow unblocked: Cura plain G-code → `bambox` → printer
 - estampo core (pipeline.py, slicer.py, cura.py, gcode.py) has zero Bambu-specific imports after this milestone
