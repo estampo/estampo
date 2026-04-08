@@ -500,6 +500,28 @@ def test_substitute_conditional(tmp_path):
     assert "{endif}" not in text
 
 
+def test_substitute_machine_and_material_type(tmp_path):
+    """Machine and material type placeholders are replaced."""
+    gcode = tmp_path / "test.gcode"
+    gcode.write_text(
+        "; BAMBOX_NOZZLE_DIAMETER={machine_nozzle_size}\n"
+        "; BAMBOX_BED_TYPE={machine_buildplate_type}\n"
+        "; BAMBOX_FILAMENT_TYPE={material_type}\n"
+    )
+    profile = CuraProfile(
+        nozzle_diameter=0.4,
+        bed_type="Textured PEI Plate",
+        filament_type="PLA",
+    )
+    _substitute_gcode_templates(gcode, profile)
+    text = gcode.read_text()
+    assert "; BAMBOX_NOZZLE_DIAMETER=0.4" in text
+    assert "; BAMBOX_BED_TYPE=textured_pei_plate" in text
+    assert "; BAMBOX_FILAMENT_TYPE=PLA" in text
+    assert "{machine_" not in text
+    assert "{material_type}" not in text
+
+
 def test_substitute_no_change(tmp_path):
     """G-code without template variables is unchanged."""
     gcode = tmp_path / "test.gcode"

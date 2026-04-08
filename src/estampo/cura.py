@@ -754,6 +754,9 @@ def _substitute_gcode_templates(gcode_path: Path, profile: CuraProfile) -> None:
         "material_bed_temperature": str(profile.material_bed_temperature),
         "material_print_temperature_layer_0": str(profile.material_print_temperature),
         "material_print_temperature": str(profile.material_print_temperature),
+        "machine_nozzle_size": str(profile.nozzle_diameter),
+        "machine_buildplate_type": profile.bed_type.lower().replace(" ", "_"),
+        "material_type": profile.filament_type,
     }
 
     changed = False
@@ -774,7 +777,7 @@ def _substitute_gcode_templates(gcode_path: Path, profile: CuraProfile) -> None:
         except (ValueError, TypeError, SyntaxError):
             return m.group(0)
 
-    text, n = re.subn(r"\{([^}]*\b(?:material_\w+)\b[^}]*)\}", _eval_expr, text)
+    text, n = re.subn(r"\{([^}]*\b(?:material_\w+|machine_\w+)\b[^}]*)\}", _eval_expr, text)
     if n > 0:
         changed = True
 
