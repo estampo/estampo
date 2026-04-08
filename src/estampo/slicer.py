@@ -13,12 +13,9 @@ from estampo.gcode import parse_gcode_metadata
 # Re-export OrcaSlicer symbols for backward compatibility.
 # Tests and scripts may import these from estampo.slicer.
 from estampo.orca import (  # noqa: F401, E402
-    _BC_DEFAULT_KEYS,
-    _MIN_FILAMENT_SLOTS,
     _apply_overrides,
     _check_slicer_version,
     _detect_slicer_version,
-    _fix_sliced_3mf,
     _resolve_profiles,
     _slice_via_docker,
     _write_tmp_profile,
@@ -144,37 +141,20 @@ def _ensure_docker_image(image: str) -> bool:
 # ---------------------------------------------------------------------------
 
 
-def package_for_printer(
-    sliced_output_dir: Path,
-    plate_3mf: Path | None = None,
-    printer_type: str | None = None,
-) -> Path:
-    """Printer-specific post-processing of slicer output.
+def find_deliverable(sliced_output_dir: Path) -> Path:
+    """Find the deliverable file in slicer output.
 
-    For Bambu printers: patches the .gcode.3mf so Bambu Connect accepts it
-    (missing keys, short filament arrays, thumbnails).
-
-    For other printers: returns the plain .gcode path unchanged.
-
-    Returns the path to the deliverable file.
+    Returns the first .gcode.3mf or .gcode file found.
+    For Bambu-specific post-processing, use ``bambox repack`` as a
+    command stage in the pipeline.
     """
-    is_bambu = printer_type in ("bambu-lan", "bambu-cloud")
-
-    if is_bambu:
-        sliced_3mfs = list(sliced_output_dir.glob("*_sliced.gcode.3mf"))
-        if sliced_3mfs:
-            _fix_sliced_3mf(sliced_3mfs[0], plate_3mf)
-            return sliced_3mfs[0]
-
-    # Non-Bambu or no 3MF found: return plain gcode
-    gcode_files = list(sliced_output_dir.glob("*.gcode"))
-    if gcode_files:
-        return gcode_files[0]
-
-    # Fallback: return whatever is available
     sliced_3mfs = list(sliced_output_dir.glob("*_sliced.gcode.3mf"))
     if sliced_3mfs:
         return sliced_3mfs[0]
+
+    gcode_files = list(sliced_output_dir.glob("*.gcode"))
+    if gcode_files:
+        return gcode_files[0]
 
     raise FileNotFoundError(f"No gcode or 3MF output found in {sliced_output_dir}")
 

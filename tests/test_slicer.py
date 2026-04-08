@@ -756,7 +756,6 @@ def test_slice_plate_ok_with_matching_version(tmp_path):
     with (
         patch("estampo.slicer._ensure_docker_image", return_value=True),
         patch("estampo.orca._slice_via_docker", return_value=output_dir) as mock_docker,
-        patch("estampo.orca._fix_sliced_3mf"),
         patch("estampo.orca.extract_docker_profiles", return_value=tmp_path / "docker"),
     ):
         slice_plate(

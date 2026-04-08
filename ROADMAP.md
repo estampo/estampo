@@ -56,7 +56,7 @@ Coordinates with bambox v0.3.0 (absorb printer code). bambox's Rust bridge daemo
 - Move AMS CLI flags and Bambu stage IDs to bambox (#375)
 - Move Bambu Connect 3MF patching from slicer.py to bambox (#376)
 - Move plate.py BambuStudio 3MF metadata to bambox (#378)
-- Stabilise `_fix_sliced_3mf` before extraction (#336)
+- ~~Stabilise `_fix_sliced_3mf` before extraction (#336)~~ — removed; use `bambox repack` command stage
 - estampo depends on `bambox` as a package; no user-visible change
 - CuraEngine → Bambu printer workflow unblocked: Cura plain G-code → `bambox` → printer
 - estampo core (pipeline.py, slicer.py, cura.py, gcode.py) has zero Bambu-specific imports after this milestone

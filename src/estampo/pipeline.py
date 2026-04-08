@@ -425,30 +425,12 @@ def sliced_output_dir(
 
 def packaged_output(
     sliced_output_dir: Path,
-    plate_3mf_path: Path,
-    config: EstampoConfig,
 ) -> Path:
-    """Printer-specific post-processing of slicer output.
+    """Locate the deliverable file in slicer output.
 
-    For Bambu printers: patches the .gcode.3mf so Bambu Connect accepts it.
-    For other printers: no-op (returns the output directory unchanged).
+    For Bambu-specific post-processing (3MF patching, thumbnails),
+    add ``bambox repack`` as a command stage in the pipeline.
     """
-    from estampo.slicer import package_for_printer
-
-    printer_type: str | None = None
-    if config.printer:
-        from estampo.credentials import load_printer_credentials
-
-        try:
-            creds = load_printer_credentials(config.printer.name)
-            printer_type = creds.get("type")
-        except (FileNotFoundError, KeyError, OSError):
-            log.warning(
-                "Could not load printer credentials for '%s' — packaging as generic gcode",
-                config.printer.name,
-            )
-
-    package_for_printer(sliced_output_dir, plate_3mf_path, printer_type)
     return sliced_output_dir
 
 
