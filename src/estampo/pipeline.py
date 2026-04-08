@@ -60,6 +60,7 @@ def resolve_outputs(
     stages: list[str],
     until: str | None = None,
     only: str | None = None,
+    command_stages: set[str] | None = None,
 ) -> list[str]:
     """Resolve the list of Hamilton output nodes to request.
 
@@ -67,11 +68,26 @@ def resolve_outputs(
         stages: The full ordered pipeline from config.
         until: If set, include stages up to and including this one.
         only: If set, include only this single stage's outputs.
+        command_stages: Names of stages implemented as external commands.
+            These are skipped when collecting Hamilton outputs since they
+            run outside the DAG.
 
     Returns:
         List of Hamilton node names to pass to ``driver.execute()``.
     """
+    cmd_stages = command_stages or set()
+
     if only:
+        if only in cmd_stages:
+            # Command stages run outside Hamilton — return the outputs of
+            # the last built-in stage before this one so Hamilton computes
+            # everything the command stage needs.
+            idx = stages.index(only)
+            outputs: list[str] = []
+            for s in stages[:idx]:
+                if s not in cmd_stages:
+                    outputs = list(STAGE_OUTPUTS.get(s, []))
+            return outputs
         if only not in STAGE_OUTPUTS:
             raise ValueError(f"Unknown stage '{only}'. Valid stages: {sorted(STAGE_OUTPUTS)}")
         return list(STAGE_OUTPUTS[only])
@@ -83,9 +99,11 @@ def resolve_outputs(
     else:
         cut = stages
 
-    outputs: list[str] = []
+    outputs = []
     for stage in cut:
-        outputs.extend(STAGE_OUTPUTS[stage])
+        if stage in cmd_stages:
+            continue  # command stages run outside Hamilton
+        outputs.extend(STAGE_OUTPUTS.get(stage, []))
     return outputs
 
 

@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from estampo import EstampoError
+from estampo.commands import CommandStageConfig, parse_command_stage
 from estampo.constants import DEFAULT_PLATE_SIZE
 
 log = logging.getLogger(__name__)
@@ -87,6 +88,7 @@ DEFAULT_STAGES = ["load", "arrange", "plate", "slice"]
 @dataclass
 class PipelineConfig:
     stages: list[str] = field(default_factory=lambda: list(DEFAULT_STAGES))
+    command_stages: dict[str, CommandStageConfig] = field(default_factory=dict)
 
 
 @dataclass
@@ -430,14 +432,25 @@ def load_config(path: Path) -> EstampoConfig:
     pipeline_stages = pipeline_raw.get("stages", list(DEFAULT_STAGES))
     if not isinstance(pipeline_stages, list):
         raise EstampoError("pipeline.stages must be a list of stage names")
+
+    # Parse command stages: top-level TOML sections with a "command" key
+    command_stages: dict[str, CommandStageConfig] = {}
     for s in pipeline_stages:
         if not isinstance(s, str) or not s.strip():
             raise EstampoError(f"pipeline.stages: each stage must be a non-empty string, got {s!r}")
-        if s not in STAGE_OUTPUTS:
+        if s in STAGE_OUTPUTS:
+            continue  # built-in stage
+        # Check for a matching TOML section with a command key
+        stage_raw = raw.get(s)
+        if stage_raw is None or not isinstance(stage_raw, dict) or "command" not in stage_raw:
             raise EstampoError(
-                f"pipeline.stages: unknown stage '{s}'. Valid stages: {sorted(STAGE_OUTPUTS)}"
+                f"pipeline.stages: unknown stage '{s}'. "
+                f"Either use a built-in stage ({sorted(STAGE_OUTPUTS)}) "
+                f"or define a [{s}] section with a 'command' key."
             )
-    pipeline = PipelineConfig(stages=pipeline_stages)
+        command_stages[s] = parse_command_stage(s, stage_raw)
+
+    pipeline = PipelineConfig(stages=pipeline_stages, command_stages=command_stages)
 
     # Printer config (optional)
     printer = None
