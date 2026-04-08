@@ -1,0 +1,1 @@
+CuraEngine now accepts raw definition IDs (e.g. ``bambox_p1s_ams``) and copies extruder definitions to Docker staging.
