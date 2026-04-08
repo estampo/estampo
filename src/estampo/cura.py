@@ -54,6 +54,7 @@ def _resolve_def_name(printer_name: str | None) -> str:
 
     1. Exact match in manifest (``"BambuLab P1S"``).
     2. Already a known definition ID (``"bambulab_p1s"``).
+    2b. Looks like a raw definition ID (``"bambox_p1s_ams"``).
     3. Case-insensitive match against manifest names.
     4. Strip nozzle suffix (``"Bambu Lab P1S 0.4 nozzle"`` → retry).
 
@@ -71,6 +72,11 @@ def _resolve_def_name(printer_name: str | None) -> str:
     # 2. Already a definition ID (value in the map)
     ids = set(def_map.values())
     if printer_name in ids:
+        return printer_name
+
+    # 2b. Looks like a raw definition ID (no spaces, e.g. "bambox_p1s_ams").
+    # Accept it and let _resolve_def_chain find the file in pinned/bundled defs.
+    if " " not in printer_name and printer_name.replace("_", "").replace("-", "").isalnum():
         return printer_name
 
     # 3. Case-insensitive match
@@ -148,6 +154,35 @@ def _resolve_def_chain(
             break
 
     return chain
+
+
+def _copy_extruder_defs(
+    machine_def_path: Path,
+    staging: Path,
+    project_dir: Path | None = None,
+    profiles_dir: str = "profiles",
+) -> None:
+    """Copy extruder definition files referenced by a machine definition."""
+    try:
+        with open(machine_def_path) as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return
+
+    trains = data.get("metadata", {}).get("machine_extruder_trains", {})
+    for extruder_id in trains.values():
+        filename = f"{extruder_id}.def.json"
+        if (staging / filename).exists():
+            continue
+        # Search: pinned → bundled (same order as _resolve_def_chain)
+        if project_dir:
+            pinned = project_dir / profiles_dir / "cura" / "definitions" / filename
+            if pinned.exists():
+                shutil.copy2(pinned, staging / filename)
+                continue
+        bundled = _DATA_DIR / filename
+        if bundled.exists():
+            shutil.copy2(bundled, staging / filename)
 
 
 def resolve_cura_bed_size(
@@ -819,6 +854,8 @@ def slice_stl(
         machine_def = def_chain[0].name
         for def_path in def_chain:
             shutil.copy2(def_path, staging / def_path.name)
+        # Also copy extruder definitions referenced by the machine definition.
+        _copy_extruder_defs(def_chain[0], staging, project_dir, profiles_dir)
     else:
         # No local definitions found — rely on Docker's built-in defs
         machine_def = f"{def_id}.def.json"
