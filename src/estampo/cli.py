@@ -362,7 +362,33 @@ def _run_pipeline(
     from estampo import ui
 
     ui.info(f"Output → [bold]{out_dir}[/bold]")
-    dr.execute(outputs, inputs=inputs, overrides=overrides)
+    hamilton_results = dr.execute(outputs, inputs=inputs, overrides=overrides)
+
+    # Run command stages (external CLI tools defined in TOML)
+    command_stages = cfg.pipeline.command_stages
+    if command_stages:
+        from estampo.commands import build_command_context, run_command_stage
+
+        # Determine which stages to run based on --until / --only
+        if only and only in command_stages:
+            stages_to_run = [only]
+        elif until:
+            cut = stages[: stages.index(until) + 1]
+            stages_to_run = [s for s in cut if s in command_stages]
+        else:
+            stages_to_run = [s for s in stages if s in command_stages]
+
+        # Build context from Hamilton results + config
+        stage_results = dict(hamilton_results)
+        stage_results.update(overrides)
+        context = build_command_context(cfg, out_dir, stage_results)
+
+        for stage_name in stages_to_run:
+            stage_cfg = command_stages[stage_name]
+            output_path = run_command_stage(stage_cfg, context)
+            # Feed output back into context for downstream command stages
+            if output_path is not None:
+                context[stage_name] = str(output_path)
 
 
 # ---------------------------------------------------------------------------
