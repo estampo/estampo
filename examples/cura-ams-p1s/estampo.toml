@@ -29,18 +29,19 @@ bed_type = "Textured PEI Plate"
 printer = "profiles/cura/definitions/bambox_p1s_ams.def.json"
 
 # Per-slot filament types — drives material_type header and temperatures.
-# Slot 1 = AMS tray 1, Slot 2 = AMS tray 2.
-filaments = ["PLA", "PETG"]
+# Slot 1 = white PLA, Slot 4 = black PLA (slots 2 and 3 unused).
+filaments = ["PLA", "", "", "PLA"]
 
-# Part 1: cube on AMS slot 1 (PLA)
+# Part 1: cube on AMS slot 1 (white PLA)
 [[parts]]
 file = "../../tests/fixtures/cube_10mm.stl"
 filament = 1
 
-# Part 2: cylinder on AMS slot 2 (PETG)
+# Part 2: cylinder on AMS slot 4 (black PLA), standing upright on its end
 [[parts]]
 file = "../../tests/fixtures/cylinder_5x20mm.stl"
-filament = 2
+filament = 4
+orient = "upright"
 
 # bambox pack: converts CuraEngine G-code → Bambu-compatible .gcode.3mf
 # CuraEngine always writes plate.gcode into {sliced_dir}.
