@@ -1013,6 +1013,7 @@ def _run_docker_slice(
         *output_dir* on success.
     """
     import os
+    import sys
 
     cmd = [
         "docker",
@@ -1020,8 +1021,11 @@ def _run_docker_slice(
         "--rm",
         "--platform",
         "linux/amd64",
-        "--user",
-        f"{os.getuid()}:{os.getgid()}",
+    ]
+    # Windows doesn't have getuid/getgid; Docker Desktop handles UID remapping there.
+    if sys.platform != "win32":
+        cmd += ["--user", f"{os.getuid()}:{os.getgid()}"]
+    cmd += [
         "-v",
         f"{output_dir}:/work/output",
         "--entrypoint",
