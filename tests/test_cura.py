@@ -83,13 +83,13 @@ def test_cura_docker_image_custom_version():
 def test_cura_profile_defaults():
     profile = CuraProfile()
     assert profile.nozzle_diameter == 0.4
-    assert profile.material_print_temperature == 260
-    assert profile.material_bed_temperature == 70
+    assert profile.material_print_temperature == 220
+    assert profile.material_bed_temperature == 55
     assert profile.layer_height == 0.20
     assert profile.wall_line_count == 3
     assert profile.infill_sparse_density == 25
     assert profile.bed_type == "Textured PEI Plate"
-    assert profile.filament_type == "PETG-CF"
+    assert profile.filament_type == "PLA"
     assert profile.overrides == {}
 
 
@@ -174,8 +174,8 @@ def test_settings_flags_defaults():
         k, val = v.split("=", 1)
         value_dict[k] = val
     assert value_dict["layer_height"] == "0.2"
-    assert value_dict["material_print_temperature"] == "260"
-    assert value_dict["material_bed_temperature"] == "70"
+    assert value_dict["material_print_temperature"] == "220"
+    assert value_dict["material_bed_temperature"] == "55"
     assert value_dict["wall_line_count"] == "3"
 
 

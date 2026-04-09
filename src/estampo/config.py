@@ -45,6 +45,8 @@ class OrcaSlicerConfig(EngineConfig):
 class CuraSlicerConfig(EngineConfig):
     """CuraEngine-specific settings: printer definition + flat key-value overrides."""
 
+    filaments: list[str] = field(default_factory=list)
+
 
 @dataclass
 class SlicerConfig:
@@ -259,6 +261,7 @@ def _parse_cura_config(raw: dict) -> CuraSlicerConfig:
     return CuraSlicerConfig(
         printer=raw.get("printer"),
         overrides=raw.get("overrides", {}),
+        filaments=raw.get("filaments", []),
     )
 
 

@@ -103,6 +103,17 @@ def parse_gcode_metadata(gcode_path: Path) -> dict[str, str | float | int]:
             stats["filament_cm3"] = round(cm3, 2)
             stats["filament_g"] = round(cm3 * _DENSITY_G_CM3, 2)
 
+    # CuraEngine: prefer the last ;TIME_ELAPSED cumulative value over the
+    # header ;TIME: placeholder (which can be a bogus default like 6666).
+    last_elapsed: float | None = None
+    for line in lines:
+        if m := re.match(r";TIME_ELAPSED:([\d.]+)", line):
+            last_elapsed = float(m.group(1))
+    if last_elapsed is not None:
+        secs = round(last_elapsed)
+        stats["print_time"] = _format_seconds(secs)
+        stats["print_time_secs"] = secs
+
     # Scan tail for OrcaSlicer filament stats (CuraEngine puts them in header).
     # OrcaSlicer emits one line per slot (including 0.00 for unused slots)
     # and sometimes a separate total line.
@@ -214,7 +225,7 @@ def analyze_gcode(path: Path) -> GcodeInfo:
             info.print_time = m.group(1).strip()
         elif m := re.match(r";\s*estimated printing time.*?=\s*(.+)", line):
             info.print_time = m.group(1).strip()
-        # CuraEngine
+        # CuraEngine (header value — may be overridden by TIME_ELAPSED below)
         elif m := re.match(r";TIME:(\d+)", line):
             info.print_time = _format_seconds(int(m.group(1)))
         elif m := re.match(r";MATERIAL:(\d+)", line):
@@ -247,6 +258,7 @@ def analyze_gcode(path: Path) -> GcodeInfo:
 
     # (layer, extruder) pairs recording each tool change point
     tool_events: list[tuple[int, int]] = []  # (layer_at_change, new_extruder)
+    last_elapsed: float | None = None
 
     for line in lines:
         # OrcaSlicer layer marker
@@ -259,6 +271,9 @@ def analyze_gcode(path: Path) -> GcodeInfo:
         elif m := re.match(r";LAYER:(\d+)", line):
             current_layer = int(m.group(1)) + 1  # normalize to 1-indexed
             layer_z[current_layer] = current_z
+        # CuraEngine cumulative time elapsed
+        elif m := re.match(r";TIME_ELAPSED:([\d.]+)", line):
+            last_elapsed = float(m.group(1))
         # CuraEngine Z moves (G0/G1 with Z parameter)
         elif m := re.match(r"G[01]\s.*Z([\d.]+)", line):
             current_z = float(m.group(1))
@@ -279,6 +294,10 @@ def analyze_gcode(path: Path) -> GcodeInfo:
                 tool_events.append((current_layer, tool))
                 info.filament_changes += 1
                 current_extruder = tool
+
+    # Prefer TIME_ELAPSED over the header ;TIME: placeholder
+    if last_elapsed is not None:
+        info.print_time = _format_seconds(round(last_elapsed))
 
     # If no tool events recorded, the initial extruder was used throughout
     if not tool_events and current_layer > 0:
