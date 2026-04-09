@@ -24,8 +24,9 @@ bed_type = "Textured PEI Plate"
 
 [slicer.cura]
 # bambox P1S AMS definition: 4-extruder machine with BAMBOX header contract.
-# Requires bambox to be installed: https://github.com/estampo/bambox
-printer = "bambox_p1s_ams"
+# The definition files are bundled in profiles/cura/definitions/ so this
+# example works without installing bambox as a Python package.
+printer = "profiles/cura/definitions/bambox_p1s_ams.def.json"
 
 # Per-slot filament types — drives material_type header and temperatures.
 # Slot 1 = AMS tray 1, Slot 2 = AMS tray 2.
