@@ -46,6 +46,22 @@ def _bundled_def_path(name: str) -> Path:
     return Path(str(ref))
 
 
+def _find_in_bambox(filename: str) -> Path | None:
+    """Look for a CuraEngine definition in bambox's bundled data/cura directory.
+
+    Returns the path if found, None if bambox is not installed or the file
+    doesn't exist there.
+    """
+    try:
+        ref = importlib.resources.files("bambox").joinpath("data", "cura", filename)
+        p = Path(str(ref))
+        if p.exists():
+            return p
+    except (ImportError, TypeError, AttributeError, ModuleNotFoundError):
+        pass
+    return None
+
+
 def _resolve_def_name(printer_name: str | None) -> str:
     """Map a human printer name to a definition filename stem.
 
@@ -124,7 +140,7 @@ def _resolve_def_chain(
         seen.add(current_id)
         filename = f"{current_id}.def.json"
 
-        # Search: pinned → bundled
+        # Search: pinned → bundled (estampo) → bambox package
         path: Path | None = None
         if project_dir:
             pinned = project_dir / profiles_dir / "cura" / "definitions" / filename
@@ -134,9 +150,32 @@ def _resolve_def_chain(
             bundled = _DATA_DIR / filename
             if bundled.exists():
                 path = bundled
+        if path is None:
+            path = _find_in_bambox(filename)
 
         if path is None:
-            # Definition not found locally — will rely on Docker's built-in defs
+            if current_id == def_id:
+                # The root definition itself was not found — give a clear error
+                # rather than silently building a broken Docker command.
+                pinned_loc = (
+                    project_dir / profiles_dir / "cura" / "definitions" / filename
+                    if project_dir
+                    else "(no project dir)"
+                )
+                raise EstampoError(
+                    f"CuraEngine printer definition '{filename}' was not found.\n"
+                    "Search locations checked:\n"
+                    f"  1. {pinned_loc}\n"
+                    f"  2. {_DATA_DIR / filename}\n"
+                    "  3. bambox package data/cura/ "
+                    "(bambox not installed or definition missing)\n"
+                    "\n"
+                    "To fix: install bambox in the same Python environment as estampo:\n"
+                    "  pipx inject estampo bambox\n"
+                    "Or pin the definition to your project's "
+                    "profiles/cura/definitions/ directory."
+                )
+            # Parent definition not found locally — will rely on Docker's built-in defs
             break
 
         chain.append(path)
@@ -174,7 +213,7 @@ def _copy_extruder_defs(
         filename = f"{extruder_id}.def.json"
         if (staging / filename).exists():
             continue
-        # Search: pinned → bundled (same order as _resolve_def_chain)
+        # Search: pinned → bundled (estampo) → bambox (same order as _resolve_def_chain)
         if project_dir:
             pinned = project_dir / profiles_dir / "cura" / "definitions" / filename
             if pinned.exists():
@@ -183,6 +222,10 @@ def _copy_extruder_defs(
         bundled = _DATA_DIR / filename
         if bundled.exists():
             shutil.copy2(bundled, staging / filename)
+            continue
+        bambox_path = _find_in_bambox(filename)
+        if bambox_path:
+            shutil.copy2(bambox_path, staging / filename)
 
 
 def resolve_cura_bed_size(
