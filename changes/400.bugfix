@@ -1,0 +1,1 @@
+Fix default output directory to resolve relative to the config file's directory instead of the caller's working directory
