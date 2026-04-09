@@ -45,5 +45,5 @@ filament = 2
 # bambox pack: converts CuraEngine G-code → Bambu-compatible .gcode.3mf
 # CuraEngine always writes plate.gcode into {sliced_dir}.
 [pack]
-command = "bambox pack {sliced_dir}/plate.gcode -o {output_dir}"
+command = "bambox pack {sliced_dir}/plate.gcode -o {output_dir}/plate.gcode.3mf"
 output = "{output_dir}/plate.gcode.3mf"
