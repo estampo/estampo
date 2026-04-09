@@ -148,11 +148,19 @@ def find_deliverable(sliced_output_dir: Path) -> Path:
     For Bambu-specific post-processing, use ``bambox repack`` as a
     command stage in the pipeline.
     """
-    sliced_3mfs = list(sliced_output_dir.glob("*_sliced.gcode.3mf"))
+    sliced_3mfs = sorted(
+        sliced_output_dir.glob("*_sliced.gcode.3mf"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
     if sliced_3mfs:
         return sliced_3mfs[0]
 
-    gcode_files = list(sliced_output_dir.glob("*.gcode"))
+    gcode_files = sorted(
+        sliced_output_dir.glob("*.gcode"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
     if gcode_files:
         return gcode_files[0]
 

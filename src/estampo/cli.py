@@ -331,13 +331,18 @@ def _run_pipeline(
     elif cfg.output_dir != "estampo_output":
         out_dir = cfg.base_dir / cfg.output_dir
     elif cfg.name:
-        out_dir = Path("estampo_output") / cfg.name
+        out_dir = cfg.base_dir / "estampo_output" / cfg.name
     else:
-        out_dir = Path("estampo_output")
+        out_dir = cfg.base_dir / "estampo_output"
     out_dir.mkdir(parents=True, exist_ok=True)
     output_3mf = out_dir / "plate.3mf"
 
-    outputs = resolve_outputs(stages, until=until, only=only)
+    outputs = resolve_outputs(
+        stages,
+        until=until,
+        only=only,
+        command_stages=set(cfg.pipeline.command_stages),
+    )
 
     overrides = {}
     if only:
