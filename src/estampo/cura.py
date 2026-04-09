@@ -46,6 +46,51 @@ def _bundled_def_path(name: str) -> Path:
     return Path(str(ref))
 
 
+def _printer_is_url(printer: str) -> bool:
+    return printer.startswith(("http://", "https://"))
+
+
+def _printer_is_file(printer: str, project_dir: Path | None) -> Path | None:
+    """Return the resolved Path if *printer* points to an existing .def.json file."""
+    p = Path(printer)
+    if not p.is_absolute() and project_dir:
+        p = project_dir / p
+    if p.suffix == ".json" and p.exists() and p.is_file():
+        return p
+    return None
+
+
+def _fetch_printer_def(
+    printer: str,
+    project_dir: Path | None,
+    staging: Path,
+) -> str | None:
+    """If *printer* is a URL or file path, put the definition in *staging*.
+
+    Returns the definition filename (e.g. ``bambox_p1s_ams.def.json``), or
+    None if *printer* is a plain name/ID that should go through normal resolution.
+    """
+    import urllib.request
+
+    if _printer_is_url(printer):
+        filename = printer.rsplit("/", 1)[-1]
+        if not filename.endswith(".def.json"):
+            filename += ".def.json"
+        dest = staging / filename
+        if not dest.exists():
+            log.info("Downloading printer definition from %s", printer)
+            urllib.request.urlretrieve(printer, dest)  # noqa: S310
+        return filename
+
+    file_path = _printer_is_file(printer, project_dir)
+    if file_path:
+        dest = staging / file_path.name
+        shutil.copy2(file_path, dest)
+        return file_path.name
+
+    return None
+
+
 def _find_in_bambox(filename: str) -> Path | None:
     """Look for a CuraEngine definition in bambox's bundled data/cura directory.
 
@@ -237,9 +282,26 @@ def resolve_cura_bed_size(
 
     Walks the definition chain to find machine_width and machine_depth.
     Falls back to (256, 256) if not found.
+
+    *printer_name* may be a definition name/ID, a local file path, or a URL.
     """
-    def_id = _resolve_def_name(printer_name)
-    chain = _resolve_def_chain(def_id, project_dir, profiles_dir)
+    # URL or local file: read just that file for bed dimensions.
+    _is_url = printer_name and _printer_is_url(printer_name)
+    _is_file = printer_name and _printer_is_file(printer_name, project_dir)
+    if _is_url or _is_file:
+        import tempfile
+        import urllib.request
+
+        if _printer_is_url(printer_name):
+            with tempfile.NamedTemporaryFile(suffix=".def.json", delete=False) as tmp:
+                urllib.request.urlretrieve(printer_name, tmp.name)  # noqa: S310
+                tmp_path = Path(tmp.name)
+            chain = [tmp_path]
+        else:
+            chain = [_printer_is_file(printer_name, project_dir)]  # type: ignore[list-item]
+    else:
+        def_id = _resolve_def_name(printer_name)
+        chain = _resolve_def_chain(def_id, project_dir, profiles_dir)
 
     # Search from leaf to root for machine_width/depth
     width: float | None = None
@@ -906,6 +968,14 @@ def _prepare_cura_staging(
     staging = output_dir / ".cura-staging"
     staging.mkdir(exist_ok=True)
 
+    # URL / file-path shortcut: copy the definition directly to staging.
+    if printer:
+        direct_def = _fetch_printer_def(printer, project_dir, staging)
+        if direct_def:
+            _copy_extruder_defs(staging / direct_def, staging, project_dir, profiles_dir)
+            return staging, direct_def
+
+    # Name / ID resolution: search pinned → estampo bundled → bambox package.
     def_id = _resolve_def_name(printer)
     def_chain = _resolve_def_chain(def_id, project_dir, profiles_dir)
     if def_chain:
