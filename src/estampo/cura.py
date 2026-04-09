@@ -509,6 +509,23 @@ def load_cura_machine_profile(
     )
 
 
+# Default print/bed temperatures by filament type string.
+# Used to populate per-extruder profile settings when a filaments list is
+# provided.  Values are (print_temp_°C, bed_temp_°C).
+_FILAMENT_TEMPS: dict[str, tuple[int, int]] = {
+    "PLA": (220, 55),
+    "PLA-CF": (220, 55),
+    "PETG": (240, 70),
+    "PETG-CF": (260, 70),
+    "ABS": (250, 100),
+    "ASA": (255, 100),
+    "TPU": (230, 30),
+    "PA": (270, 80),
+    "PA-CF": (280, 80),
+    "PC": (270, 100),
+}
+
+
 @dataclass
 class CuraProfile:
     """Slicer profile for CuraEngine targeting a BBL printer.
@@ -544,6 +561,12 @@ class CuraProfile:
 
     # Additional -s overrides (Cura setting key names)
     overrides: dict[str, str] = field(default_factory=dict)
+
+    # Per-extruder overrides (index 0 = extruder 0).  Each dict contains
+    # CuraEngine setting key/value pairs that are appended after the global
+    # settings in that extruder's ``-g -eN`` block.  If absent or shorter
+    # than the extruder count, global settings apply for remaining extruders.
+    per_extruder: list[dict[str, object]] = field(default_factory=list)
 
 
 def _settings_flags(profile: CuraProfile) -> list[str]:
@@ -593,6 +616,20 @@ def _settings_flags(profile: CuraProfile) -> list[str]:
     for k, v in pairs.items():
         flags.extend(["-s", f"{k}={v}"])
     return flags
+
+
+def _extruder_settings_str(profile: CuraProfile, ext_idx: int) -> str:
+    """Build the ``-s`` flags string for one extruder's ``-g -eN`` block.
+
+    Starts from the global ``_settings_flags(profile)`` output and appends
+    any per-extruder overrides from ``profile.per_extruder[ext_idx]``.
+    If *ext_idx* is out of range the global settings are returned unchanged.
+    """
+    flags = _settings_flags(profile)
+    if ext_idx < len(profile.per_extruder):
+        for k, v in profile.per_extruder[ext_idx].items():
+            flags.extend(["-s", f"{k}={v}"])
+    return " ".join(f'"{s}"' for s in flags)
 
 
 def _patch_gcode_header(gcode_path: Path, stderr: str) -> None:
@@ -811,6 +848,89 @@ def _substitute_gcode_templates(gcode_path: Path, profile: CuraProfile) -> None:
         log.info("Substituted template variables in G-code")
 
 
+def _prepare_cura_staging(
+    printer: str | None,
+    project_dir: Path | None,
+    profiles_dir: str,
+    output_dir: Path,
+) -> tuple[Path, str]:
+    """Set up the staging directory with printer definition files.
+
+    Returns:
+        ``(staging, machine_def)`` — the staging directory and the filename
+        to pass to CuraEngine's ``-j`` flag.
+    """
+    staging = output_dir / ".cura-staging"
+    staging.mkdir(exist_ok=True)
+
+    def_id = _resolve_def_name(printer)
+    def_chain = _resolve_def_chain(def_id, project_dir, profiles_dir)
+    if def_chain:
+        machine_def = def_chain[0].name
+        for def_path in def_chain:
+            shutil.copy2(def_path, staging / def_path.name)
+        _copy_extruder_defs(def_chain[0], staging, project_dir, profiles_dir)
+    else:
+        machine_def = f"{def_id}.def.json"
+
+    return staging, machine_def
+
+
+def _run_docker_slice(
+    inner_cmd: str,
+    image: str,
+    output_dir: Path,
+    staging: Path,
+    output_stem: str,
+    profile: CuraProfile,
+) -> Path:
+    """Run CuraEngine via Docker, validate output, and post-process G-code.
+
+    Cleans up *staging* regardless of success or failure.
+
+    Returns:
+        *output_dir* on success.
+    """
+    cmd = [
+        "docker",
+        "run",
+        "--rm",
+        "--platform",
+        "linux/amd64",
+        "-v",
+        f"{output_dir}:/work/output",
+        "--entrypoint",
+        "/bin/bash",
+        image,
+        "-c",
+        inner_cmd,
+    ]
+
+    from estampo import ui
+
+    log.info("Slicing via Docker (%s)", image)
+    with ui.status("Slicing (CuraEngine)"):
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+
+    shutil.rmtree(staging, ignore_errors=True)
+
+    if result.returncode != 0:
+        combined = (result.stdout + "\n" + result.stderr).strip()
+        log.error("CuraEngine output:\n%s", combined)
+        raise EstampoError(f"CuraEngine failed (exit {result.returncode}):\n{combined[:500]}")
+
+    output_gcode = output_dir / f"{output_stem}.gcode"
+    if not output_gcode.exists() or output_gcode.stat().st_size < 100:
+        combined = (result.stdout + "\n" + result.stderr).strip()
+        raise EstampoError(f"CuraEngine produced no output:\n{combined[:500]}")
+
+    _patch_gcode_header(output_gcode, result.stderr)
+    _substitute_gcode_templates(output_gcode, profile)
+
+    log.info("CuraEngine output: %s (%d bytes)", output_gcode, output_gcode.stat().st_size)
+    return output_dir
+
+
 def slice_stl(
     stl_path: Path,
     output_dir: Path,
@@ -820,7 +940,7 @@ def slice_stl(
     project_dir: Path | None = None,
     profiles_dir: str = "profiles",
 ) -> Path:
-    """Slice an STL file with CuraEngine and return the output directory.
+    """Slice a single STL file with CuraEngine and return the output directory.
 
     Uses Docker with the estampo/estampo:cura-X.Y.Z image.  The machine
     definition (resolved from *printer* name) provides machine geometry
@@ -847,21 +967,7 @@ def slice_stl(
     output_dir = output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    staging = output_dir / ".cura-staging"
-    staging.mkdir(exist_ok=True)
-
-    # Resolve the printer definition and its inheritance chain.
-    def_id = _resolve_def_name(printer)
-    def_chain = _resolve_def_chain(def_id, project_dir, profiles_dir)
-    if def_chain:
-        machine_def = def_chain[0].name
-        for def_path in def_chain:
-            shutil.copy2(def_path, staging / def_path.name)
-        # Also copy extruder definitions referenced by the machine definition.
-        _copy_extruder_defs(def_chain[0], staging, project_dir, profiles_dir)
-    else:
-        # No local definitions found — rely on Docker's built-in defs
-        machine_def = f"{def_id}.def.json"
+    staging, machine_def = _prepare_cura_staging(printer, project_dir, profiles_dir, output_dir)
 
     # Get bed dimensions for mesh centering
     bed_w, bed_d = resolve_cura_bed_size(printer or "", project_dir, profiles_dir)
@@ -876,7 +982,7 @@ def slice_stl(
 
     # Build the CuraEngine command.
     # -d adds search paths for definition file resolution (inherits chain).
-    # -j loads the P1S definition (machine geometry + start/end gcode).
+    # -j loads the machine definition (geometry + start/end gcode).
     # -g starts a mesh group, -e0 sets extruder 0 context for per-extruder
     # settings (material_diameter etc.) that CuraEngine requires.
     settings = _settings_flags(profile)
@@ -891,45 +997,68 @@ def slice_stl(
         f"-l {c_stl}"
     )
 
-    cmd = [
-        "docker",
-        "run",
-        "--rm",
-        "--platform",
-        "linux/amd64",
-        "-v",
-        f"{output_dir}:/work/output",
-        "--entrypoint",
-        "/bin/bash",
-        image,
-        "-c",
-        inner_cmd,
-    ]
+    return _run_docker_slice(inner_cmd, image, output_dir, staging, stl_path.stem, profile)
 
-    from estampo import ui
 
-    log.info("Slicing via Docker (%s)", image)
-    with ui.status("Slicing (CuraEngine)"):
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+def slice_stl_multi(
+    stl_meshes: list[tuple[int, Path]],
+    output_dir: Path,
+    profile: CuraProfile | None = None,
+    image: str | None = None,
+    printer: str | None = None,
+    project_dir: Path | None = None,
+    profiles_dir: str = "profiles",
+) -> Path:
+    """Slice multiple pre-positioned STL files with per-mesh extruder assignments.
 
-    # Cleanup staging
-    shutil.rmtree(staging, ignore_errors=True)
+    Each entry in *stl_meshes* is ``(extruder_idx, stl_path)`` where
+    *extruder_idx* is 0-based.  The STLs must already be positioned correctly
+    relative to each other and to the build plate (no centering is applied).
 
-    if result.returncode != 0:
-        combined = (result.stdout + "\n" + result.stderr).strip()
-        log.error("CuraEngine output:\n%s", combined)
-        raise EstampoError(f"CuraEngine failed (exit {result.returncode}):\n{combined[:500]}")
+    CuraEngine receives one ``-g -eN -l mesh.stl`` group per entry, in order.
+    Global settings from *profile* apply to all groups; ``profile.per_extruder``
+    provides additional per-extruder overrides (filament type, temperatures).
 
-    output_gcode = output_dir / (stl_path.stem + ".gcode")
-    if not output_gcode.exists() or output_gcode.stat().st_size < 100:
-        combined = (result.stdout + "\n" + result.stderr).strip()
-        raise EstampoError(f"CuraEngine produced no output:\n{combined[:500]}")
+    Returns:
+        The output directory containing ``plate.gcode``.
+    """
+    if not stl_meshes:
+        raise ValueError("stl_meshes must not be empty")
+    if profile is None:
+        profile = CuraProfile()
+    if image is None:
+        image = cura_docker_image()
 
-    _patch_gcode_header(output_gcode, result.stderr)
-    _substitute_gcode_templates(output_gcode, profile)
+    output_dir = output_dir.resolve()
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-    log.info("CuraEngine output: %s (%d bytes)", output_gcode, output_gcode.stat().st_size)
-    return output_dir
+    staging, machine_def = _prepare_cura_staging(printer, project_dir, profiles_dir, output_dir)
+
+    # Copy each STL into staging so Docker can reach it.
+    c_staging = "/work/output/.cura-staging"
+    c_output = "/work/output/plate.gcode"
+
+    global_settings_str = " ".join(f'"{s}"' for s in _settings_flags(profile))
+
+    mesh_groups = ""
+    for ext_idx, stl_path in stl_meshes:
+        dest = staging / stl_path.name
+        if not dest.exists():
+            shutil.copy2(stl_path, dest)
+        c_stl = f"{c_staging}/{stl_path.name}"
+        ext_str = _extruder_settings_str(profile, ext_idx)
+        mesh_groups += f" -g -e{ext_idx} {ext_str} -l {c_stl}"
+
+    inner_cmd = (
+        f"CuraEngine slice "
+        f"-d {c_staging}:{_DEFS_DIR}:/opt/cura/extruders "
+        f"-j {c_staging}/{machine_def} "
+        f"-o {c_output} "
+        f"{global_settings_str}"
+        f"{mesh_groups}"
+    )
+
+    return _run_docker_slice(inner_cmd, image, output_dir, staging, "plate", profile)
 
 
 def _coerce(value: object, target_type: type) -> object:
@@ -945,6 +1074,7 @@ def cura_profile_from_config(
     overrides: dict[str, object] | None = None,
     bed_type: str | None = None,
     filament_type: str | None = None,
+    filaments: list[str] | None = None,
     printer: str | None = None,
     project_dir: Path | None = None,
     profiles_dir: str = "profiles",
@@ -953,6 +1083,10 @@ def cura_profile_from_config(
 
     The machine profile JSON defines machine geometry and nozzle dimensions.
     Config overrides (process settings) are applied on top.
+
+    If *filaments* is provided (a list of filament type strings, one per
+    extruder slot), ``profile.per_extruder`` is populated with per-slot
+    temperature and material_type overrides derived from ``_FILAMENT_TEMPS``.
 
     Maps estampo-style override keys (which may use OrcaSlicer names) to
     CuraEngine equivalents where possible.
@@ -1009,5 +1143,18 @@ def cura_profile_from_config(
 
         if cura_overrides:
             profile.overrides = cura_overrides
+
+    if filaments:
+        per_ext: list[dict[str, object]] = []
+        for ft in filaments:
+            ext_overrides: dict[str, object] = {"material_type": ft}
+            if ft in _FILAMENT_TEMPS:
+                print_temp, bed_temp = _FILAMENT_TEMPS[ft]
+                ext_overrides["material_print_temperature"] = print_temp
+                ext_overrides["material_print_temperature_layer_0"] = print_temp
+                ext_overrides["material_bed_temperature"] = bed_temp
+                ext_overrides["material_bed_temperature_layer_0"] = bed_temp
+            per_ext.append(ext_overrides)
+        profile.per_extruder = per_ext
 
     return profile
