@@ -521,6 +521,13 @@ def pin_cura_definitions(
         log.info("No CuraEngine printer specified — nothing to pin.")
         return []
 
+    # If the printer is a local file path that already exists, it was placed
+    # there by 'profiles add' — treat it as already pinned, nothing to squash.
+    existing = _printer_is_file(printer, project_dir)
+    if existing:
+        log.info("Printer definition is a local file — already pinned: %s", existing)
+        return [existing]
+
     def_id = _resolve_def_name(printer)
 
     bundled_def = _DATA_DIR / f"{def_id}.def.json"
