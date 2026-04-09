@@ -723,6 +723,18 @@ def _settings_flags(profile: CuraProfile) -> list[str]:
     return flags
 
 
+def _extruder_settings_list(profile: CuraProfile, ext_idx: int) -> list[str]:
+    """Build ``-s key=value`` args list for one extruder's ``-g -eN`` block.
+
+    Suitable for passing directly to ``subprocess.run`` (no shell quoting).
+    """
+    flags = _settings_flags(profile)
+    if ext_idx < len(profile.per_extruder):
+        for k, v in profile.per_extruder[ext_idx].items():
+            flags.extend(["-s", f"{k}={v}"])
+    return flags
+
+
 def _extruder_settings_str(profile: CuraProfile, ext_idx: int) -> str:
     """Build the ``-s`` flags string for one extruder's ``-g -eN`` block.
 
@@ -730,11 +742,7 @@ def _extruder_settings_str(profile: CuraProfile, ext_idx: int) -> str:
     any per-extruder overrides from ``profile.per_extruder[ext_idx]``.
     If *ext_idx* is out of range the global settings are returned unchanged.
     """
-    flags = _settings_flags(profile)
-    if ext_idx < len(profile.per_extruder):
-        for k, v in profile.per_extruder[ext_idx].items():
-            flags.extend(["-s", f"{k}={v}"])
-    return " ".join(f'"{s}"' for s in flags)
+    return " ".join(f'"{s}"' for s in _extruder_settings_list(profile, ext_idx))
 
 
 def _patch_gcode_header(gcode_path: Path, stderr: str) -> None:
@@ -1044,6 +1052,50 @@ def _run_docker_slice(
     return output_dir
 
 
+def _run_local_slice(
+    cura_args: list[str],
+    output_dir: Path,
+    staging: Path,
+    output_stem: str,
+    profile: CuraProfile,
+) -> Path:
+    """Run CuraEngine locally (without Docker), validate output, and post-process G-code.
+
+    Cleans up *staging* regardless of success or failure.
+
+    Returns:
+        *output_dir* on success.
+    """
+    from estampo.slicer import find_slicer
+
+    cura_bin = find_slicer("cura")
+    cmd = [str(cura_bin), "slice"] + cura_args
+
+    from estampo import ui
+
+    log.info("Slicing locally (%s)", cura_bin)
+    with ui.status("Slicing (CuraEngine)"):
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+
+    shutil.rmtree(staging, ignore_errors=True)
+
+    if result.returncode != 0:
+        combined = (result.stdout + "\n" + result.stderr).strip()
+        log.error("CuraEngine output:\n%s", combined)
+        raise EstampoError(f"CuraEngine failed (exit {result.returncode}):\n{combined[:500]}")
+
+    output_gcode = output_dir / f"{output_stem}.gcode"
+    if not output_gcode.exists() or output_gcode.stat().st_size < 100:
+        combined = (result.stdout + "\n" + result.stderr).strip()
+        raise EstampoError(f"CuraEngine produced no output:\n{combined[:500]}")
+
+    _patch_gcode_header(output_gcode, result.stderr)
+    _substitute_gcode_templates(output_gcode, profile)
+
+    log.info("CuraEngine output: %s (%d bytes)", output_gcode, output_gcode.stat().st_size)
+    return output_dir
+
+
 def slice_stl(
     stl_path: Path,
     output_dir: Path,
@@ -1052,6 +1104,7 @@ def slice_stl(
     printer: str | None = None,
     project_dir: Path | None = None,
     profiles_dir: str = "profiles",
+    local: bool = False,
 ) -> Path:
     """Slice a single STL file with CuraEngine and return the output directory.
 
@@ -1088,6 +1141,26 @@ def slice_stl(
     # Place mesh on the build plate (Z>=0, centered) before slicing.
     staged_stl = _place_on_bed(stl_path, staging, bed_width=bed_w, bed_depth=bed_d)
 
+    settings = _settings_flags(profile)
+
+    if local:
+        defs_path = f"{staging}:{_DATA_DIR}"
+        cura_args = [
+            "-d",
+            defs_path,
+            "-j",
+            str(staging / machine_def),
+            "-o",
+            str(output_dir / (stl_path.stem + ".gcode")),
+            *settings,
+            "-g",
+            "-e0",
+            *settings,
+            "-l",
+            str(staged_stl),
+        ]
+        return _run_local_slice(cura_args, output_dir, staging, stl_path.stem, profile)
+
     # Container paths (output_dir mounted at /work/output)
     c_staging = "/work/output/.cura-staging"
     c_stl = f"{c_staging}/{staged_stl.name}"
@@ -1098,7 +1171,6 @@ def slice_stl(
     # -j loads the machine definition (geometry + start/end gcode).
     # -g starts a mesh group, -e0 sets extruder 0 context for per-extruder
     # settings (material_diameter etc.) that CuraEngine requires.
-    settings = _settings_flags(profile)
     settings_str = " ".join(f'"{s}"' for s in settings)
     inner_cmd = (
         f"CuraEngine slice "
@@ -1121,6 +1193,7 @@ def slice_stl_multi(
     printer: str | None = None,
     project_dir: Path | None = None,
     profiles_dir: str = "profiles",
+    local: bool = False,
 ) -> Path:
     """Slice multiple pre-positioned STL files with per-mesh extruder assignments.
 
@@ -1147,7 +1220,29 @@ def slice_stl_multi(
 
     staging, machine_def = _prepare_cura_staging(printer, project_dir, profiles_dir, output_dir)
 
-    # Copy each STL into staging so Docker can reach it.
+    # Copy each STL into staging so it's accessible from one location.
+    for _ext_idx, stl_path in stl_meshes:
+        dest = staging / stl_path.name
+        if not dest.exists():
+            shutil.copy2(stl_path, dest)
+
+    if local:
+        defs_path = f"{staging}:{_DATA_DIR}"
+        cura_args: list[str] = [
+            "-d",
+            defs_path,
+            "-j",
+            str(staging / machine_def),
+            "-o",
+            str(output_dir / "plate.gcode"),
+            *_settings_flags(profile),
+        ]
+        for ext_idx, stl_path in stl_meshes:
+            cura_args.extend(["-g", f"-e{ext_idx}"])
+            cura_args.extend(_extruder_settings_list(profile, ext_idx))
+            cura_args.extend(["-l", str(staging / stl_path.name)])
+        return _run_local_slice(cura_args, output_dir, staging, "plate", profile)
+
     c_staging = "/work/output/.cura-staging"
     c_output = "/work/output/plate.gcode"
 
@@ -1155,9 +1250,6 @@ def slice_stl_multi(
 
     mesh_groups = ""
     for ext_idx, stl_path in stl_meshes:
-        dest = staging / stl_path.name
-        if not dest.exists():
-            shutil.copy2(stl_path, dest)
         c_stl = f"{c_staging}/{stl_path.name}"
         ext_str = _extruder_settings_str(profile, ext_idx)
         mesh_groups += f" -g -e{ext_idx} {ext_str} -l {c_stl}"

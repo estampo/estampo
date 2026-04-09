@@ -284,6 +284,7 @@ def slice_plate(
                     printer=printer,
                     project_dir=project_dir,
                     profiles_dir=profiles_dir,
+                    local=local,
                 )
             else:
                 log.warning(
@@ -313,6 +314,7 @@ def slice_plate(
             printer=printer,
             project_dir=project_dir,
             profiles_dir=profiles_dir,
+            local=local,
         )
 
     # OrcaSlicer backend — delegate to orca module
