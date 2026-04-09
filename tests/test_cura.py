@@ -9,6 +9,7 @@ from estampo.cura import (
     _FILAMENT_TEMPS,
     CuraProfile,
     _extruder_settings_str,
+    _fetch_printer_def,
     _patch_gcode_header,
     _place_on_bed,
     _resolve_def_name,
@@ -781,3 +782,84 @@ def test_safe_eval_condition_string_neq():
 def test_safe_eval_condition_rejects_function_calls():
     with pytest.raises(ValueError):
         _safe_eval_condition("__import__('os').system('id') == ''")
+
+
+# --- _fetch_printer_def (URL / file path) ---
+
+
+def test_fetch_printer_def_returns_none_for_plain_name(tmp_path):
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    result = _fetch_printer_def("bambox_p1s_ams", project_dir=None, staging=staging)
+    assert result is None
+
+
+def test_fetch_printer_def_copies_local_file(tmp_path):
+    # Create a fake .def.json file
+    def_file = tmp_path / "my_printer.def.json"
+    def_file.write_text('{"version": 1}')
+    staging = tmp_path / "staging"
+    staging.mkdir()
+
+    result = _fetch_printer_def(str(def_file), project_dir=None, staging=staging)
+
+    assert result == "my_printer.def.json"
+    assert (staging / "my_printer.def.json").exists()
+
+
+def test_fetch_printer_def_resolves_relative_to_project_dir(tmp_path):
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    def_file = project_dir / "my_printer.def.json"
+    def_file.write_text('{"version": 1}')
+    staging = tmp_path / "staging"
+    staging.mkdir()
+
+    result = _fetch_printer_def("my_printer.def.json", project_dir=project_dir, staging=staging)
+
+    assert result == "my_printer.def.json"
+    assert (staging / "my_printer.def.json").exists()
+
+
+def test_fetch_printer_def_url_downloads_file(tmp_path):
+    import urllib.request
+
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    fake_content = b'{"version": 1}'
+
+    with patch.object(urllib.request, "urlretrieve") as mock_dl:
+
+        def _fake_retrieve(url, dest):
+            dest.write_bytes(fake_content)
+
+        mock_dl.side_effect = _fake_retrieve
+        result = _fetch_printer_def(
+            "https://example.com/my_printer.def.json",
+            project_dir=None,
+            staging=staging,
+        )
+
+    assert result == "my_printer.def.json"
+    assert (staging / "my_printer.def.json").read_bytes() == fake_content
+
+
+def test_fetch_printer_def_url_adds_def_json_suffix(tmp_path):
+    import urllib.request
+
+    staging = tmp_path / "staging"
+    staging.mkdir()
+
+    with patch.object(urllib.request, "urlretrieve") as mock_dl:
+
+        def _fake_retrieve(url, dest):
+            dest.write_bytes(b"{}")
+
+        mock_dl.side_effect = _fake_retrieve
+        result = _fetch_printer_def(
+            "https://example.com/my_printer",
+            project_dir=None,
+            staging=staging,
+        )
+
+    assert result == "my_printer.def.json"
