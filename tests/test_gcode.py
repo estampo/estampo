@@ -59,6 +59,25 @@ def test_parse_cura_time(tmp_path):
     assert stats["print_time"] == "1h 7m 32s"
 
 
+def test_parse_cura_time_elapsed_overrides_header(tmp_path):
+    """TIME_ELAPSED is preferred over the header ;TIME: placeholder."""
+    gcode = tmp_path / "test.gcode"
+    gcode.write_text(
+        ";Generated with Cura_SteamEngine 5.12.0\n"
+        ";TIME:6666\n"
+        "G28\n"
+        ";LAYER:0\n"
+        "G1 X10 Y10 E1\n"
+        ";TIME_ELAPSED:100.5\n"
+        ";LAYER:1\n"
+        "G1 X20 Y20 E2\n"
+        ";TIME_ELAPSED:223.86\n"
+    )
+    stats = parse_gcode_metadata(gcode)
+    assert stats["print_time_secs"] == 224
+    assert stats["print_time"] == "3m 44s"
+
+
 def test_parse_cura_filament(tmp_path):
     gcode = tmp_path / "test.gcode"
     gcode.write_text(";Generated with Cura_SteamEngine 5.12.0\n;Filament used: 1.23456m\nG28\n")

@@ -652,8 +652,8 @@ class CuraProfile:
     # Nozzle / material
     nozzle_diameter: float = 0.4
     material_diameter: float = 1.75
-    material_print_temperature: int = 260
-    material_bed_temperature: int = 70
+    material_print_temperature: int = 220
+    material_bed_temperature: int = 55
 
     # Process
     layer_height: float = 0.20
@@ -669,7 +669,7 @@ class CuraProfile:
 
     # BBL-specific
     bed_type: str = "Textured PEI Plate"
-    filament_type: str = "PETG-CF"
+    filament_type: str = "PLA"
 
     # Additional -s overrides (Cura setting key names)
     overrides: dict[str, str] = field(default_factory=dict)
@@ -1130,7 +1130,7 @@ def slice_stl(
     Args:
         stl_path: Path to the input STL file.
         output_dir: Directory for output G-code.
-        profile: Slicer profile. Defaults to P1S / PETG-CF / 0.2mm.
+        profile: Slicer profile. Defaults to P1S / PLA / 0.2mm.
         image: Docker image override. Defaults to estampo/estampo:cura-5.12.0.
         printer: Printer definition name (e.g. ``"BambuLab P1S"``).
         project_dir: Project root for pinned profile lookup.

@@ -383,9 +383,12 @@ def resolved_filaments(
     elif loaded_parts.has_paint_colors:
         return ResolvedFilaments(filaments=None, filament_ids=loaded_parts.filament_ids)
     else:
-        orca = config.slicer.orca
+        if config.slicer.engine == "cura":
+            fils = config.slicer.cura.filaments
+        else:
+            fils = config.slicer.orca.filaments
         return ResolvedFilaments(
-            filaments=orca.filaments or None,
+            filaments=fils or None,
             filament_ids=loaded_parts.filament_ids,
         )
 
