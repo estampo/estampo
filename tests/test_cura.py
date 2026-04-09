@@ -17,6 +17,7 @@ from estampo.cura import (
     cura_docker_image,
     cura_profile_from_config,
     slice_stl,
+    slice_stl_multi,
 )
 
 # --- _resolve_def_name ---
@@ -363,6 +364,116 @@ def test_slice_plate_cura_dispatch(tmp_path):
     assert profile.layer_height == 0.12
     assert profile.filament_type == "PLA"
     assert "estampo/estampo:cura-5.12.0" in str(call_kwargs)
+
+
+# --- slice_stl_multi ---
+
+
+def test_slice_stl_multi_docker_command(tmp_path):
+    """slice_stl_multi builds one -g -eN -l group per mesh."""
+    import trimesh
+
+    stl_a = tmp_path / "part_0.stl"
+    stl_b = tmp_path / "part_1.stl"
+    trimesh.creation.box(extents=[10, 10, 10]).export(str(stl_a))
+    trimesh.creation.box(extents=[5, 5, 5]).export(str(stl_b))
+
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    (output_dir / "plate.gcode").write_text("G28\n" * 100)
+
+    mock_result = MagicMock(returncode=0, stdout="", stderr="")
+    with (
+        patch("estampo.cura.subprocess.run", return_value=mock_result) as mock_run,
+        patch("estampo.ui.status"),
+    ):
+        slice_stl_multi(
+            [(0, stl_a), (1, stl_b)],
+            output_dir,
+            CuraProfile(),
+            image="estampo/estampo:cura-5.12.0",
+        )
+
+    inner_cmd = mock_run.call_args[0][0][-1]
+    assert "-g -e0" in inner_cmd
+    assert "-g -e1" in inner_cmd
+    assert "part_0.stl" in inner_cmd
+    assert "part_1.stl" in inner_cmd
+    # Order must be preserved
+    assert inner_cmd.index("-e0") < inner_cmd.index("-e1")
+
+
+def test_slice_stl_multi_empty_raises(tmp_path):
+    """slice_stl_multi with an empty list raises ValueError."""
+    with pytest.raises(ValueError, match="must not be empty"):
+        slice_stl_multi([], tmp_path / "output", CuraProfile())
+
+
+def test_slice_plate_cura_multi_dispatch(tmp_path):
+    """slice_plate with multi-filament ids dispatches to slice_stl_multi."""
+    import trimesh
+
+    from estampo.slicer import slice_plate
+
+    # Two-geometry scene — separate box and sphere positioned apart
+    mesh_a = trimesh.creation.box(extents=[10, 10, 10])
+    mesh_b = trimesh.creation.box(extents=[5, 5, 5])
+    mesh_b.vertices += [30, 0, 0]
+    scene = trimesh.Scene()
+    scene.add_geometry(mesh_a, geom_name="body")
+    scene.add_geometry(mesh_b, geom_name="cap")
+    input_3mf = tmp_path / "plate.3mf"
+    scene.export(str(input_3mf))
+
+    output_dir = tmp_path / "output"
+
+    with (
+        patch("estampo.cura.slice_stl_multi", return_value=output_dir) as mock_multi,
+        patch("estampo.cura.slice_stl") as mock_single,
+    ):
+        result = slice_plate(
+            input_3mf,
+            engine="cura",
+            output_dir=output_dir,
+            filament_ids=[1, 2],
+            docker_version="5.12.0",
+        )
+
+    assert result == output_dir
+    mock_multi.assert_called_once()
+    mock_single.assert_not_called()
+
+    # Verify extruder indices are 0-based (filament_ids [1,2] → extruders [0,1])
+    stl_meshes_arg = mock_multi.call_args[0][0]
+    assert [ext for ext, _ in stl_meshes_arg] == [0, 1]
+
+
+def test_slice_plate_cura_single_filament_uses_slice_stl(tmp_path):
+    """slice_plate with a single filament slot falls back to slice_stl."""
+    import trimesh
+
+    from estampo.slicer import slice_plate
+
+    input_3mf = tmp_path / "plate.3mf"
+    scene = trimesh.Scene(trimesh.creation.box(extents=[10, 10, 10]))
+    scene.export(str(input_3mf))
+
+    output_dir = tmp_path / "output"
+
+    with (
+        patch("estampo.cura.slice_stl", return_value=output_dir) as mock_single,
+        patch("estampo.cura.slice_stl_multi") as mock_multi,
+    ):
+        slice_plate(
+            input_3mf,
+            engine="cura",
+            output_dir=output_dir,
+            filament_ids=[1, 1],  # same slot — should not use multi path
+            docker_version="5.12.0",
+        )
+
+    mock_single.assert_called_once()
+    mock_multi.assert_not_called()
 
 
 # --- _patch_gcode_header ---
