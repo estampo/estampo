@@ -1,0 +1,48 @@
+# CuraEngine multi-filament example — Bambu P1S with AMS
+#
+# Two parts on separate AMS slots, sliced by CuraEngine and packed by bambox.
+# Used for e2e comparison against a BambuStudio reference slice.
+#
+# Run:
+#   estampo run examples/cura-ams-p1s/estampo.toml
+#
+# Output: examples/cura-ams-p1s/output/plate.gcode.3mf
+
+name = "cura-ams-p1s"
+
+[pipeline]
+stages = ["load", "arrange", "plate", "slice", "pack"]
+
+[plate]
+size = [256, 256]
+padding = 10.0
+
+[slicer]
+engine = "cura"
+version = "5.12.0"
+bed_type = "Textured PEI Plate"
+
+[slicer.cura]
+# bambox P1S AMS definition: 4-extruder machine with BAMBOX header contract.
+# Requires bambox to be installed: https://github.com/estampo/bambox
+printer = "bambox_p1s_ams"
+
+# Per-slot filament types — drives material_type header and temperatures.
+# Slot 1 = AMS tray 1, Slot 2 = AMS tray 2.
+filaments = ["PLA", "PETG"]
+
+# Part 1: cube on AMS slot 1 (PLA)
+[[parts]]
+file = "../../tests/fixtures/cube_10mm.stl"
+filament = 1
+
+# Part 2: cylinder on AMS slot 2 (PETG)
+[[parts]]
+file = "../../tests/fixtures/cylinder_5x20mm.stl"
+filament = 2
+
+# bambox pack: converts CuraEngine G-code → Bambu-compatible .gcode.3mf
+# CuraEngine always writes plate.gcode into {sliced_dir}.
+[pack]
+command = "bambox pack {sliced_dir}/plate.gcode -o {output_dir}"
+output = "{output_dir}/plate.gcode.3mf"
