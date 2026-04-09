@@ -7,6 +7,7 @@ build/
 .pytest_cache/
 *.3mf
 *.gcode
+!examples/**/reference/*.gcode.3mf
 output/
 .DS_Store
 .coverage
