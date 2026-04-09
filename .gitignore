@@ -19,3 +19,4 @@ fabprint_output/
 estampo_output/
 bc_tls*.log
 docs/bc_https_hook.py
+.env

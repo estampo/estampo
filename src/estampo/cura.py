@@ -1012,12 +1012,16 @@ def _run_docker_slice(
     Returns:
         *output_dir* on success.
     """
+    import os
+
     cmd = [
         "docker",
         "run",
         "--rm",
         "--platform",
         "linux/amd64",
+        "--user",
+        f"{os.getuid()}:{os.getgid()}",
         "-v",
         f"{output_dir}:/work/output",
         "--entrypoint",

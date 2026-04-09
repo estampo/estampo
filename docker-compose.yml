@@ -9,4 +9,7 @@ services:
     volumes:
       - .:/project
     working_dir: /project
+    # UID/GID come from .env (copy .env.example → .env and set your IDs).
+    # $UID is a bash variable that is never exported, so it cannot be used
+    # directly here — docker-compose reads .env instead.
     user: "${UID:-1000}:${GID:-1000}"
