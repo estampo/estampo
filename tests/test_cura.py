@@ -6,7 +6,9 @@ import pytest
 
 from estampo import EstampoError
 from estampo.cura import (
+    _FILAMENT_TEMPS,
     CuraProfile,
+    _extruder_settings_str,
     _patch_gcode_header,
     _place_on_bed,
     _resolve_def_name,
@@ -446,6 +448,102 @@ def test_slice_plate_cura_multi_dispatch(tmp_path):
     # Verify extruder indices are 0-based (filament_ids [1,2] → extruders [0,1])
     stl_meshes_arg = mock_multi.call_args[0][0]
     assert [ext for ext, _ in stl_meshes_arg] == [0, 1]
+
+
+# --- per-extruder profiles (Stage 2) ---
+
+
+def test_extruder_settings_str_no_per_extruder():
+    """Without per_extruder data, _extruder_settings_str returns global settings."""
+    profile = CuraProfile(material_print_temperature=230)
+    s = _extruder_settings_str(profile, 0)
+    assert "material_print_temperature=230" in s
+    # Same for extruder 1 (no per_extruder entry)
+    assert _extruder_settings_str(profile, 1) == s
+
+
+def test_extruder_settings_str_with_per_extruder():
+    """Per-extruder overrides are appended after the global settings."""
+    profile = CuraProfile(
+        material_print_temperature=260,
+        per_extruder=[
+            {"material_print_temperature": 220, "material_type": "PLA"},
+            {"material_print_temperature": 240, "material_type": "PETG"},
+        ],
+    )
+    s0 = _extruder_settings_str(profile, 0)
+    s1 = _extruder_settings_str(profile, 1)
+
+    # Per-extruder override appears in the string
+    assert "material_print_temperature=220" in s0
+    assert "material_type=PLA" in s0
+    assert "material_print_temperature=240" in s1
+    assert "material_type=PETG" in s1
+
+    # The per-extruder value comes AFTER the global one (CuraEngine uses last wins)
+    assert s0.index("material_print_temperature=220") > s0.index("material_print_temperature=260")
+
+
+def test_cura_profile_from_config_per_extruder_populated():
+    """cura_profile_from_config builds per_extruder from the filaments list."""
+    profile = cura_profile_from_config(filaments=["PLA", "PETG-CF"])
+
+    assert len(profile.per_extruder) == 2
+    assert profile.per_extruder[0]["material_type"] == "PLA"
+    assert profile.per_extruder[1]["material_type"] == "PETG-CF"
+    # Known filament types get temperature overrides
+    assert profile.per_extruder[0]["material_print_temperature"] == _FILAMENT_TEMPS["PLA"][0]
+    assert profile.per_extruder[1]["material_print_temperature"] == _FILAMENT_TEMPS["PETG-CF"][0]
+
+
+def test_cura_profile_from_config_unknown_filament_no_temps():
+    """Unknown filament type gets material_type only — no temperature guess."""
+    profile = cura_profile_from_config(filaments=["SuperCustom"])
+    assert profile.per_extruder[0]["material_type"] == "SuperCustom"
+    assert "material_print_temperature" not in profile.per_extruder[0]
+
+
+def test_slice_stl_multi_per_extruder_in_command(tmp_path):
+    """slice_stl_multi emits per-extruder -s overrides in each -g block."""
+    import trimesh
+
+    stl_a = tmp_path / "part_0.stl"
+    stl_b = tmp_path / "part_1.stl"
+    trimesh.creation.box(extents=[10, 10, 10]).export(str(stl_a))
+    trimesh.creation.box(extents=[5, 5, 5]).export(str(stl_b))
+
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    (output_dir / "plate.gcode").write_text("G28\n" * 100)
+
+    profile = CuraProfile(
+        per_extruder=[
+            {"material_type": "PLA", "material_print_temperature": 220},
+            {"material_type": "PETG-CF", "material_print_temperature": 260},
+        ]
+    )
+    mock_result = MagicMock(returncode=0, stdout="", stderr="")
+    with (
+        patch("estampo.cura.subprocess.run", return_value=mock_result) as mock_run,
+        patch("estampo.ui.status"),
+    ):
+        slice_stl_multi(
+            [(0, stl_a), (1, stl_b)],
+            output_dir,
+            profile,
+            image="estampo/estampo:cura-5.12.0",
+        )
+
+    inner_cmd = mock_run.call_args[0][0][-1]
+    # Extruder 0 block must contain PLA overrides
+    e0_start = inner_cmd.index("-g -e0")
+    e1_start = inner_cmd.index("-g -e1")
+    e0_block = inner_cmd[e0_start:e1_start]
+    e1_block = inner_cmd[e1_start:]
+    assert "material_type=PLA" in e0_block
+    assert "material_print_temperature=220" in e0_block
+    assert "material_type=PETG-CF" in e1_block
+    assert "material_print_temperature=260" in e1_block
 
 
 def test_slice_plate_cura_single_filament_uses_slice_stl(tmp_path):

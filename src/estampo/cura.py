@@ -509,6 +509,23 @@ def load_cura_machine_profile(
     )
 
 
+# Default print/bed temperatures by filament type string.
+# Used to populate per-extruder profile settings when a filaments list is
+# provided.  Values are (print_temp_°C, bed_temp_°C).
+_FILAMENT_TEMPS: dict[str, tuple[int, int]] = {
+    "PLA": (220, 55),
+    "PLA-CF": (220, 55),
+    "PETG": (240, 70),
+    "PETG-CF": (260, 70),
+    "ABS": (250, 100),
+    "ASA": (255, 100),
+    "TPU": (230, 30),
+    "PA": (270, 80),
+    "PA-CF": (280, 80),
+    "PC": (270, 100),
+}
+
+
 @dataclass
 class CuraProfile:
     """Slicer profile for CuraEngine targeting a BBL printer.
@@ -544,6 +561,12 @@ class CuraProfile:
 
     # Additional -s overrides (Cura setting key names)
     overrides: dict[str, str] = field(default_factory=dict)
+
+    # Per-extruder overrides (index 0 = extruder 0).  Each dict contains
+    # CuraEngine setting key/value pairs that are appended after the global
+    # settings in that extruder's ``-g -eN`` block.  If absent or shorter
+    # than the extruder count, global settings apply for remaining extruders.
+    per_extruder: list[dict[str, object]] = field(default_factory=list)
 
 
 def _settings_flags(profile: CuraProfile) -> list[str]:
@@ -593,6 +616,20 @@ def _settings_flags(profile: CuraProfile) -> list[str]:
     for k, v in pairs.items():
         flags.extend(["-s", f"{k}={v}"])
     return flags
+
+
+def _extruder_settings_str(profile: CuraProfile, ext_idx: int) -> str:
+    """Build the ``-s`` flags string for one extruder's ``-g -eN`` block.
+
+    Starts from the global ``_settings_flags(profile)`` output and appends
+    any per-extruder overrides from ``profile.per_extruder[ext_idx]``.
+    If *ext_idx* is out of range the global settings are returned unchanged.
+    """
+    flags = _settings_flags(profile)
+    if ext_idx < len(profile.per_extruder):
+        for k, v in profile.per_extruder[ext_idx].items():
+            flags.extend(["-s", f"{k}={v}"])
+    return " ".join(f'"{s}"' for s in flags)
 
 
 def _patch_gcode_header(gcode_path: Path, stderr: str) -> None:
@@ -979,8 +1016,8 @@ def slice_stl_multi(
     relative to each other and to the build plate (no centering is applied).
 
     CuraEngine receives one ``-g -eN -l mesh.stl`` group per entry, in order.
-    All groups share the same *profile* settings (Stage 1 — per-extruder
-    profiles are added in Stage 2).
+    Global settings from *profile* apply to all groups; ``profile.per_extruder``
+    provides additional per-extruder overrides (filament type, temperatures).
 
     Returns:
         The output directory containing ``plate.gcode``.
@@ -1001,8 +1038,7 @@ def slice_stl_multi(
     c_staging = "/work/output/.cura-staging"
     c_output = "/work/output/plate.gcode"
 
-    settings = _settings_flags(profile)
-    settings_str = " ".join(f'"{s}"' for s in settings)
+    global_settings_str = " ".join(f'"{s}"' for s in _settings_flags(profile))
 
     mesh_groups = ""
     for ext_idx, stl_path in stl_meshes:
@@ -1010,14 +1046,15 @@ def slice_stl_multi(
         if not dest.exists():
             shutil.copy2(stl_path, dest)
         c_stl = f"{c_staging}/{stl_path.name}"
-        mesh_groups += f" -g -e{ext_idx} {settings_str} -l {c_stl}"
+        ext_str = _extruder_settings_str(profile, ext_idx)
+        mesh_groups += f" -g -e{ext_idx} {ext_str} -l {c_stl}"
 
     inner_cmd = (
         f"CuraEngine slice "
         f"-d {c_staging}:{_DEFS_DIR}:/opt/cura/extruders "
         f"-j {c_staging}/{machine_def} "
         f"-o {c_output} "
-        f"{settings_str}"
+        f"{global_settings_str}"
         f"{mesh_groups}"
     )
 
@@ -1037,6 +1074,7 @@ def cura_profile_from_config(
     overrides: dict[str, object] | None = None,
     bed_type: str | None = None,
     filament_type: str | None = None,
+    filaments: list[str] | None = None,
     printer: str | None = None,
     project_dir: Path | None = None,
     profiles_dir: str = "profiles",
@@ -1045,6 +1083,10 @@ def cura_profile_from_config(
 
     The machine profile JSON defines machine geometry and nozzle dimensions.
     Config overrides (process settings) are applied on top.
+
+    If *filaments* is provided (a list of filament type strings, one per
+    extruder slot), ``profile.per_extruder`` is populated with per-slot
+    temperature and material_type overrides derived from ``_FILAMENT_TEMPS``.
 
     Maps estampo-style override keys (which may use OrcaSlicer names) to
     CuraEngine equivalents where possible.
@@ -1101,5 +1143,18 @@ def cura_profile_from_config(
 
         if cura_overrides:
             profile.overrides = cura_overrides
+
+    if filaments:
+        per_ext: list[dict[str, object]] = []
+        for ft in filaments:
+            ext_overrides: dict[str, object] = {"material_type": ft}
+            if ft in _FILAMENT_TEMPS:
+                print_temp, bed_temp = _FILAMENT_TEMPS[ft]
+                ext_overrides["material_print_temperature"] = print_temp
+                ext_overrides["material_print_temperature_layer_0"] = print_temp
+                ext_overrides["material_bed_temperature"] = bed_temp
+                ext_overrides["material_bed_temperature_layer_0"] = bed_temp
+            per_ext.append(ext_overrides)
+        profile.per_extruder = per_ext
 
     return profile

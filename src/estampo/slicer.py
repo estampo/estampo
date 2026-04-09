@@ -235,6 +235,7 @@ def slice_plate(
             overrides=overrides,
             bed_type=bed_type,
             filament_type=filament_type,
+            filaments=filaments if isinstance(filaments, list) else None,
             printer=printer,
             project_dir=project_dir,
             profiles_dir=profiles_dir,
