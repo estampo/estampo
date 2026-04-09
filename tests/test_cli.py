@@ -290,6 +290,8 @@ def test_profiles_pin(tmp_path):
     config.write_text(f"""
 [slicer]
 engine = "orca"
+
+[slicer.orca]
 printer = "Bambu Lab P1S 0.4 nozzle"
 process = "0.20mm Standard @BBL X1C"
 filaments = ["Generic PLA @base"]
