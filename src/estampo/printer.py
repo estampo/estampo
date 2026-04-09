@@ -289,7 +289,11 @@ def _send_cloud_bridge(
             log.debug("Status check failed (printer may be offline): %s", e)
 
     # Use the slicer's .gcode.3mf if available, otherwise wrap the gcode
-    sliced_3mfs = list(gcode_path.parent.glob("*_sliced.gcode.3mf"))
+    sliced_3mfs = sorted(
+        gcode_path.parent.glob("*_sliced.gcode.3mf"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
     if sliced_3mfs:
         threemf_path = sliced_3mfs[0]
     else:

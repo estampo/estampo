@@ -465,7 +465,11 @@ def gcode_stats(packaged_output: Path) -> dict:
 
 def gcode_path(packaged_output: Path) -> Path:
     """Find the gcode file in the slicer output directory."""
-    gcode_files = list(packaged_output.glob("*.gcode"))
+    gcode_files = sorted(
+        packaged_output.glob("*.gcode"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
     if not gcode_files:
         raise RuntimeError(f"No gcode files found in {packaged_output}")
     return gcode_files[0]
