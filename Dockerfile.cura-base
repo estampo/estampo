@@ -115,6 +115,10 @@ LABEL org.opencontainers.image.description="CuraEngine ${CURA_VERSION} base imag
 LABEL org.opencontainers.image.source="https://github.com/estampo/estampo"
 LABEL org.opencontainers.image.licenses="AGPL-3.0"
 LABEL estampo.cura-version="${CURA_VERSION}"
+LABEL estampo.curaengine.source="https://github.com/Ultimaker/CuraEngine/tree/${CURA_VERSION}"
+LABEL estampo.curaengine.license="AGPL-3.0"
+LABEL estampo.cura-definitions.source="https://github.com/Ultimaker/Cura/tree/${CURA_VERSION}"
+LABEL estampo.cura-definitions.license="LGPL-3.0"
 
 # Runtime deps (libgomp for OpenMP)
 RUN --mount=type=cache,id=apt-cura-rt,target=/var/cache/apt \

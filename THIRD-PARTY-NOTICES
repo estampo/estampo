@@ -1,0 +1,54 @@
+Third-Party Software Notices
+============================
+
+This file lists third-party components used by estampo and the licenses
+that apply to them. Estampo itself is licensed under the Apache License 2.0
+(see LICENSE).
+
+
+CuraEngine
+----------
+Copyright (C) UltiMaker
+License: AGPL-3.0 (GNU Affero General Public License v3.0)
+Source:  https://github.com/Ultimaker/CuraEngine
+
+Estampo invokes CuraEngine as a separate subprocess (not linked). The
+Docker images distributed as estampo/estampo:cura-* and estampo/cura-base:*
+contain the CuraEngine binary compiled from source. Complete corresponding
+source code is available at the URL above, tagged by version (e.g. 5.12.0).
+
+Full license text: https://www.gnu.org/licenses/agpl-3.0.html
+
+
+Cura Printer Definitions
+-------------------------
+Copyright (C) UltiMaker
+License: LGPL-3.0 (GNU Lesser General Public License v3.0)
+Source:  https://github.com/Ultimaker/Cura
+
+The following files in src/estampo/data/ are derived from printer
+definitions distributed with UltiMaker Cura under the LGPL-3.0:
+
+  - bambulab_base.def.json   (from Cura's resources/definitions/)
+  - bambulab_p1s.def.json    (adapted from Cura + OrcaSlicer profiles)
+
+The Docker images also bundle the full set of Cura printer definitions
+extracted from the Cura AppImage release.
+
+Modifications made by estampo are noted in each file's "author" metadata
+field. Per LGPL-3.0, modified files remain under LGPL-3.0.
+
+Full license text: https://www.gnu.org/licenses/lgpl-3.0.html
+
+
+OrcaSlicer
+----------
+Copyright (C) SoftFever and contributors
+License: AGPL-3.0 (GNU Affero General Public License v3.0)
+Source:  https://github.com/SoftFever/OrcaSlicer
+
+Estampo invokes OrcaSlicer as a separate subprocess (not linked). The
+Docker images distributed as estampo/estampo:orca-* contain the OrcaSlicer
+binary. Complete corresponding source code is available at the URL above.
+
+Full license text: https://www.gnu.org/licenses/agpl-3.0.html
