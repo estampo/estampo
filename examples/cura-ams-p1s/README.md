@@ -16,7 +16,10 @@ BambuStudio reference slice of the same models.
 - estampo installed (`pipx install estampo`)
 - Docker running (CuraEngine image pulled automatically)
 - bambox installed (`pipx install bambox` or `cargo install bambox`)
-- `bambox_p1s_ams` definition available (bundled with bambox)
+
+The CuraEngine printer definition (`bambox_p1s_ams`) is bundled in
+`profiles/cura/definitions/` so estampo can find it without bambox
+installed as a Python package.
 
 ## Running the estampo slice
 
