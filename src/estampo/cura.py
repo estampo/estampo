@@ -1,11 +1,10 @@
 """CuraEngine slicer backend.
 
-Slices STL files using CuraEngine via Docker, with a proper Bambu Lab P1S
-machine definition (inheriting from bambulab_base → fdmprinter).  Produces
-plain G-code that can be packaged into .gcode.3mf.
+Slices STL files using CuraEngine via Docker, with a printer definition
+(inheriting from fdmprinter).  Produces plain G-code.
 
 Uses CuraEngine 5.12.0 built from source, packaged in a minimal Docker
-image with bundled printer definitions.
+image with bundled printer definitions.  Default printer: Ultimaker 2.
 """
 
 from __future__ import annotations
@@ -110,19 +109,19 @@ def _find_in_bambox(filename: str) -> Path | None:
 def _resolve_def_name(printer_name: str | None) -> str:
     """Map a human printer name to a definition filename stem.
 
-    Uses the bundled manifest to map e.g. ``"BambuLab P1S"`` →
-    ``"bambulab_p1s"``.  Tries several fallbacks:
+    Uses the bundled manifest to map e.g. ``"Ultimaker 2"`` →
+    ``"ultimaker2"``.  Tries several fallbacks:
 
-    1. Exact match in manifest (``"BambuLab P1S"``).
-    2. Already a known definition ID (``"bambulab_p1s"``).
-    2b. Looks like a raw definition ID (``"bambox_p1s_ams"``).
+    1. Exact match in manifest (``"Ultimaker 2"``).
+    2. Already a known definition ID (``"ultimaker2"``).
+    2b. Looks like a raw definition ID (``"my_custom_printer"``).
     3. Case-insensitive match against manifest names.
-    4. Strip nozzle suffix (``"Bambu Lab P1S 0.4 nozzle"`` → retry).
+    4. Strip nozzle suffix (``"My Printer 0.4 nozzle"`` → retry).
 
     Raises :class:`EstampoError` if nothing matches.
     """
     if not printer_name:
-        return "bambulab_p1s"
+        return "ultimaker2"
 
     def_map = load_cura_definition_map()
 
@@ -171,7 +170,7 @@ def _resolve_def_chain(
     """Resolve a printer definition and its full inheritance chain.
 
     Returns a list of Paths from leaf (printer) to root, e.g.
-    ``[bambulab_p1s.def.json, bambulab_base.def.json]``.
+    ``[ultimaker2.def.json]``.
 
     Search order per definition:
     1. Pinned (squashed) in ``profiles/cura/definitions/``
@@ -344,7 +343,7 @@ _BUNDLED_DIR = Path(__file__).parent / "data"
 def load_cura_definition_map(version: str | None = None) -> dict[str, str]:
     """Load a mapping of CuraEngine definition names to IDs.
 
-    Returns ``{"BambuLab P1S": "bambulab_p1s", ...}``.
+    Returns ``{"Ultimaker 2": "ultimaker2", ...}``.
     """
     data = _load_bundled_manifest(version)
     if not data:
@@ -640,11 +639,11 @@ _FILAMENT_TEMPS: dict[str, tuple[int, int]] = {
 
 @dataclass
 class CuraProfile:
-    """Slicer profile for CuraEngine targeting a BBL printer.
+    """Slicer profile for CuraEngine.
 
-    Machine geometry and start/end G-code come from the bambulab_p1s
-    definition file.  This profile controls process settings (layer
-    height, speeds, temperatures, infill) passed as ``-s`` overrides.
+    Machine geometry and start/end G-code come from the printer definition
+    file (default: ultimaker2).  This profile controls process settings
+    (layer height, speeds, temperatures, infill) passed as ``-s`` overrides.
     Nozzle and material dimensions can be overridden via a machine
     profile JSON (see ``load_cura_machine_profile``).
     """
@@ -667,7 +666,7 @@ class CuraProfile:
     speed_wall_0: int = 50
     speed_infill: int = 80
 
-    # BBL-specific
+    # Bed / filament
     bed_type: str = "Textured PEI Plate"
     filament_type: str = "PLA"
 
@@ -685,7 +684,7 @@ def _settings_flags(profile: CuraProfile) -> list[str]:
     """Build -s key=value flags from profile.
 
     Machine settings (bed size, heated bed, start/end gcode) are handled
-    by the bambulab_p1s definition — only process/material settings here.
+    by the printer definition — only process/material settings here.
     """
     # CuraEngine computes infill_line_distance from infill_sparse_density
     # via a ``value`` expression in fdmprinter.def.json, but ``value``
@@ -795,7 +794,7 @@ def _place_on_bed(
     and is centered on the build plate.
 
     CuraEngine only slices geometry above Z=0.  With
-    ``machine_center_is_zero = false`` (BBL default), the bed origin is at
+    ``machine_center_is_zero = false`` (common default), the bed origin is at
     the corner, so the center of the bed is (width/2, depth/2).  This
     function:
     1. Shifts Z so the lowest vertex is at Z=0.
@@ -1132,7 +1131,7 @@ def slice_stl(
         output_dir: Directory for output G-code.
         profile: Slicer profile. Defaults to P1S / PLA / 0.2mm.
         image: Docker image override. Defaults to estampo/estampo:cura-5.12.0.
-        printer: Printer definition name (e.g. ``"BambuLab P1S"``).
+        printer: Printer definition name (e.g. ``"Ultimaker 2"``).
         project_dir: Project root for pinned profile lookup.
         profiles_dir: Profiles directory name within the project.
 
@@ -1316,7 +1315,7 @@ def cura_profile_from_config(
     # Load machine profile JSON if available (nozzle/material overrides).
     # Falls back to CuraProfile defaults when no machine profile exists —
     # the .def.json definition is sufficient for slicing.
-    machine_name = printer or "Bambu Lab P1S 0.4 nozzle"
+    machine_name = printer or "Ultimaker 2"
     try:
         machine_data = load_cura_machine_profile(machine_name, project_dir, profiles_dir)
         for key, value in machine_data.items():

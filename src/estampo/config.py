@@ -79,11 +79,6 @@ class PartConfig:
     sequence: int = 1  # print order for sequential printing
 
 
-@dataclass
-class PrinterConfig:
-    name: str  # references a printer in ~/.config/estampo/credentials.toml
-
-
 DEFAULT_STAGES = ["load", "arrange", "plate", "slice"]
 
 
@@ -102,7 +97,6 @@ class EstampoConfig:
     name: str | None = None  # optional project name, used to prefix output filenames
     output_dir: str = "estampo_output"  # output directory, relative to base_dir
     filaments: dict[str, str] = field(default_factory=dict)  # material alias → profile name
-    printer: PrinterConfig | None = None
     pipeline: PipelineConfig = field(default_factory=PipelineConfig)
 
 
@@ -455,22 +449,6 @@ def load_config(path: Path) -> EstampoConfig:
 
     pipeline = PipelineConfig(stages=pipeline_stages, command_stages=command_stages)
 
-    # Printer config (optional)
-    printer = None
-    printer_raw = raw.get("printer")
-    if printer_raw is not None:
-        # Reject secrets in project TOML — they belong in credentials.toml
-        for secret_field in ("ip", "access_code", "serial", "mode"):
-            if secret_field in printer_raw:
-                raise EstampoError(
-                    f"printer.{secret_field} should not be in project config. "
-                    f"Use 'estampo setup' to configure printers in credentials.toml."
-                )
-        name = printer_raw.get("name")
-        if not name:
-            raise EstampoError("printer.name is required — it references credentials.toml")
-        printer = PrinterConfig(name=name)
-
     # Top-level project name (optional)
     project_name: str | None = raw.get("name")
     if project_name is not None:
@@ -492,6 +470,5 @@ def load_config(path: Path) -> EstampoConfig:
         name=project_name,
         output_dir=output_dir,
         filaments=filament_aliases,
-        printer=printer,
         pipeline=pipeline,
     )

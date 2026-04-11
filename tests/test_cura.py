@@ -28,32 +28,32 @@ from estampo.cura import (
 
 def test_resolve_def_name_exact_match():
     """Exact manifest name maps to definition ID."""
-    assert _resolve_def_name("BambuLab P1S") == "bambulab_p1s"
+    assert _resolve_def_name("Ultimaker 2") == "ultimaker2"
 
 
 def test_resolve_def_name_none_returns_default():
-    """None falls back to bambulab_p1s."""
-    assert _resolve_def_name(None) == "bambulab_p1s"
+    """None falls back to ultimaker2."""
+    assert _resolve_def_name(None) == "ultimaker2"
 
 
 def test_resolve_def_name_already_id():
     """If the name is already a definition ID, return it as-is."""
-    assert _resolve_def_name("bambulab_p1s") == "bambulab_p1s"
+    assert _resolve_def_name("ultimaker2") == "ultimaker2"
 
 
 def test_resolve_def_name_case_insensitive():
     """Case-insensitive matching against manifest names."""
-    assert _resolve_def_name("bambulab p1s") == "bambulab_p1s"
+    assert _resolve_def_name("ultimaker 2") == "ultimaker2"
 
 
 def test_resolve_def_name_strips_nozzle_suffix():
     """Machine profile names with nozzle suffix resolve correctly."""
-    assert _resolve_def_name("BambuLab P1S 0.4 nozzle") == "bambulab_p1s"
+    assert _resolve_def_name("Ultimaker 2 0.4 nozzle") == "ultimaker2"
 
 
 def test_resolve_def_name_strips_nozzle_mm_suffix():
     """Nozzle suffix with mm unit resolves correctly."""
-    assert _resolve_def_name("BambuLab P1S 0.6mm nozzle") == "bambulab_p1s"
+    assert _resolve_def_name("Ultimaker 2 0.6mm nozzle") == "ultimaker2"
 
 
 def test_resolve_def_name_unknown_raises():
@@ -222,28 +222,13 @@ def test_settings_flags_custom_overrides():
 # --- bundled definition files ---
 
 
-def test_bundled_definitions_exist():
-    """BBL definition files are bundled with the package."""
-    from estampo.cura import _bundled_def_path, _resolve_def_chain
+def test_bundled_def_path_returns_path():
+    """_bundled_def_path returns a Path inside data/."""
+    from estampo.cura import _bundled_def_path
 
-    # P1S definition and its base must exist
-    for def_name in ("bambulab_p1s.def.json", "bambulab_base.def.json"):
-        path = _bundled_def_path(def_name)
-        assert path.exists(), f"Missing bundled definition: {def_name}"
-
-    import json
-
-    p1s = json.loads(_bundled_def_path("bambulab_p1s.def.json").read_text())
-    assert p1s["name"] == "BambuLab P1S"
-    assert p1s["inherits"] == "bambulab_base"
-    assert "machine_start_gcode" in p1s["overrides"]
-    assert "machine_end_gcode" in p1s["overrides"]
-
-    # Definition chain should resolve both files
-    chain = _resolve_def_chain("bambulab_p1s")
-    assert len(chain) >= 2
-    assert chain[0].name == "bambulab_p1s.def.json"
-    assert chain[1].name == "bambulab_base.def.json"
+    path = _bundled_def_path("some_printer.def.json")
+    assert path.name == "some_printer.def.json"
+    assert "data" in str(path)
 
 
 # --- slice_stl Docker execution ---
@@ -251,6 +236,8 @@ def test_bundled_definitions_exist():
 
 def test_slice_stl_docker_command(tmp_path):
     """Verify Docker command is built correctly."""
+    import json
+
     import trimesh
 
     mesh = trimesh.creation.box(extents=[10, 10, 10])
@@ -263,6 +250,25 @@ def test_slice_stl_docker_command(tmp_path):
     gcode_out = output_dir / "model.gcode"
     gcode_out.write_text("G28\n" * 100)
 
+    # Create a minimal printer definition so _prepare_cura_staging resolves
+    defs_dir = tmp_path / "profiles" / "cura" / "definitions"
+    defs_dir.mkdir(parents=True)
+    (defs_dir / "test_printer.def.json").write_text(
+        json.dumps(
+            {
+                "name": "Test Printer",
+                "inherits": "fdmprinter",
+                "overrides": {
+                    "machine_width": {"default_value": 256},
+                    "machine_depth": {"default_value": 256},
+                    "machine_height": {"default_value": 256},
+                    "machine_start_gcode": {"default_value": "G28"},
+                    "machine_end_gcode": {"default_value": "M84"},
+                },
+            }
+        )
+    )
+
     profile = CuraProfile()
     mock_result = MagicMock(returncode=0, stdout="", stderr="")
 
@@ -270,7 +276,14 @@ def test_slice_stl_docker_command(tmp_path):
         patch("estampo.cura.subprocess.run", return_value=mock_result) as mock_run,
         patch("estampo.ui.status"),
     ):
-        slice_stl(stl, output_dir, profile, image="estampo/estampo:cura-5.12.0")
+        slice_stl(
+            stl,
+            output_dir,
+            profile,
+            image="estampo/estampo:cura-5.12.0",
+            printer="test_printer",
+            project_dir=tmp_path,
+        )
 
     cmd = mock_run.call_args[0][0]
     assert cmd[0] == "docker"
@@ -283,9 +296,9 @@ def test_slice_stl_docker_command(tmp_path):
     # Volume mount for output directory
     vol_idx = cmd.index("-v") + 1
     assert ":/work/output" in cmd[vol_idx]
-    # Inner command uses P1S definition
+    # Inner command uses the test definition
     inner_cmd = cmd[-1]
-    assert "bambulab_p1s.def.json" in inner_cmd
+    assert "test_printer.def.json" in inner_cmd
     assert "-g -e0" in inner_cmd
 
 

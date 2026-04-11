@@ -1,0 +1,1 @@
+Delete printer, auth, credentials, cloud, and thumbnails modules — estampo is now fully printer-agnostic. Default CuraEngine printer changed from Bambu Lab P1S to Ultimaker 2.

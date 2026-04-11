@@ -304,7 +304,8 @@ file = "cube.stl"
     assert cfg.slicer.version == "2.3.1"
 
 
-def test_printer_config(tmp_path):
+def test_printer_section_ignored(tmp_path):
+    """[printer] section is no longer parsed — config loads without error."""
     path = _write_toml(
         tmp_path,
         """
@@ -317,54 +318,7 @@ file = "cube.stl"
         create_files=["cube.stl"],
     )
     cfg = load_config(path)
-    assert cfg.printer is not None
-    assert cfg.printer.name == "workshop"
-
-
-def test_printer_rejects_secrets_in_project_toml(tmp_path):
-    for field in ("ip", "access_code", "serial", "mode"):
-        path = _write_toml(
-            tmp_path,
-            f"""
-[printer]
-name = "workshop"
-{field} = "secret_value"
-
-[[parts]]
-file = "cube.stl"
-""",
-            create_files=["cube.stl"],
-        )
-        with pytest.raises(EstampoError, match=f"printer.{field}"):
-            load_config(path)
-
-
-def test_printer_config_absent(tmp_path):
-    path = _write_toml(
-        tmp_path,
-        """
-[[parts]]
-file = "cube.stl"
-""",
-        create_files=["cube.stl"],
-    )
-    cfg = load_config(path)
-    assert cfg.printer is None
-
-
-def test_printer_requires_name(tmp_path):
-    path = _write_toml(
-        tmp_path,
-        """
-[printer]
-
-[[parts]]
-file = "cube.stl"
-""",
-        create_files=["cube.stl"],
-    )
-    with pytest.raises(EstampoError, match="printer.name is required"):
-        load_config(path)
+    assert not hasattr(cfg, "printer")
 
 
 def test_rotate_valid(tmp_path):

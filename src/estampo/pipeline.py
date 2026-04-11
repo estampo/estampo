@@ -14,8 +14,8 @@ Typical execution::
     # Only plate generation (Hamilton computes the minimum subgraph):
     result = dr.execute(["plate_3mf_path"], inputs={...})
 
-    # Full pipeline through printing:
-    result = dr.execute(["print_result"], inputs={...})
+    # Full pipeline through slicing + stats:
+    result = dr.execute(["gcode_stats"], inputs={...})
 """
 
 import logging
@@ -44,7 +44,6 @@ STAGE_OUTPUTS: dict[str, list[str]] = {
     "plate": ["plate_3mf_path", "preview_path"],
     "slice": ["sliced_output_dir", "packaged_output", "gcode_stats"],
     "gcode-info": ["gcode_stats"],  # kept for backward compat
-    "print": ["print_result"],
 }
 
 # For --only mode: maps stage names to the Hamilton node overrides that must
@@ -52,7 +51,6 @@ STAGE_OUTPUTS: dict[str, list[str]] = {
 STAGE_REQUIRES: dict[str, list[tuple[str, str]]] = {
     "slice": [("plate_3mf_path", "plate 3MF file")],
     "gcode-info": [("packaged_output", "slicer output directory")],
-    "print": [("gcode_path", "sliced gcode file")],
 }
 
 
@@ -431,8 +429,8 @@ def packaged_output(
 ) -> Path:
     """Locate the deliverable file in slicer output.
 
-    For Bambu-specific post-processing (3MF patching, thumbnails),
-    add ``bambox repack`` as a command stage in the pipeline.
+    For vendor-specific post-processing, add a command stage
+    in the pipeline (e.g. ``bambox repack`` for Bambu Lab).
     """
     return sliced_output_dir
 
@@ -476,26 +474,3 @@ def gcode_path(packaged_output: Path) -> Path:
     if not gcode_files:
         raise RuntimeError(f"No gcode files found in {packaged_output}")
     return gcode_files[0]
-
-
-def print_result(
-    gcode_path: Path,
-    config: EstampoConfig,
-    dry_run: bool,
-    upload_only: bool,
-    experimental: bool,
-    skip_ams_mapping: bool,
-) -> None:
-    """Send sliced gcode to the printer."""
-    from estampo.printer import send_print
-
-    if config.printer is None:
-        raise ValueError("No [printer] section in config. Required for printing.")
-    send_print(
-        gcode_path,
-        config.printer,
-        dry_run=dry_run,
-        upload_only=upload_only,
-        experimental=experimental,
-        skip_ams_mapping=skip_ams_mapping,
-    )
