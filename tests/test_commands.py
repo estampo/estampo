@@ -117,6 +117,29 @@ class TestBuildCommandContext:
         assert ctx["sliced_3mf"] == ""
         assert ctx["sliced_dir"] == ""
 
+    def test_filament_single(self, tmp_path):
+        cfg = _make_config(tmp_path, filaments=["Generic PLA @base"])
+        ctx = build_command_context(cfg, tmp_path / "out", {})
+        assert ctx["filament"] == "Generic PLA @base"
+        assert ctx["filaments"] == "Generic PLA @base"
+
+    def test_filament_multiple(self, tmp_path):
+        cfg = _make_config(tmp_path, filaments=["Generic PLA @base", "Generic PETG @base"])
+        ctx = build_command_context(cfg, tmp_path / "out", {})
+        assert ctx["filament"] == "Generic PLA @base"
+        assert ctx["filaments"] == "Generic PLA @base,Generic PETG @base"
+
+    def test_filament_empty_when_unset(self, tmp_path):
+        cfg = _make_config(tmp_path)
+        ctx = build_command_context(cfg, tmp_path / "out", {})
+        assert ctx["filament"] == ""
+        assert ctx["filaments"] == ""
+
+    def test_filament_from_cura_engine(self, tmp_path):
+        cfg = _make_config(tmp_path, engine="cura", filaments=["PLA"])
+        ctx = build_command_context(cfg, tmp_path / "out", {})
+        assert ctx["filament"] == "PLA"
+
 
 # ---------------------------------------------------------------------------
 # parse_command_stage
@@ -357,6 +380,8 @@ def _make_config(
     tmp_path: Path,
     name: str | None = None,
     printer: str | None = None,
+    filaments: list[str] | None = None,
+    engine: str = "orca",
 ) -> EstampoConfig:
     """Create a minimal EstampoConfig for testing."""
     stl = tmp_path / "cube.stl"
@@ -365,8 +390,9 @@ def _make_config(
     return EstampoConfig(
         plate=PlateConfig(),
         slicer=SlicerConfig(
-            orca=OrcaSlicerConfig(printer=printer),
-            cura=CuraSlicerConfig(),
+            engine=engine,
+            orca=OrcaSlicerConfig(printer=printer, filaments=filaments or []),
+            cura=CuraSlicerConfig(filaments=filaments or []),
         ),
         parts=[PartConfig(file=stl)],
         base_dir=tmp_path,
