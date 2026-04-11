@@ -1,1 +1,0 @@
-Substitute ``{machine_nozzle_size}``, ``{machine_buildplate_type}``, and ``{material_type}`` in CuraEngine G-code output

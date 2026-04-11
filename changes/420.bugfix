@@ -1,1 +1,0 @@
-Fix `profiles pin` erroring when printer is set to a local file path (via `profiles add`)

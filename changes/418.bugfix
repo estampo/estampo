@@ -1,1 +1,0 @@
-Fix docker-compose.yml UID resolution so non-1000 UIDs work correctly

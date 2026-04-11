@@ -1,1 +1,0 @@
-Sort glob results by mtime before selecting artifacts to prevent stale files being picked in reused output directories

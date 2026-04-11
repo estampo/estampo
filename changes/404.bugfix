@@ -1,1 +1,0 @@
-Fix ``test_profiles_pin`` which was using the removed flat ``[slicer]`` config format since #358

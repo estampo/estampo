@@ -4,6 +4,44 @@ All notable changes to this project are documented here.
 
 <!-- towncrier release notes start -->
 
+## 0.3.1 — 2026-04-11
+
+### Features
+
+- Multi-mesh CuraEngine slicing: parts on different filament slots are passed as separate ``-g -eN`` groups, preserving plate arrangement and extruder assignments ([#405](https://github.com/estampo/estampo/pull/405))
+- Per-extruder filament profiles for CuraEngine: filament type and temperatures are set independently per AMS slot via ``CuraProfile.per_extruder`` ([#406](https://github.com/estampo/estampo/pull/406))
+- Pipeline stages can now run external CLI commands defined in TOML (e.g. ``bambox pack``), enabling tool integration without Python dependencies.
+
+### Bugfixes
+
+- Substitute ``{machine_nozzle_size}``, ``{machine_buildplate_type}``, and ``{material_type}`` in CuraEngine G-code output ([#396](https://github.com/estampo/estampo/pull/396))
+- Pass ``command_stages`` to ``resolve_outputs()`` so command stages are excluded from Hamilton outputs and pipeline ordering is respected ([#399](https://github.com/estampo/estampo/pull/399))
+- Fix default output directory to resolve relative to the config file's directory instead of the caller's working directory ([#400](https://github.com/estampo/estampo/pull/400))
+- Sort glob results by mtime before selecting artifacts to prevent stale files being picked in reused output directories ([#401](https://github.com/estampo/estampo/pull/401))
+- Add ``pythonpath = ["src"]`` to pytest config so tests run correctly from a fresh checkout without a prior editable install ([#402](https://github.com/estampo/estampo/pull/402))
+- Fix ``test_profiles_pin`` which was using the removed flat ``[slicer]`` config format since #358 ([#404](https://github.com/estampo/estampo/pull/404))
+- Search bambox package data for CuraEngine printer definitions so `bambox_p1s_ams` and other bambox-provided definitions are found without manual pinning ([#409](https://github.com/estampo/estampo/pull/409))
+- Bundle bambox_p1s_ams CuraEngine definitions in cura-ams-p1s example so it works without installing bambox as a Python package ([#411](https://github.com/estampo/estampo/pull/411))
+- Fix CuraEngine Docker write failure on Linux due to UID mismatch ([#415](https://github.com/estampo/estampo/pull/415))
+- Fix `--local` flag being silently ignored when using the CuraEngine backend ([#416](https://github.com/estampo/estampo/pull/416))
+- Fix docker-compose.yml UID resolution so non-1000 UIDs work correctly ([#418](https://github.com/estampo/estampo/pull/418))
+- Fix `profiles pin` erroring when printer is set to a local file path (via `profiles add`) ([#420](https://github.com/estampo/estampo/pull/420))
+- CuraEngine now accepts raw definition IDs (e.g. ``bambox_p1s_ams``) and copies extruder definitions to Docker staging.
+- Fix ``[slicer.cura].filaments`` being silently ignored — Cura now reads its own filament config instead of falling through to OrcaSlicer defaults
+- Use CuraEngine ``TIME_ELAPSED`` for print time instead of bogus ``;TIME:`` header placeholder
+
+### Misc
+
+- Remove ``_fix_sliced_3mf`` and ``package_for_printer`` — Bambu 3MF fixup is now handled by ``bambox repack`` as a command stage. ([#393](https://github.com/estampo/estampo/pull/393))
+- Stop publishing TestPyPI dev builds from PR branches to avoid version collisions ([#422](https://github.com/estampo/estampo/pull/422))
+- Add ``THIRD-PARTY-NOTICES`` file and Docker image labels for CuraEngine (AGPL-3.0) and Cura definition (LGPL-3.0) license attribution ([#426](https://github.com/estampo/estampo/pull/426))
+- Align docs and CLAUDE.md with printer-agnostic north star and CLI-only bambox integration ([#428](https://github.com/estampo/estampo/pull/428))
+- Add BambuStudio reference slice to cura-ams-p1s example for e2e comparison
+- Add CuraEngine multi-filament e2e example for P1S + AMS with comparison instructions against BambuStudio reference slice
+- Update cura-ams-p1s example: cylinder upright, white PLA slot 1, black PLA slot 4
+- Update roadmap: mark v0.3.0 complete, detail v0.4.0 extraction plan
+
+
 ## 0.3.0 — 2026-04-06
 
 ### Features
