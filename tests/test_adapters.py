@@ -226,26 +226,6 @@ class TestProgressAdapterBefore:
             adapter.run_before_node_execution(node_name="sliced_output_dir", **_kw())
         mock.assert_called_once_with("Slicing")
 
-    def test_print_result_with_printer_name(self):
-        adapter = self._make_adapter()
-        cfg = SimpleNamespace(printer=SimpleNamespace(name="MyP1S"))
-        with patch.object(adapter, "_start_spinner") as mock:
-            adapter.run_before_node_execution(
-                node_name="print_result",
-                **_kw(node_kwargs={"config": cfg}),
-            )
-        mock.assert_called_once_with('Sending to printer "MyP1S"')
-
-    def test_print_result_no_printer(self):
-        adapter = self._make_adapter()
-        cfg = SimpleNamespace(printer=None)
-        with patch.object(adapter, "_start_spinner") as mock:
-            adapter.run_before_node_execution(
-                node_name="print_result",
-                **_kw(node_kwargs={"config": cfg}),
-            )
-        mock.assert_called_once_with("Sending to printer")
-
 
 # ======================================================================
 # ProgressAdapter.run_after_node_execution
@@ -432,50 +412,3 @@ class TestProgressAdapterAfter:
         with patch.object(adapter, "_ok") as ok_mock:
             self._run_after(adapter, "gcode_stats", result)
         ok_mock.assert_not_called()
-
-    def test_print_result_normal(self):
-        adapter = self._make_adapter()
-        cfg = SimpleNamespace(printer=SimpleNamespace(name="P1S"))
-        with patch.object(adapter, "_ok") as ok_mock:
-            self._run_after(
-                adapter,
-                "print_result",
-                result="ok",
-                node_kwargs={"config": cfg, "dry_run": False},
-            )
-        msg = ok_mock.call_args[0][0]
-        assert 'Sent to printer "P1S"' in msg
-
-    def test_print_result_dry_run(self):
-        adapter = self._make_adapter()
-        cfg = SimpleNamespace(printer=SimpleNamespace(name="P1S"))
-        with patch.object(adapter, "_ok") as ok_mock:
-            self._run_after(
-                adapter,
-                "print_result",
-                result="ok",
-                node_kwargs={"config": cfg, "dry_run": True},
-            )
-        msg = ok_mock.call_args[0][0]
-        assert "Dry run" in msg
-        assert '"P1S"' in msg
-
-    def test_print_result_no_config(self):
-        adapter = self._make_adapter()
-        with patch.object(adapter, "_ok") as ok_mock:
-            self._run_after(adapter, "print_result", result="ok")
-        msg = ok_mock.call_args[0][0]
-        assert '"printer"' in msg
-
-    def test_print_result_config_no_printer(self):
-        adapter = self._make_adapter()
-        cfg = SimpleNamespace(printer=None)
-        with patch.object(adapter, "_ok") as ok_mock:
-            self._run_after(
-                adapter,
-                "print_result",
-                result="ok",
-                node_kwargs={"config": cfg},
-            )
-        msg = ok_mock.call_args[0][0]
-        assert '"printer"' in msg

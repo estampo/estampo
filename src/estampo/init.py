@@ -20,7 +20,7 @@ _TEMPLATE = """\
 # Docs: https://github.com/estampo/estampo/blob/main/docs/config.md
 
 [pipeline]
-# Stages to run: load, arrange, plate, slice, print
+# Stages to run: load, arrange, plate, slice
 stages = ["load", "arrange", "plate", "slice"]
 
 [plate]
@@ -34,8 +34,8 @@ engine = "orca"                            # "orca" (OrcaSlicer) or "cura" (Cura
 
 # OrcaSlicer profile chain:
 [slicer.orca]
-printer = "Bambu Lab P1S 0.4 nozzle"       # machine profile name
-process = "0.20mm Standard @BBL X1C"       # process/quality profile
+printer = "My Printer 0.4 nozzle"          # machine profile name
+process = "0.20mm Standard @base"          # process/quality profile
 filaments = ["Generic PLA @base"]          # filament profiles (one per slot)
 
 # Per-slot filament mapping (alternative to filaments list):
@@ -71,11 +71,6 @@ orient = "flat"                # flat, upright, side, or upside-down
 # file = "another-part.step"
 # copies = 2
 # orient = "upright"
-
-# Printer connection (optional — requires credentials.toml):
-# [printer]
-# name = "my-printer"           # references [printers.my-printer] in credentials.toml
-#                                # Run 'estampo setup' to configure printers
 """
 
 
@@ -103,7 +98,6 @@ class _ExistingConfig:
     plate_size: tuple[int, int] | None = None
     overrides: dict[str, str] | None = None
     parts: list[dict] | None = None
-    printer_name: str | None = None
     stages: list[str] | None = None
 
 
@@ -156,9 +150,6 @@ def _load_existing(path: Path) -> _ExistingConfig | None:
         plate_size=plate_size,
         overrides=overrides,
         parts=parts,
-        printer_name=(
-            raw.get("printer", {}).get("name") if isinstance(raw.get("printer"), dict) else None
-        ),
         stages=pipeline.get("stages"),
     )
 
@@ -304,30 +295,6 @@ def validate_config(path: Path) -> ValidationResult:
         else:
             passes.append(f"Slicer override keys valid ({len(active.overrides)} override(s))")
 
-    # Check printer credentials reference
-    if cfg.printer:
-        from estampo.credentials import _credentials_path
-
-        cred_path = _credentials_path()
-        if not cred_path.exists():
-            warnings.append(
-                f"printer.name = '{cfg.printer.name}' but credentials file not found: {cred_path}. "
-                "Run 'estampo setup' to configure."
-            )
-        else:
-            import tomllib
-
-            with open(cred_path, "rb") as f:
-                creds = tomllib.load(f)
-            printers = creds.get("printers", {})
-            if cfg.printer.name not in printers:
-                available = list(printers.keys())
-                warnings.append(
-                    f"printer '{cfg.printer.name}' not found in {cred_path}. Available: {available}"
-                )
-            else:
-                passes.append(f"Printer '{cfg.printer.name}' found in credentials")
-
     # Check for absolute part paths (check raw TOML value, not resolved path)
     import tomllib
 
@@ -469,17 +436,6 @@ def _read_machine_info(profile_name: str, engine: str) -> _MachineInfo:
     except (OSError, KeyError, ValueError):
         log.debug("Failed to read machine info", exc_info=True)
     return info
-
-
-def _list_configured_printers() -> dict[str, dict]:
-    """Return configured printers from credentials.toml, or empty dict."""
-    try:
-        from estampo.credentials import list_printers
-
-        return list_printers() or {}
-    except (OSError, ImportError):
-        log.debug("Failed to list configured printers", exc_info=True)
-        return {}
 
 
 def _detect_orca_version() -> str | None:
@@ -714,14 +670,6 @@ def _prompt_overrides() -> dict[str, str]:
     return overrides
 
 
-def _wizard_setup_printers(configured: dict[str, dict]) -> dict[str, dict]:
-    """Check for configured printers (no prompts — printer is optional).
-
-    Returns the configured printers dict (may be empty).
-    """
-    return configured
-
-
 def _wizard_pick_profiles(
     engine: str,
     profiles: dict[str, list[str]],
@@ -743,7 +691,7 @@ def _wizard_pick_profiles(
         machine_info = _read_machine_info(printer_profile, engine)
         ui.console.print()
     else:
-        printer_profile = _prompt_str("Printer profile name (e.g. 'Bambu Lab P1S 0.4 nozzle')")
+        printer_profile = _prompt_str("Printer profile name (e.g. 'My Printer 0.4 nozzle')")
         ui.console.print()
 
     # --- Step 4: Pick process profile ---
@@ -755,7 +703,7 @@ def _wizard_pick_profiles(
         process_profile = processes[chosen[0]]
         ui.console.print()
     else:
-        process_profile = _prompt_str("Process profile name (e.g. '0.20mm Standard @BBL X1C')")
+        process_profile = _prompt_str("Process profile name (e.g. '0.20mm Standard @base')")
         ui.console.print()
 
     return printer_profile, process_profile, machine_info
@@ -933,32 +881,6 @@ def _wizard_pick_slicer_version(engine: str = "orca") -> str | None:
     return slicer_version
 
 
-def _wizard_pick_printer() -> str | None:
-    """Pick printer connection (optional).
-
-    Returns the printer name, or ``None`` if skipped.
-    """
-    from estampo import ui
-
-    ui.heading("Printer (optional)")
-    configured = _list_configured_printers()
-    if configured:
-        names = list(configured.keys())
-        chosen = _prompt_choice("Pick a printer", [*names, "Skip — slice only"])
-        pick = names[chosen[0]] if chosen[0] < len(names) else None
-        ui.console.print()
-        return pick
-
-    if _prompt_yn("Connect a printer? (run 'estampo setup' first)", default=False):
-        printer_name = _prompt_str("Printer name (from 'estampo setup')", "")
-        ui.console.print()
-        return printer_name or None
-
-    ui.info("No printer — config will slice only. Add [printer] later to enable printing.")
-    ui.console.print()
-    return None
-
-
 def run_wizard(output: Path | None = None) -> str:
     """Run the interactive init wizard and return generated TOML.
 
@@ -1014,18 +936,7 @@ def run_wizard(output: Path | None = None) -> str:
     # --- Step 2: CAD files (copies, orient — filament slots assigned later) ---
     parts_config = _wizard_pick_parts(existing_parts=existing.parts if existing else None)
 
-    # --- Step 3: Printer connection (optional, OrcaSlicer only) ---
-    printer_name = None
-    if engine == "orca":
-        printer_name = _wizard_pick_printer()
-    else:
-        ui.info("Printing is not yet supported for CuraEngine — skipping printer setup.")
-        ui.console.print()
-
-    # Build pipeline stages — include "print" only if printer selected
     stages = list(DEFAULT_STAGES)
-    if printer_name:
-        stages.append("print")
 
     # --- Discover profiles (needed for picker and machine info) ---
     if engine == "cura":
@@ -1046,7 +957,7 @@ def run_wizard(output: Path | None = None) -> str:
             printer_profile: str | None = machines[chosen[0]]
         else:
             ui.warn("No CuraEngine printer definitions found.")
-            printer_profile = _prompt_str("Printer definition name", "BambuLab P1S").strip()
+            printer_profile = _prompt_str("Printer definition name").strip()
         ui.console.print()
 
         # Derive plate size from the .def.json
@@ -1141,7 +1052,6 @@ def run_wizard(output: Path | None = None) -> str:
         plate_size=(plate_x, plate_y),
         slicer_version=slicer_version or None,
         stages=stages,
-        printer_name=printer_name,
         bed_type=bed_type,
         overrides=overrides,
         machine_overrides=machine_overrides or None,
@@ -1184,7 +1094,6 @@ def _build_toml(
     plate_size: tuple[int, int],
     slicer_version: str | None,
     stages: list[str],
-    printer_name: str | None,
     bed_type: str | None = None,
     overrides: dict[str, str] | None = None,
     machine_overrides: dict[str, str] | None = None,
@@ -1274,12 +1183,6 @@ def _build_toml(
             lines.append(f'orient = "{p["orient"]}"')
         if p.get("filament", 1) != 1:
             lines.append(f"filament = {p['filament']}")
-        lines.append("")
-
-    # Printer
-    if printer_name:
-        lines.append("[printer]")
-        lines.append(f'name = "{printer_name}"')
         lines.append("")
 
     return "\n".join(lines)

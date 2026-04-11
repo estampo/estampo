@@ -3,7 +3,7 @@
 import logging
 import sys
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated
 
 import click
 import typer
@@ -21,28 +21,6 @@ app = typer.Typer(
 
 profiles_app = typer.Typer(help="List or pin slicer profiles.")
 app.add_typer(profiles_app, name="profiles")
-
-# Bambu printer stage IDs → human-readable labels
-_PRINT_STAGES: dict[str, str] = {
-    "0": "printing",
-    "1": "auto bed leveling",
-    "2": "heatbed preheating",
-    "3": "sweeping XY mech mode",
-    "4": "changing filament",
-    "5": "M400 pause",
-    "6": "filament runout pause",
-    "7": "heating hotend",
-    "8": "calibrating extrusion",
-    "9": "scanning bed surface",
-    "10": "inspecting first layer",
-    "11": "identifying build plate type",
-    "12": "calibrating micro lidar",
-    "13": "homing toolhead",
-    "14": "cleaning nozzle tip",
-    "17": "calibrating extrusion flow",
-    "18": "vibration compensation",
-    "19": "motor noise calibration",
-}
 
 
 # ---------------------------------------------------------------------------
@@ -113,10 +91,6 @@ def _gather_inputs(
     docker_version: str | None,
     filament_type: str | None,
     filament_slot: int,
-    dry_run: bool,
-    upload_only: bool,
-    experimental: bool,
-    no_ams_mapping: bool,
 ) -> dict:
     """Build the full set of Hamilton driver inputs."""
     return {
@@ -128,10 +102,6 @@ def _gather_inputs(
         "docker_version": docker_version,
         "filament_type_override": filament_type,
         "filament_slot_override": filament_slot,
-        "dry_run": dry_run,
-        "upload_only": upload_only,
-        "experimental": experimental,
-        "skip_ams_mapping": no_ams_mapping,
     }
 
 
@@ -182,23 +152,7 @@ def run(
         str | None,
         typer.Option(help="Override filament profile name (e.g. 'Generic PLA @base')"),
     ] = None,
-    filament_slot: Annotated[int, typer.Option(help="AMS slot for --filament-type")] = 1,
-    dry_run: Annotated[
-        bool, typer.Option("--dry-run", help="Do everything except send to printer")
-    ] = False,
-    upload_only: Annotated[
-        bool, typer.Option("--upload-only", help="Upload gcode but don't start printing")
-    ] = False,
-    experimental: Annotated[
-        bool, typer.Option("--experimental", help="Enable experimental printer modes")
-    ] = False,
-    no_ams_mapping: Annotated[
-        bool,
-        typer.Option(
-            "--no-ams-mapping",
-            help="Skip AMS mapping and use bridge default [0,1,2,3] (diagnostic)",
-        ),
-    ] = False,
+    filament_slot: Annotated[int, typer.Option(help="Slot number for --filament-type")] = 1,
     verbose: Annotated[bool, typer.Option("-v", "--verbose", help="Enable debug logging")] = False,
 ) -> None:
     """Run the pipeline defined in estampo.toml."""
@@ -219,10 +173,6 @@ def run(
         scale=scale,
         filament_type=filament_type,
         filament_slot=filament_slot,
-        dry_run=dry_run,
-        upload_only=upload_only,
-        experimental=experimental,
-        no_ams_mapping=no_ams_mapping,
     )
 
 
@@ -297,10 +247,6 @@ def _run_pipeline(
     scale: float | None = None,
     filament_type: str | None = None,
     filament_slot: int = 1,
-    dry_run: bool = False,
-    upload_only: bool = False,
-    experimental: bool = False,
-    no_ams_mapping: bool = False,
 ) -> None:
     """Execute the pipeline (shared by run and watch commands)."""
     from estampo.pipeline import resolve_outputs, resolve_overrides
@@ -358,10 +304,6 @@ def _run_pipeline(
         docker_version=docker_version,
         filament_type=filament_type,
         filament_slot=filament_slot,
-        dry_run=dry_run,
-        upload_only=upload_only,
-        experimental=experimental,
-        no_ams_mapping=no_ams_mapping,
     )
 
     from estampo import ui
@@ -397,7 +339,7 @@ def _run_pipeline(
 
 
 # ---------------------------------------------------------------------------
-# init / validate / setup commands
+# init / validate commands
 # ---------------------------------------------------------------------------
 
 
@@ -469,328 +411,6 @@ def validate(
         ui.console.print(f"  [yellow]{n}[/yellow] warning{'s' if n != 1 else ''} found.")
     else:
         ui.success("All checks passed.")
-
-
-@app.command()
-def setup(
-    verbose: Annotated[bool, typer.Option("-v", "--verbose", help="Enable debug logging")] = False,
-) -> None:
-    """Set up a printer (credentials, cloud login, connection type)."""
-    _setup_logging(verbose)
-    from estampo.credentials import setup_printer
-
-    setup_printer()
-
-
-# ---------------------------------------------------------------------------
-# status / watch commands
-# ---------------------------------------------------------------------------
-
-
-def _resolve_status_printers(
-    printer_name: str | None, serial: str | None, list_printers_fn, load_creds_fn
-):
-    """Build list of (name, creds) tuples for status/watch commands."""
-    if printer_name:
-        creds = load_creds_fn(printer_name)
-        return [(printer_name, creds)]
-
-    if serial:
-        return [(serial, {"type": "bambu-cloud", "serial": serial})]
-
-    all_printers = list_printers_fn()
-    if not all_printers:
-        raise EstampoError("No printers configured.\nRun 'estampo setup' to add a printer.")
-    return [(name, {**creds}) for name, creds in all_printers.items()]
-
-
-def _query_printer_status(name: str, creds: dict) -> dict:
-    """Query a single printer's status, dispatching by type."""
-    ptype = creds.get("type")
-
-    if ptype == "bambu-cloud":
-        from estampo.cloud import cloud_status
-        from estampo.credentials import cloud_token_json
-
-        serial = creds.get("serial")
-        if not serial:
-            raise ValueError(f"Printer '{name}' has no serial")
-        with cloud_token_json() as token_file:
-            return cloud_status(serial, token_file)
-
-    elif ptype == "bambu-lan":
-        from estampo.printer import get_lan_status
-
-        ip = creds.get("ip") or ""
-        access_code = creds.get("access_code") or ""
-        serial = creds.get("serial") or ""
-        if not all([ip, access_code, serial]):
-            raise ValueError(f"bambu-lan printer '{name}' requires ip, access_code, serial")
-        return get_lan_status(ip, access_code, serial)
-
-    elif ptype == "moonraker":
-        from estampo.printer import get_moonraker_status
-
-        url = creds.get("url")
-        if not url:
-            raise ValueError(f"moonraker printer '{name}' requires url")
-        return get_moonraker_status(url, creds.get("api_key"))
-
-    else:
-        raise ValueError(f"Unknown printer type '{ptype}' for '{name}'")
-
-
-def _render_printer(status: dict, name: str, serial: str) -> list[str]:
-    """Render a single printer's status as lines of text."""
-    from estampo.cloud import parse_ams_trays
-
-    lines: list[str] = []
-    state = status.get("gcode_state", "unknown")
-    lines.append(f"  State:    {state}")
-
-    task_name = status.get("subtask_name", "")
-    if task_name:
-        lines.append(f"  Task:     {task_name}")
-
-    if state not in ("IDLE", "FINISH", "FAILED", ""):
-        layer = status.get("layer_num", 0)
-        stage_id = str(status.get("mc_print_stage", ""))
-        if layer and int(layer) > 0:
-            stage = "printing"
-        else:
-            stage = _PRINT_STAGES.get(stage_id, "")
-        if stage:
-            lines.append(f"  Stage:    {stage}")
-        percent = int(status.get("mc_percent", 0))
-        layer = status.get("layer_num", 0)
-        total_layers = status.get("total_layer_num", 0)
-
-        bar_width = 30
-        filled = int(bar_width * percent / 100)
-        bar = "\u2588" * filled + "\u2591" * (bar_width - filled)
-        progress = f"  Progress: [{bar}] {percent}%"
-        if total_layers:
-            progress += f" (layer {layer}/{total_layers})"
-        lines.append(progress)
-
-        remaining = int(status.get("mc_remaining_time", 0))
-        if remaining:
-            import time as _time
-
-            h, m = divmod(remaining, 60)
-            eta = _time.strftime("%H:%M", _time.localtime(_time.time() + remaining * 60))
-            time_str = f"{h}h {m}m" if h else f"{m}m"
-            lines.append(f"  ETA:      {time_str} remaining (done ~{eta})")
-
-    nozzle = status.get("nozzle_temper", 0)
-    nozzle_target = status.get("nozzle_target_temper", 0)
-    bed = status.get("bed_temper", 0)
-    bed_target = status.get("bed_target_temper", 0)
-    nozzle_str = f"{nozzle:.0f}\u00b0C"
-    if nozzle_target:
-        nozzle_str += f" \u2192 {nozzle_target:.0f}\u00b0C"
-    bed_str = f"{bed:.0f}\u00b0C"
-    if bed_target:
-        bed_str += f" \u2192 {bed_target:.0f}\u00b0C"
-    lines.append(f"  Nozzle:   {nozzle_str}")
-    lines.append(f"  Bed:      {bed_str}")
-
-    ams_trays = parse_ams_trays(status)
-    if ams_trays:
-        tray_now_raw = int(status.get("ams", {}).get("tray_now", 255))
-        lines.append("  AMS:")
-        for t in ams_trays:
-            active = " <-- printing" if t["phys_slot"] == tray_now_raw else ""
-            c = t["color"]
-            r, g, b = int(c[0:2], 16), int(c[2:4], 16), int(c[4:6], 16)
-            swatch = f"\033[48;2;{r};{g};{b}m  \033[0m"
-            lines.append(f"    slot {t['phys_slot'] + 1}  {t['type']:<12}  {swatch} #{c}{active}")
-
-    return lines
-
-
-def _status_action(
-    printers: list[tuple[str, dict]],
-    stop: bool = False,
-    resume: bool = False,
-    clear: bool = False,
-) -> None:
-    """Execute --stop, --resume, or --clear action on printers."""
-    for name, creds in printers:
-        ptype = creds.get("type", "unknown")
-
-        if ptype == "bambu-cloud":
-            from estampo.cloud import cloud_cancel, cloud_clear_status, cloud_resume
-            from estampo.credentials import cloud_token_json
-
-            serial = creds.get("serial")
-            if not serial:
-                print(f"\033[31m{name}: no serial configured\033[0m")
-                continue
-
-            with cloud_token_json() as token_file:
-                if stop:
-                    cloud_cancel(serial, token_file)
-                    print(f"{name}: stop sent")
-                if resume:
-                    cloud_resume(serial, token_file)
-                    print(f"{name}: resume sent")
-                if clear:
-                    from estampo.cloud import cloud_status
-
-                    pre = cloud_status(serial, token_file)
-                    err = pre.get("print_error", 0)
-                    if err:
-                        cloud_clear_status(serial, token_file)
-                        print(f"{name}: cleared print_error={err}")
-                    else:
-                        print(
-                            f"{name}: no active error (print_error=0). "
-                            "FAILED state clears when a new print starts."
-                        )
-
-        elif ptype == "bambu-lan":
-            print(f"{name}: printer control not yet supported for bambu-lan")
-
-        elif ptype == "moonraker":
-            import requests
-
-            url = creds.get("url", "").rstrip("/")
-            api_key = creds.get("api_key")
-            headers = {"X-Api-Key": api_key} if api_key else {}
-            if stop:
-                requests.post(f"{url}/printer/print/cancel", headers=headers, timeout=10)
-                print(f"{name}: stop sent")
-            if resume:
-                requests.post(f"{url}/printer/print/resume", headers=headers, timeout=10)
-                print(f"{name}: resume sent")
-            if clear:
-                requests.post(
-                    f"{url}/printer/gcode/script",
-                    json={"script": "FIRMWARE_RESTART"},
-                    headers=headers,
-                    timeout=10,
-                )
-                print(f"{name}: clear sent (firmware restart)")
-
-        else:
-            print(f"{name}: unsupported printer type '{ptype}'")
-
-        # Show status after action
-        import time
-
-        time.sleep(2)  # give printer time to update
-        try:
-            st = _query_printer_status(name, creds)
-            for line in _render_printer(st, name, creds.get("serial", "")):
-                print(line)
-        except Exception as e:
-            print(f"  \033[31merror reading status: {e}\033[0m")
-        print()
-
-
-@app.command()
-def status(
-    printer: Annotated[str | None, typer.Option(help="Printer name from credentials.toml")] = None,
-    serial: Annotated[
-        str | None, typer.Option(help="Bambu printer serial (cloud only, legacy)")
-    ] = None,
-    watch: Annotated[bool, typer.Option("-w", "--watch", help="Live dashboard mode")] = False,
-    interval: Annotated[int, typer.Option(help="Refresh interval in seconds (with --watch)")] = 10,
-    stop: Annotated[bool, typer.Option("--stop", help="Stop the current print job")] = False,
-    resume: Annotated[bool, typer.Option("--resume", help="Resume a paused print")] = False,
-    clear: Annotated[
-        bool, typer.Option("--clear", help="Clear FAILED state and dismiss error")
-    ] = False,
-    verbose: Annotated[bool, typer.Option("-v", "--verbose", help="Enable debug logging")] = False,
-) -> None:
-    """Query printer status (all configured or by name).
-
-    Use --watch / -w for a live dashboard that refreshes automatically.
-    """
-    _setup_logging(verbose)
-    from estampo.credentials import list_printers, load_printer_credentials
-
-    printers = _resolve_status_printers(printer, serial, list_printers, load_printer_credentials)
-
-    if stop or resume or clear:
-        _status_action(printers, stop=stop, resume=resume, clear=clear)
-        return
-
-    if not watch:
-        for name, creds in printers:
-            ptype = creds.get("type", "unknown")
-            print(f"\033[1m{name}\033[0m  ({ptype})")
-            try:
-                st = _query_printer_status(name, creds)
-                for line in _render_printer(st, name, creds.get("serial", "")):
-                    print(line)
-            except Exception as e:
-                print(f"  \033[31merror: {e}\033[0m")
-            print()
-        return
-
-    import time
-
-    print(f"Watching {len(printers)} printer(s): {', '.join(n for n, _ in printers)}")
-
-    cloud_printers = [(n, c) for n, c in printers if c.get("type") == "bambu-cloud"]
-    bridge_ctx = None
-    bridge_map: dict[str, Any] = {}  # serial -> PersistentBridge
-    token_ctx = None
-    if cloud_printers:
-        from estampo.cloud import PersistentBridge
-        from estampo.credentials import cloud_token_json
-
-        token_ctx = cloud_token_json()
-        token_file = token_ctx.__enter__()
-        for _name, creds in cloud_printers:
-            serial = creds["serial"]
-            bridge = PersistentBridge(token_file, serial)
-            bridge.__enter__()
-            bridge_map[serial] = bridge
-        # Keep bridge_ctx for backward compat in the status loop
-        if len(bridge_map) == 1:
-            bridge_ctx = next(iter(bridge_map.values()))
-
-    try:
-        while True:
-            t0 = time.monotonic()
-            output_lines = []
-
-            for name, creds in printers:
-                ptype = creds.get("type", "unknown")
-                output_lines.append(f"\033[1m{name}\033[0m  ({ptype})")
-                try:
-                    serial = creds.get("serial", "")
-                    if ptype == "bambu-cloud" and serial in bridge_map:
-                        st = bridge_map[serial].status()
-                    elif ptype == "bambu-cloud" and bridge_ctx is not None:
-                        st = bridge_ctx.status(serial)
-                    else:
-                        st = _query_printer_status(name, creds)
-                    output_lines.extend(_render_printer(st, name, creds.get("serial", "")))
-                except Exception as e:
-                    output_lines.append(f"  \033[31merror: {e}\033[0m")
-                output_lines.append("")
-
-            elapsed = time.monotonic() - t0
-            now = time.strftime("%H:%M:%S")
-            header = f"estampo status  {now}  (polled in {elapsed:.1f}s, Ctrl-C to quit)"
-
-            sys.stdout.write("\033[2J\033[H")
-            sys.stdout.write(header + "\n\n" + "\n".join(output_lines))
-            sys.stdout.flush()
-
-            sleep_time = max(1, interval - elapsed)
-            time.sleep(sleep_time)
-    except KeyboardInterrupt:
-        print("\n")
-    finally:
-        for bridge in bridge_map.values():
-            bridge.__exit__(None, None, None)
-        if token_ctx is not None:
-            token_ctx.__exit__(None, None, None)
 
 
 # ---------------------------------------------------------------------------

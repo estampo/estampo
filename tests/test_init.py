@@ -1,7 +1,6 @@
 """Tests for estampo init, validate, and template commands."""
 
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
@@ -402,27 +401,6 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
         result = validate_config(toml)
         assert any("bogus_setting" in w for w in result.warnings)
 
-    def test_printer_name_no_credentials(self, tmp_path):
-        toml = tmp_path / "estampo.toml"
-        toml.write_text(f"""
-[slicer]
-engine = "orca"
-version = "2.3.1"
-
-[[parts]]
-file = "{_posix(FIXTURES / "cube_10mm.stl")}"
-
-[printer]
-name = "nonexistent-printer"
-""")
-        # Patch credentials path to a non-existent file
-        with patch(
-            "estampo.credentials._credentials_path",
-            return_value=tmp_path / "no-creds.toml",
-        ):
-            warnings = validate_config(toml)
-        assert any("credentials" in w.lower() for w in warnings)
-
 
 # ---------------------------------------------------------------------------
 # Closest match helper
@@ -557,28 +535,12 @@ class TestBuildToml:
             plate_size=(256, 256),
             slicer_version="2.3.1",
             stages=["load", "arrange", "plate", "slice"],
-            printer_name=None,
         )
         assert "[slicer]" in toml
         assert 'engine = "orca"' in toml
         assert 'version = "2.3.1"' in toml
         assert "[[parts]]" in toml
         assert 'file = "cube.stl"' in toml
-
-    def test_with_printer_name(self):
-        toml = _build_toml(
-            engine="orca",
-            printer_profile=None,
-            process_profile=None,
-            filament_names=[],
-            parts=[{"file": "a.stl", "copies": 1, "orient": "flat", "filament": 1}],
-            plate_size=(200, 200),
-            slicer_version=None,
-            stages=["load", "arrange", "plate"],
-            printer_name="my-printer",
-        )
-        assert "[printer]" in toml
-        assert 'name = "my-printer"' in toml
 
     def test_multiple_copies_shown(self):
         toml = _build_toml(
@@ -590,7 +552,6 @@ class TestBuildToml:
             plate_size=(256, 256),
             slicer_version=None,
             stages=["load", "arrange", "plate"],
-            printer_name=None,
         )
         assert "copies = 3" in toml
 
@@ -604,7 +565,6 @@ class TestBuildToml:
             plate_size=(256, 256),
             slicer_version=None,
             stages=["load", "arrange", "plate"],
-            printer_name=None,
         )
         assert 'orient = "upright"' in toml
 
@@ -618,7 +578,6 @@ class TestBuildToml:
             plate_size=(256, 256),
             slicer_version=None,
             stages=["load", "arrange", "plate", "slice"],
-            printer_name=None,
             overrides={"sparse_infill_density": "25%", "wall_loops": "3"},
         )
         assert "[slicer.orca.overrides]" in toml
@@ -635,7 +594,6 @@ class TestBuildToml:
             plate_size=(256, 256),
             slicer_version=None,
             stages=["load", "arrange", "plate", "slice"],
-            printer_name=None,
             overrides={},
         )
         assert "[slicer.orca.overrides]" not in toml
@@ -651,7 +609,6 @@ class TestBuildToml:
             plate_size=(256, 256),
             slicer_version=None,
             stages=["load", "arrange", "plate"],
-            printer_name=None,
         )
         assert "copies" not in toml
         assert "orient" not in toml
@@ -681,9 +638,8 @@ class TestWizard:
                 "1",  # Select files
                 "1",  # copies
                 "flat",  # orient
-                "n",  # Connect a printer? -> no
-                "Bambu Lab P1S 0.4 nozzle",  # Printer profile name
-                "0.20mm Standard @BBL X1C",  # Process profile name
+                "My Printer 0.4 nozzle",  # Printer profile name
+                "0.20mm Standard @base",  # Process profile name
                 "256",  # plate width
                 "256",  # plate depth
                 "",  # slicer version (skip)
@@ -700,8 +656,6 @@ class TestWizard:
             "estampo.profiles.discover_profiles",
             lambda engine: {"machine": {}, "process": {}, "filament": {}},
         )
-        # Mock configured printers to empty so we don't depend on real credentials
-        monkeypatch.setattr("estampo.init._list_configured_printers", lambda: {})
         # Mock slicer version discovery so we don't hit DockerHub
         monkeypatch.setattr("estampo.init._fetch_available_versions", lambda: [])
         monkeypatch.setattr("estampo.init._detect_orca_version", lambda: None)
@@ -724,7 +678,6 @@ class TestWizard:
                 "1",  # Engine choice (OrcaSlicer)
                 "",  # Project name (use default)
                 "my-part.stl",  # Part file path
-                "n",  # Connect a printer? -> no
                 "My Printer",  # Printer profile name
                 "My Process",  # Process profile name
                 "256",  # plate width
@@ -741,8 +694,6 @@ class TestWizard:
             "estampo.profiles.discover_profiles",
             lambda engine: {"machine": {}, "process": {}, "filament": {}},
         )
-        # Mock configured printers to empty so we don't depend on real credentials
-        monkeypatch.setattr("estampo.init._list_configured_printers", lambda: {})
         # Mock slicer version discovery so we don't hit DockerHub
         monkeypatch.setattr("estampo.init._fetch_available_versions", lambda: [])
         monkeypatch.setattr("estampo.init._detect_orca_version", lambda: None)

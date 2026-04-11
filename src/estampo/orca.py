@@ -913,7 +913,6 @@ def extract_from_3mf(path: Path) -> str:
         plate_size=plate_size,
         slicer_version=None,  # user should pin this
         stages=list(DEFAULT_STAGES),
-        printer_name=None,
         bed_type=bed_type,
         machine_overrides=machine_overrides or None,
     )

@@ -95,7 +95,7 @@ def test_dag_builds():
     assert "preview_path" in node_names
     assert "sliced_output_dir" in node_names
     assert "gcode_path" in node_names
-    assert "print_result" in node_names
+    assert "gcode_path" in node_names
 
 
 def test_dag_plate_execution(tmp_path):
@@ -160,30 +160,28 @@ def test_resolve_outputs_full():
     """resolve_outputs with no flags returns all stage outputs."""
     from estampo.pipeline import resolve_outputs
 
-    stages = ["load", "arrange", "plate", "slice", "print"]
+    stages = ["load", "arrange", "plate", "slice"]
     outputs = resolve_outputs(stages)
     assert "loaded_parts" in outputs
     assert "plate_3mf_path" in outputs
     assert "sliced_output_dir" in outputs
-    assert "print_result" in outputs
 
 
 def test_resolve_outputs_until():
     """resolve_outputs with until stops at the right stage."""
     from estampo.pipeline import resolve_outputs
 
-    stages = ["load", "arrange", "plate", "slice", "print"]
+    stages = ["load", "arrange", "plate", "slice"]
     outputs = resolve_outputs(stages, until="plate")
     assert "plate_3mf_path" in outputs
     assert "sliced_output_dir" not in outputs
-    assert "print_result" not in outputs
 
 
 def test_resolve_outputs_only():
     """resolve_outputs with only returns just that stage's outputs."""
     from estampo.pipeline import resolve_outputs
 
-    stages = ["load", "arrange", "plate", "slice", "print"]
+    stages = ["load", "arrange", "plate", "slice"]
     outputs = resolve_outputs(stages, only="slice")
     assert outputs == ["sliced_output_dir", "packaged_output", "gcode_stats"]
 
@@ -250,22 +248,12 @@ def test_resolve_overrides_gcode_info_finds_dir(tmp_path):
     assert overrides["packaged_output"] == tmp_path
 
 
-def test_resolve_overrides_print_finds_gcode(tmp_path):
-    """--only print resolves gcode_path from disk."""
+def test_resolve_overrides_unknown_stage_returns_empty(tmp_path):
+    """Stages with no requirements return empty overrides."""
     from estampo.pipeline import resolve_overrides
 
-    gcode = tmp_path / "plate.gcode"
-    gcode.write_text("G28\n")
-    overrides = resolve_overrides("print", tmp_path)
-    assert overrides["gcode_path"] == gcode
-
-
-def test_resolve_overrides_print_missing_gcode(tmp_path):
-    """--only print raises when no gcode files exist."""
-    from estampo.pipeline import resolve_overrides
-
-    with pytest.raises(FileNotFoundError, match="sliced gcode file"):
-        resolve_overrides("print", tmp_path)
+    overrides = resolve_overrides("load", tmp_path)
+    assert overrides == {}
 
 
 # --- gcode_path node tests ---
@@ -335,16 +323,10 @@ class TestResolveOutputsAllPaths:
         outputs = resolve_outputs(["load", "arrange", "plate"], only="load")
         assert outputs == ["loaded_parts", "part_summary"]
 
-    def test_only_print_returns_print_result(self):
-        from estampo.pipeline import resolve_outputs
-
-        outputs = resolve_outputs(["load"], only="print")
-        assert outputs == ["print_result"]
-
     def test_until_load(self):
         from estampo.pipeline import resolve_outputs
 
-        stages = ["load", "arrange", "plate", "slice", "print"]
+        stages = ["load", "arrange", "plate", "slice"]
         outputs = resolve_outputs(stages, until="load")
         assert "loaded_parts" in outputs
         assert "part_summary" in outputs
@@ -387,15 +369,6 @@ class TestResolveOverridesArtifacts:
 
         overrides = resolve_overrides("gcode-info", tmp_path)
         assert overrides["packaged_output"] == tmp_path
-
-    def test_print_finds_first_gcode(self, tmp_path):
-        """--only print picks a gcode file from the directory."""
-        from estampo.pipeline import resolve_overrides
-
-        (tmp_path / "a.gcode").write_text("G28\n")
-        (tmp_path / "b.gcode").write_text("G28\n")
-        overrides = resolve_overrides("print", tmp_path)
-        assert overrides["gcode_path"].suffix == ".gcode"
 
     def test_unknown_stage_returns_empty(self):
         """Stages with no requirements return empty overrides."""
@@ -724,40 +697,3 @@ class TestResolvedFilamentsPaintColors:
         rf = resolved_filaments(cfg, parts, filament_type_override=None, filament_slot_override=1)
         assert rf.filaments is None
         assert rf.filament_ids == [1, 2]
-
-
-class TestPrintResultNode:
-    """Test print_result node error handling."""
-
-    def test_no_printer_config_raises(self, tmp_path):
-        from estampo.pipeline import print_result
-
-        toml = tmp_path / "estampo.toml"
-        stl = tmp_path / "dummy.stl"
-        # Create a minimal STL so config loader doesn't fail
-        mesh = trimesh.creation.box(extents=[10, 10, 10])
-        mesh.export(str(stl))
-
-        toml.write_text(f"""
-[plate]
-size = [256, 256]
-padding = 5.0
-
-[slicer]
-engine = "orca"
-
-[[parts]]
-file = "{_posix(stl)}"
-""")
-        cfg = load_config(toml)
-        assert cfg.printer is None
-
-        with pytest.raises(ValueError, match="No \\[printer\\] section"):
-            print_result(
-                gcode_path=Path("/tmp/fake.gcode"),
-                config=cfg,
-                dry_run=False,
-                upload_only=False,
-                experimental=False,
-                skip_ams_mapping=False,
-            )

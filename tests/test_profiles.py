@@ -888,19 +888,18 @@ def test_pin_cura_definitions_from_bundled(tmp_path):
     from estampo.profiles import pin_cura_definitions
 
     result = pin_cura_definitions(
-        printer="BambuLab P1S",
+        printer="Ultimaker 2",
         project_dir=tmp_path,
     )
     assert len(result) == 1
     dest = result[0]
-    assert dest.name == "bambulab_p1s.def.json"
+    assert dest.name == "ultimaker2.def.json"
     assert dest.parent.name == "definitions"
 
     squashed = json.loads(dest.read_text())
     # fdmprinter is not bundled — kept so CuraEngine resolves at runtime
     assert squashed.get("inherits") == "fdmprinter"
-    assert squashed["name"] == "BambuLab P1S"
-    # Should have overrides from both P1S and base merged
+    assert squashed["name"] == "Ultimaker 2"
     assert "machine_width" in squashed["overrides"]
     assert "machine_heated_bed" in squashed["overrides"]
 
@@ -909,13 +908,13 @@ def test_pin_profiles_delegates_to_cura(tmp_path):
     """pin_profiles delegates to pin_cura_definitions for engine='cura'."""
     result = pin_profiles(
         engine="cura",
-        printer="BambuLab P1S",
+        printer="Ultimaker 2",
         process=None,
         filaments=[],
         project_dir=tmp_path,
     )
     assert len(result) == 1
-    assert result[0].name == "bambulab_p1s.def.json"
+    assert result[0].name == "ultimaker2.def.json"
 
 
 def test_discover_profile_names_cura_pinned(tmp_path):

@@ -84,7 +84,6 @@ class ProgressAdapter(NodeExecutionHook):
             "sliced_output_dir",
             "packaged_output",
             "gcode_stats",
-            "print_result",
         }
     )
 
@@ -94,9 +93,8 @@ class ProgressAdapter(NodeExecutionHook):
         "plate_3mf_path": "Exporting plate",
         "preview_path": "Exporting preview",
         "sliced_output_dir": "Slicing",
-        "packaged_output": "Printer-specific packaging",
+        "packaged_output": "Packaging output",
         "gcode_stats": "Reading gcode",
-        "print_result": "Sending to printer",
     }
 
     def __init__(self) -> None:
@@ -173,11 +171,6 @@ class ProgressAdapter(NodeExecutionHook):
                 label = f"Slicing with {engine_name} {ver}"
                 self._slice_version = ver
 
-        elif node_name == "print_result":
-            cfg = node_kwargs.get("config")
-            if cfg and cfg.printer:
-                label = f'Sending to printer "{cfg.printer.name}"'
-
         # gcode_stats is fast — skip spinner, just print the result line
         if node_name != "gcode_stats":
             self._start_spinner(label)
@@ -244,11 +237,7 @@ class ProgressAdapter(NodeExecutionHook):
                     self._console.print(f"  [dim]→ {gcode_files[0].name}[/dim]")
 
         elif node_name == "packaged_output":
-            cfg = node_kwargs.get("config")
-            printer_name = ""
-            if cfg and cfg.printer:
-                printer_name = f' for "{cfg.printer.name}"'
-            self._ok(f"Packaged{printer_name}", elapsed)
+            self._ok("Packaged output", elapsed)
 
         elif node_name == "gcode_stats":
             parts: list[str] = []
@@ -267,12 +256,3 @@ class ProgressAdapter(NodeExecutionHook):
                 parts.append(f"{result['filament_cm3']:.1f}cm³ filament")
             if parts:
                 self._ok(", ".join(parts), elapsed)
-
-        elif node_name == "print_result":
-            cfg = node_kwargs.get("config")
-            dry_run = node_kwargs.get("dry_run", False)
-            printer_name = cfg.printer.name if cfg and cfg.printer else "printer"
-            if dry_run:
-                self._ok(f'Dry run — would send to "{printer_name}"', elapsed)
-            else:
-                self._ok(f'Sent to printer "{printer_name}"', elapsed)
