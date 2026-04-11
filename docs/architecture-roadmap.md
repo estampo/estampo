@@ -1,114 +1,99 @@
-# Architecture Roadmap: Slicer-Agnostic Printing
+# Architecture Roadmap: Slicer-Agnostic, Printer-Agnostic Pipeline
 
 This document captures the long-term vision for estampo's architecture,
 motivated by ongoing instability in OrcaSlicer's CLI mode (undocumented
 behavior changes, settings ignored from `--load-settings`, segfaults in
 headless mode, broken validation checks in 2.3.2+).
 
-## Current State
+## North Star
 
-Estampo is tightly coupled to OrcaSlicer:
+**estampo is a printer-agnostic, slicer-agnostic pipeline orchestrator.**
+It loads parts, arranges them onto a plate, invokes a slicer, and
+extracts G-code metadata. It has no knowledge of printer vendors,
+packaging formats, or print protocols.
 
-```
-estampo (pipeline) → OrcaSlicer CLI (slicing + 3MF packaging) → Bambu Connect → Printer
-```
+Printer-vendor concerns (packaging, printing, auth) live in separate
+external tools invoked via **command stages** — CLI commands declared in
+the user's TOML config (see ADR-007).
 
-OrcaSlicer handles three distinct responsibilities:
-1. **Slicing** — toolpath generation from 3D models
-2. **BBL G-code** — printer-specific start/end/toolchange macros
-3. **Packaging** — `.gcode.3mf` archive format for BBL printers
+## Current State (April 2026, v0.3.0)
 
-This coupling means every OrcaSlicer CLI bug blocks the entire pipeline.
-
-## Target Architecture
-
-Two projects, each owning one concern:
+estampo supports two slicer backends (OrcaSlicer and CuraEngine) and
+has a working command stages framework. However, legacy Bambu-specific
+code remains in several modules, pending extraction (v0.4.0).
 
 ```
 estampo (pipeline + slicer backends)
-    ↓ G-code
-bambox (packaging + G-code templates + printer communication)
+    ├── OrcaSlicer (via Docker)
+    ├── CuraEngine (via Docker)
+    ↓ plain G-code
+    ↓ command stages (user-configured CLI calls)
+bambox pack / bambox print              ← external CLI tool
     ↓ .gcode.3mf → MQTT/FTP
 Bambu printer
 ```
 
-### estampo — Pipeline Orchestrator
+Legacy code still in estampo (to be deleted in v0.4.0):
+- `printer.py` — Bambu LAN/Cloud dispatch, `.gcode.3mf` packaging
+- `auth.py`, `credentials.py`, `cloud/` — Bambu auth and bridge
+- AMS flags and Bambu stage IDs in `cli.py`
+- Bambu-specific defaults in `init.py` and `cura.py`
 
-What it does today, minus the OrcaSlicer lock-in:
-- Plate arrangement, profile management, build automation
-- Slicer-agnostic: pluggable backends (OrcaSlicer, CuraEngine, others)
-- Delegates all BBL-specific concerns to `bambox`
-- Could target non-BBL printers (Prusa, Voron, etc.) in the future
+## Target Architecture (v0.4.0)
 
-### bambox — BBL Packaging, Templates & Printing
+```
+estampo (pipeline + slicer backends)
+    ├── OrcaSlicer (via Docker)
+    ├── CuraEngine (via Docker)
+    ├── [future: PrusaSlicer, others]
+    ↓ plain G-code + metadata
+    ↓ command stages (TOML-configured CLI calls)
+Any printer tool                        ← user's choice
+```
 
-Three responsibilities:
+estampo's modules after v0.4.0:
 
-**1. `.gcode.3mf` packager** — takes plain G-code and produces a
-printer-ready BBL archive:
-- ZIP structure with required metadata files
-- MD5 checksums (validated by firmware)
-- `model_settings.config`, `slice_info.config`, `project_settings.config`
-- Thumbnail placeholders
-- Pure Python, no dependencies beyond stdlib (`zipfile`, `hashlib`)
-- ~200-300 lines for the core packager
+| Module | Responsibility |
+|--------|---------------|
+| `pipeline.py` | Hamilton DAG orchestration |
+| `slicer.py` | Slicer dispatch (routes to engine modules) |
+| `orca.py` | OrcaSlicer-specific logic |
+| `cura.py` | CuraEngine-specific logic |
+| `gcode.py` | G-code metadata parsing |
+| `commands.py` | Command stage execution |
+| `arrange.py`, `plate.py`, `loader.py`, `orient.py` | Geometry pipeline |
+| `config.py`, `cli.py`, `profiles.py`, `adapters.py` | Config, CLI, profiles |
 
-See [gcode-3mf-format.md](gcode-3mf-format.md) for the full format
-specification we've already documented.
+**Deleted:** `printer.py`, `auth.py`, `credentials.py`, `cloud/`,
+`thumbnails.py` (BBL-specific). No Bambu Python dependencies remain.
 
-**2. BBL G-code template library** — Jinja2-based rendering of
-printer-specific G-code macros:
-- Start G-code (bed leveling, nozzle wipe, AMS init, vibration cal)
-- End G-code (cooldown, retract, park)
-- Tool change G-code (AMS filament swap, purge, wipe)
-- Layer change G-code (timelapse support)
-- Per-printer-model templates (P1S, X1C, A1, etc.)
+## bambox — Standalone Bambu Lab Tool
 
-Source material for templates:
-- **KiriMoto** (`Bambu.P1S.json`, `Bambu.A1.json`) — MIT licensed,
-  complete start/end/toolchange with AMS support, JSON format
-- **BambuStudio** (`resources/profiles/BBL/machine/`) — Apache-2.0,
-  canonical templates with OrcaSlicer variable syntax
-- **OpenBambuAPI** (`gcode.md`) — reverse-engineered M-code reference
-  for proprietary commands (M620/M621, M975, M1002, etc.)
+bambox is a separate project (`estampo/bambox`) that handles all
+Bambu Lab concerns. estampo integrates with it exclusively via CLI
+command stages — never as a Python import.
 
-Template engine: **Jinja2** — proven for G-code templating by both Klipper
-and OctoPrint. OrcaSlicer's custom template syntax maps almost 1:1:
+**bambox provides:**
 
-| OrcaSlicer | Jinja2 |
-|---|---|
-| `{bed_temperature}` | `{{ bed_temperature }}` |
-| `{filament_type[0]}` | `{{ filament_type[0] }}` |
-| `{if cond}...{endif}` | `{% if cond %}...{% endif %}` |
+1. **`.gcode.3mf` packager** — takes plain G-code and produces a
+   printer-ready BBL archive (ZIP structure, MD5 checksums, metadata)
+2. **BBL G-code templates** — Jinja2-based start/end/toolchange macros
+   with BAMBOX header contract for auto-configuration
+3. **CuraEngine printer definitions** — `bambox_p1s_ams.def.json` and
+   related extruder definitions for Bambu printers
+4. **Printer communication** — cloud/LAN printing, status monitoring,
+   AMS mapping, Bambu Cloud authentication
+5. **Bridge** — Docker-based BNL bridge binary for cloud printing
 
-A thin translator (~50 lines of regex) can convert existing OrcaSlicer
-templates to Jinja2 format.
+**Integration point:**
+```toml
+[pack]
+command = "bambox pack {sliced_dir}/plate.gcode -o {output_dir}/plate.gcode.3mf"
+output = "{output_dir}/plate.gcode.3mf"
 
-**3. Printer communication** — wraps the Docker-based Bambu Network
-Library (BNL) bridge:
-- Estampo already uses Docker for slicing; same pattern for printing
-- BNL `.so` is preserved in the Docker image (insurance against Bambu
-  pulling it)
-- Handles LAN and cloud printing workflows
-- Printer discovery, status monitoring, job management
-- AMS filament slot mapping
-- Bambu Cloud authentication
-
-**Why not replace BNL?** Repeated attempts to reverse-engineer the Bambu
-cloud protocol have failed. The BNL `.so` is the only reliable path for
-cloud printing. LAN printing via raw MQTT/FTP is possible (and KiriMoto
-demonstrates it) but cloud printing requires BNL.
-
-## What This Unlocks
-
-**For estampo users:**
-- Slicer choice: CuraEngine for stability, OrcaSlicer for BBL profiles
-- No more fighting OrcaSlicer CLI bugs for non-slicing concerns
-- Faster iteration — slicer upgrades don't break packaging/printing
-
-**For the broader community:**
-- `bambox` is useful standalone (anyone using CuraEngine + BBL printer, Home Assistant, custom dashboards)
-- Each project is small, focused, and independently testable
+[print]
+command = "bambox print {output_dir}/plate.gcode.3mf --serial YOUR_SERIAL"
+```
 
 ## Slicer Comparison
 
@@ -125,30 +110,26 @@ as potential OrcaSlicer alternatives:
 | License | AGPL-3.0 | AGPL-3.0 | AGPL-3.0 | MIT |
 | Active dev | Yes | Yes (UltiMaker) | Yes (Prusa) | Solo maintainer |
 
-**CuraEngine** is the strongest candidate for a second backend:
-- Purpose-built headless CLI, stable, actively maintained
-- JSON-based settings with ~1200 parameters
-- The missing pieces (BBL profiles, 3MF packaging) are exactly what
-  `bambox` would provide
+**CuraEngine** is the strongest second backend — purpose-built headless
+CLI, stable, actively maintained. The missing pieces (BBL profiles, 3MF
+packaging) are handled by `bambox`.
 
-**PrusaSlicer** is not viable — cannot produce `.gcode.3mf` and has no
-BBL profile ecosystem.
+## Migration Phases
 
-**KiriMoto** is interesting for reference (MIT-licensed BBL templates,
-Bambu MQTT integration) but the slicer itself lacks features and the CLI
-is not production-grade.
+### Phase 1: Multi-engine support (DONE — v0.3.0)
+- CuraEngine added as second slicer backend
+- Slicer plugin protocol (ADR-006) established
+- Command stages framework (ADR-007) implemented
+- bambox extracted as standalone package
 
-## Migration Path
+### Phase 2: Vendor-agnostic estampo (IN PROGRESS — v0.4.0)
+- Delete all Bambu-specific code from estampo (see ADR-005)
+- Remove Bambu Python dependencies
+- Printing/packaging becomes command stages only
+- Tracked by issues #370, #373, #374, #375, #377, #378, #387
 
-This is not a rewrite — it's a gradual decoupling:
-
-1. **Now**: Keep OrcaSlicer as the only backend. Pin stable versions,
-   work around CLI bugs with overrides and retries.
-2. **Phase 1**: Extract `bambox` as a library. Estampo already
-   post-processes OrcaSlicer's 3MF output — formalize packaging,
-   printing, and auth into a standalone package.
-3. **Phase 2**: Add CuraEngine as a second slicer backend. Use
-   `bambox` for packaging and G-code template injection.
-
-Each phase is independently useful and shippable. No big bang migration
-required.
+### Phase 3: Ecosystem expansion (FUTURE)
+- PrusaSlicer as third engine (#351)
+- BambuStudio headless spike (#352)
+- Additional printer vendor tools (community-driven)
+- Each new printer vendor = a new external CLI tool, not estampo code

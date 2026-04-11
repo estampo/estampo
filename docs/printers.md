@@ -1,8 +1,24 @@
 # Printer support
 
-estampo supports three printer connection types. All are configured via `estampo setup` and stored in `~/.config/estampo/credentials.toml`.
+> **Note (v0.4.0 migration):** Printer communication is moving out of estampo.
+> estampo is becoming printer-agnostic — it produces G-code and delegates
+> packaging/printing to external tools via command stages (see ADR-005, ADR-007).
+>
+> For Bambu Lab printers, use [bambox](https://github.com/estampo/bambox):
+> ```toml
+> [pack]
+> command = "bambox pack {sliced_dir}/plate.gcode -o {output_dir}/plate.gcode.3mf"
+>
+> [print]
+> command = "bambox print {output_dir}/plate.gcode.3mf --serial YOUR_SERIAL"
+> ```
+>
+> The built-in `bambu-lan`, `bambu-cloud`, and `moonraker` printer types
+> described below are **deprecated** and will be removed in v0.4.0.
 
-## bambu-lan (experimental)
+---
+
+## bambu-lan (deprecated — use bambox)
 
 Direct LAN connection to Bambu Lab printers using the `bambulabs_api` library.
 
@@ -17,9 +33,9 @@ Direct LAN connection to Bambu Lab printers using the `bambulabs_api` library.
 
 **Dependencies:** `bambulabs_api` (optional install)
 
-**Tested against:** Not yet tested against real hardware.
+**Migration:** Use `bambox print --lan` instead. See [bambox docs](https://github.com/estampo/bambox).
 
-## bambu-cloud
+## bambu-cloud (deprecated — use bambox)
 
 Cloud connection to Bambu Lab printers via the Bambu Connect bridge binary (`bambu_cloud_bridge`).
 
@@ -34,9 +50,9 @@ Cloud connection to Bambu Lab printers via the Bambu Connect bridge binary (`bam
 
 **Dependencies:** `bambu_cloud_bridge` binary, cloud auth token
 
-**Tested against:** Bambu Lab P1S via Bambu Cloud.
+**Migration:** Use `bambox print` and `bambox bridge` instead. See [bambox docs](https://github.com/estampo/bambox).
 
-## moonraker
+## moonraker (deprecated — use command stages)
 
 REST API connection to Klipper/Moonraker printers. Works with any printer running Klipper + Moonraker (Voron, Ender with Klipper, etc.).
 
@@ -50,6 +66,13 @@ REST API connection to Klipper/Moonraker printers. Works with any printer runnin
 **Credentials:** `url` (required), `api_key` (optional, for authenticated instances)
 
 **Dependencies:** `requests` (optional install)
+
+**Migration:** In v0.4.0, Moonraker support will be available as a command stage.
+A simple `curl`-based command stage can replace the built-in integration:
+```toml
+[print]
+command = "curl -F file=@{sliced_dir}/plate.gcode http://YOUR_PRINTER:7125/server/files/upload"
+```
 
 ### API endpoints used
 
