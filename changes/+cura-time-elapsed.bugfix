@@ -1,1 +1,0 @@
-Use CuraEngine ``TIME_ELAPSED`` for print time instead of bogus ``;TIME:`` header placeholder

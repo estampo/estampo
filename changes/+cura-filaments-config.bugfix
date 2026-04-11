@@ -1,1 +1,0 @@
-Fix ``[slicer.cura].filaments`` being silently ignored — Cura now reads its own filament config instead of falling through to OrcaSlicer defaults

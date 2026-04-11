@@ -1,1 +1,0 @@
-Remove ``_fix_sliced_3mf`` and ``package_for_printer`` — Bambu 3MF fixup is now handled by ``bambox repack`` as a command stage.

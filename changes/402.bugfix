@@ -1,1 +1,0 @@
-Add ``pythonpath = ["src"]`` to pytest config so tests run correctly from a fresh checkout without a prior editable install
