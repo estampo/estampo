@@ -1,7 +1,7 @@
 # ADR-005: Vendor-Agnostic estampo via bambox Extraction
 
 **Status:** Accepted — migration in progress  
-**Date:** 2026-04  
+**Date:** 2026-04 (revised 2026-04-11)  
 
 ## Context
 
@@ -16,75 +16,105 @@ The slicer comparison research (in `docs/architecture-roadmap.md`) confirmed tha
 
 ## Decision
 
-Extract all Bambu-specific concerns into a single standalone package:
+**estampo is printer-agnostic.** It has no knowledge of printer vendors, protocols, or packaging formats. Its job ends at G-code output.
+
+All printer-vendor concerns live in separate, external tools:
 
 - **`bambox`** — Bambu Lab packaging, G-code templates, cloud/LAN printing, AMS mapping, and authentication
 
-estampo becomes a **printer-vendor-agnostic pipeline orchestrator**. It produces plain G-code and delegates packaging and dispatch to pluggable backends.
+estampo integrates with bambox (and any other printer tool) exclusively through **command stages** (ADR-007) — external CLI commands declared in the user's TOML config. estampo never imports bambox as a Python library.
 
 ```
 estampo (pipeline + slicer backends)
     ↓ plain G-code
-bambox (packaging + printing + auth)       ← optional, Bambu-specific
+    ↓ command stages (TOML-configured CLI calls)
+bambox pack / bambox print            ← external CLI, user-configured
     ↓ .gcode.3mf → MQTT/FTP
 Bambu printer
 ```
 
-For non-Bambu printers, estampo sends plain G-code directly — no BBL packaging needed.
+Example user TOML:
+```toml
+[pack]
+command = "bambox pack {sliced_dir}/plate.gcode -o {output_dir}/plate.gcode.3mf"
+output = "{output_dir}/plate.gcode.3mf"
+
+[print]
+command = "bambox print {output_dir}/plate.gcode.3mf --serial YOUR_SERIAL"
+```
+
+For non-Bambu printers, users configure different command stages (or none — just take the G-code).
 
 ## Rationale
 
-**Decoupling slicer from packaging:** OrcaSlicer currently handles slicing, BBL G-code injection, and `.gcode.3mf` packaging in one binary. Any CLI bug in OrcaSlicer blocks all three. If estampo owns packaging independently, it can swap slicers (OrcaSlicer → CuraEngine) without losing BBL printer support.
+**Decoupling slicer from packaging:** OrcaSlicer currently handles slicing, BBL G-code injection, and `.gcode.3mf` packaging in one binary. Any CLI bug in OrcaSlicer blocks all three. With bambox as a separate CLI, estampo can swap slicers (OrcaSlicer → CuraEngine) without losing BBL printer support.
 
-**Community value:** `bambox` is useful to anyone with a Bambu printer, regardless of which slicer or pipeline they use. Splitting it out makes it independently installable and testable.
+**CLI-only integration:** bambox is a Rust+Python tool with its own release cadence, FFI dependencies (BNL bridge), and build toolchain. A Python import would couple estampo's version constraints to bambox's internals. CLI integration via command stages (ADR-007) keeps both projects independently versioned and deployable.
 
-**Scope clarity for estampo:** Once the split is done, estampo's job is clear and finite: load parts, arrange, plate, invoke slicer, hand off G-code. It has no knowledge of printer vendors.
+**Community value:** `bambox` is useful to anyone with a Bambu printer, regardless of which slicer or pipeline they use. It is independently installable (`pip install bambox` / `pipx install bambox`).
 
-## What moves where
+**Scope clarity for estampo:** estampo's job is clear and finite: load parts, arrange, plate, invoke slicer, extract G-code metadata. It has no knowledge of printer vendors, packaging formats, or print protocols.
 
-### Stays in estampo
+## What stays in estampo
 
 - `pipeline.py` — DAG orchestration
-- `slicer.py` — OrcaSlicer invocation
-- `cura.py` — CuraEngine invocation
+- `slicer.py` — slicer dispatch (OrcaSlicer / CuraEngine)
+- `orca.py` — OrcaSlicer-specific logic (including OrcaSlicer 3MF painting metadata)
+- `cura.py` — CuraEngine-specific logic (printer-agnostic)
 - `gcode.py` — G-code metadata parsing (print time, filament weight — engine-agnostic)
+- `commands.py` — command stage execution (generic, not printer-aware)
 - `arrange.py`, `plate.py`, `loader.py`, `orient.py` — geometry pipeline
 - `config.py`, `cli.py`, `profiles.py`, `adapters.py`
 
-### Moves to `bambox`
+## What gets deleted from estampo
 
-- `.gcode.3mf` packaging (`printer.py` → `wrap_gcode_3mf()`)
-- BBL G-code template library (start/end/toolchange/layer-change macros)
-- The format specification at `docs/gcode-3mf-format.md`
-- Thumbnail generation (`thumbnails.py`) — BBL-specific metadata
-- Bambu LAN printing (`bambulabs-api`)
-- Bambu Cloud printing (`bambu-lab-cloud-api`)
-- Bambu Connect bridge (`cloud/bridge.py`)
-- AMS filament slot mapping (`cloud/ams.py`)
-- Bambu Cloud authentication (`auth.py`)
-- Bambu printer credentials (`credentials.py`)
-- Bambu Connect 3MF fixup (`orca.py` → `bambu_connect_fixup()`)
+These modules and functions are **deleted entirely** — not moved, not wrapped, not shimmed. bambox already provides all replacements as CLI commands.
+
+| Delete from estampo | bambox replacement | Tracking issue |
+|---|---|---|
+| `printer.py` (entire module) | `bambox pack`, `bambox print` | #370 |
+| `auth.py` (entire module) | `bambox` handles its own auth | #370 |
+| `credentials.py` (entire module) | `bambox` handles its own credentials | #370 |
+| `cloud/` directory (bridge, ams) | `bambox bridge`, `bambox print` | #370 |
+| `cli.py`: `_PRINT_STAGES`, AMS flags, printer status rendering | `bambox status`, `bambox print` | #375 |
+| `cli.py`: `--no-ams-mapping`, bambu-cloud serial discovery | `bambox print` flags | #375 |
+| `cura.py`: `_substitute_gcode_templates()`, `_patch_gcode_header()` | `bambox pack` (auto-configures from BAMBOX headers) | #387 |
+| `cura.py`: bundled `bambulab_p1s.def.json`, `bambulab_base.def.json` | bambox ships its own CuraEngine definitions | #387 |
+| `cura.py`: default to `"bambulab_p1s"` when no printer specified | Error if no printer specified | #374 |
+| `init.py`: Bambu P1S defaults in prompts and template | Generic prompts, profile picker | #373 |
+| `plate.py`: `BambuStudio:MmPaintingVersion`, `_encode_paint_color()` | Moves to `orca.py` (OrcaSlicer-specific, not printer-specific) | #378 |
+| `constants.py`: Bambu-specific comments | Generic wording | #377 |
+| `pyproject.toml`: `bambulabs-api`, `bambu-lab-cloud-api` dependencies | Not needed — bambox is a CLI tool, not a Python dependency | #370 |
 
 ## Migration path
 
 Gradual decoupling — no big bang rewrite. Each phase is independently shippable.
 
-**v0.4.0:** Extract `bambox` as a standalone library. estampo depends on it. No user-visible change, but all Bambu-specific code is out of estampo core.
+**Phase 1 — Quick wins (no bambox changes needed):**
+- #377: Reword Bambu-specific comments in `constants.py`
+- #373: Remove Bambu defaults from `init.py` prompts
+- #374: Remove Bambu defaults from `cura.py`, error on missing printer
 
-**Future:** estampo has zero Bambu-specific imports. `bambox` is an optional extra: `pip install estampo[bambu]`.
+**Phase 2 — Delete Bambu code from estampo:**
+- #378: Move BambuStudio 3MF painting metadata from `plate.py` to `orca.py`
+- #387: Delete bundled Bambu CuraEngine definitions and post-processing functions
+- #375: Delete AMS CLI flags, Bambu stage IDs, printer status rendering from `cli.py`
+- #370: Delete `printer.py`, `auth.py`, `credentials.py`, `cloud/` — remove Bambu dependencies from `pyproject.toml`
+
+**v0.4.0 gate:** After all phases complete, estampo has zero Bambu-specific code, zero Bambu Python dependencies, and zero knowledge of printer vendors. Users configure packaging and printing via command stages in TOML.
 
 ## Consequences
 
-- `printer.py` will shrink to a thin dispatch layer, then eventually move to `bambox`
-- `thumbnails.py` will move to `bambox`
-- `cloud/` directory will move to `bambox`
-- `auth.py` and `credentials.py` will move to `bambox`
-- The `packaged_output` pipeline node will call `bambox` APIs instead of local functions
-- Adding Prusa/Voron/etc. printer support becomes a matter of adding a new dispatch plugin, not forking estampo
+- `printer.py`, `auth.py`, `credentials.py`, `cloud/` are deleted
+- `bambulabs-api` and `bambu-lab-cloud-api` are removed from dependencies
+- estampo's `print` and `status` CLI subcommands are removed (users use `bambox print` / `bambox status`)
+- `plate.py` becomes a pure geometry assembler; OrcaSlicer-specific 3MF metadata moves to `orca.py`
+- Adding support for a new printer vendor requires zero changes to estampo — users just configure a different command stage
 
 ## Anti-patterns to avoid
 
-- Do not add new Bambu-specific logic to `pipeline.py`, `gcode.py`, or `arrange.py`
-- Do not add new Bambu-specific logic to `slicer.py` or `cura.py` — the slicers produce generic G-code; packaging is `bambox`'s job
-- Do not add OrcaSlicer-specific packaging logic assuming it will always be the slicer — CuraEngine output must go through the same packaging path
-- Do not create a `prusa.py` or `voron.py` in estampo — printer-vendor code belongs in vendor-specific packages, not estampo core
+- **Do not import bambox** as a Python library. Integration is CLI-only via command stages (ADR-007).
+- Do not add new Bambu-specific logic to any estampo module.
+- Do not create "thin dispatch shims" or "wrapper functions" for bambox — that's still coupling.
+- Do not add printer-vendor modules (`prusa.py`, `voron.py`) to estampo — printer-vendor code belongs in vendor-specific packages.
+- Do not add OrcaSlicer-specific packaging logic assuming it will always be the slicer — CuraEngine output must go through the same packaging path (command stages).

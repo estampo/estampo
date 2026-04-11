@@ -57,24 +57,30 @@ Each module has a defined scope. Do not add logic to the wrong module — even i
 | `config.py` | TOML parsing, config dataclasses | Business logic, file I/O beyond TOML |
 | `cli.py` | Typer commands, user-facing flags, Hamilton driver construction | Pipeline logic, slicer invocation |
 | `adapters.py` | Hamilton lifecycle hooks (progress, timing) | Pipeline logic, direct node invocation |
-| `printer.py` | Printer dispatch (LAN/Cloud/Bambu Connect) | Slicing, G-code generation |
-| `credentials.py` | `~/.config/estampo/credentials.toml` loading | Any other file I/O |
+| `commands.py` | Command stage execution (generic subprocess runner) | Printer-specific logic, slicer logic |
+| `printer.py` | **DEPRECATED — deleting in v0.4.0** (Bambu dispatch) | New code — use command stages instead |
+| `credentials.py` | **DEPRECATED — deleting in v0.4.0** (Bambu credentials) | New code — credentials belong in bambox |
 
 ## Architecture: Key Decisions
 
-Four architecture decisions are documented in `docs/decisions/`. Read them before changing any of the following:
+Seven architecture decisions are documented in `docs/decisions/`. Read them before changing any of the following:
 
 1. **`docs/decisions/001-hamilton-dag-pipeline.md`** — Why Hamilton; DAG invariants; what must not go in pipeline nodes
 2. **`docs/decisions/002-docker-local-fallback.md`** — Docker-first + local fallback; `docker_image()` as single source of truth
 3. **`docs/decisions/003-multi-engine-facade.md`** — OrcaSlicer + CuraEngine coexistence; facade pattern on SlicerConfig; engine-specific code stays in slicer.py / cura.py
 4. **`docs/decisions/004-bundled-profiles.md`** — Profiles extracted from Docker, committed to repo, bundled in pip package
+5. **`docs/decisions/005-vendor-agnostic-split.md`** — estampo is printer-agnostic; Bambu code is deleted (not moved); bambox is CLI-only (never imported)
+6. **`docs/decisions/006-slicer-plugin-protocol.md`** — Slicer engine modules as first-class peers; dispatch layers stay pure
+7. **`docs/decisions/007-command-stages.md`** — External CLI tools as pipeline stages; `str.format_map()` variable substitution
 
 **Before adding a new slicer engine:** read ADR-006 (the complete protocol a new engine module must implement).  
 **Before adding engine `if/elif` to profiles.py, init.py, or slicer.py:** read ADR-006 — it goes in the engine module instead.  
 **Before touching Docker image tag construction:** read ADR-002.  
 **Before adding logic to pipeline.py:** read ADR-001.  
 **Before changing profile loading:** read ADR-004.  
-**Before adding Bambu-specific code anywhere:** read ADR-005.
+**Before adding Bambu-specific code anywhere:** read ADR-005 — **do not add it. estampo is printer-agnostic.**  
+**Before adding printer/packaging logic:** read ADR-005 + ADR-007 — it belongs in a command stage, not in estampo.  
+**Before importing bambox:** read ADR-005 + ADR-007 — **do not import it. CLI integration only.**
 
 ## What estampo is NOT
 
@@ -82,10 +88,10 @@ To prevent scope creep and re-invention:
 
 - **Not a slicer.** estampo wraps slicers (OrcaSlicer, CuraEngine). Do not reimplement slicing algorithms in Python.
 - **Not a profile editor.** estampo pins and references profiles. Do not build profile editing UI or deep profile merging logic.
-- **Not a printer firmware.** estampo sends files to printers via existing APIs (Bambu LAN, Bambu Cloud). Do not implement printer protocols from scratch.
+- **Not a printer tool.** estampo does not send files to printers, package G-code for specific printer vendors, or handle printer authentication. Printing and packaging are handled by external tools (e.g. `bambox` for Bambu Lab) configured as command stages in TOML. See ADR-005.
 - **Not a CAD tool.** estampo loads meshes. The `build123d` integration is for code-CAD users who want to go straight from model to print — it is not a CAD kernel.
 - **Not a standalone G-code generator.** G-code comes from the slicer. estampo parses G-code metadata (print time, filament weight) but does not generate toolpaths.
-- **Not a Bambu-only tool.** Bambu Lab printer support is being extracted to the separate `bambox` package (packaging, printing, auth). Do not add new Bambu-specific logic to estampo core modules (pipeline.py, slicer.py, cura.py, gcode.py). See ADR-005.
+- **Not a Bambu tool (or any vendor's tool).** estampo is printer-agnostic. All Bambu-specific code is being deleted (v0.4.0) — not moved, not wrapped. The `bambox` package is a separate CLI tool for Bambu Lab printers. estampo never imports bambox; integration is via command stages (ADR-005, ADR-007). Do not add printer-vendor logic to any estampo module.
 
 ## Architecture: Slicer Execution
 
