@@ -34,6 +34,8 @@ COMMAND_VARIABLES: dict[str, str] = {
     "output_dir": "Output directory path",
     "machine": "Active printer/machine name (empty string if unset)",
     "engine": "Active slicer engine name (orca or cura)",
+    "filament": "First filament profile name (empty string if unset)",
+    "filaments": "All filament profiles, comma-separated (empty string if unset)",
     "input_3mf": "Plate 3MF path (available after plate stage)",
     "sliced_3mf": "Packaged 3MF after slicing (available after slice stage)",
     "sliced_dir": "Slicer output directory (available after slice stage)",
@@ -53,11 +55,15 @@ def build_command_context(
 
     The returned dict always has exactly the keys in ``COMMAND_VARIABLES``.
     """
+    engine_cfg = config.slicer.orca if config.slicer.engine == "orca" else config.slicer.cura
+    fils = engine_cfg.filaments
     ctx: dict[str, str] = {
         "name": config.name or "",
         "output_dir": str(output_dir),
         "machine": config.slicer.active.printer or "",
         "engine": config.slicer.engine,
+        "filament": fils[0] if fils else "",
+        "filaments": ",".join(fils) if fils else "",
         "input_3mf": str(stage_results.get("plate_3mf_path", "")),
         "sliced_3mf": str(stage_results.get("packaged_output", "")),
         "sliced_dir": str(stage_results.get("sliced_output_dir", "")),
