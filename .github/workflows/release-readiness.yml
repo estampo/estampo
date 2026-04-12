@@ -187,6 +187,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$BRANCH"
+          echo "Update bundled OrcaSlicer ${{ matrix.orca_version }} profiles" > changes/+update-orca-profiles.misc
+          git add changes/
           git commit -m "Update bundled OrcaSlicer profiles (${{ matrix.orca_version }})"
           git push --force origin "$BRANCH"
           gh pr create \
@@ -388,6 +390,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$BRANCH"
+          echo "Update bundled CuraEngine ${{ matrix.cura_version }} definitions" > changes/+update-cura-definitions.misc
+          git add changes/
           git commit -m "Update bundled CuraEngine definitions (${{ matrix.cura_version }})"
           git push --force origin "$BRANCH"
           gh pr create \
