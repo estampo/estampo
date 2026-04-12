@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import logging
-import shutil
 import subprocess
-import sys
 from pathlib import Path
 
 from estampo.gcode import parse_gcode_metadata
@@ -29,53 +27,22 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
-def _slicer_paths() -> dict[str, Path]:
-    """Return default slicer executable paths for the current platform."""
-    if sys.platform == "darwin":
-        return {
-            "orca": Path("/Applications/OrcaSlicer.app/Contents/MacOS/OrcaSlicer"),
-            "cura": Path("/Applications/UltiMaker Cura.app/Contents/MacOS/CuraEngine"),
-        }
-    elif sys.platform == "win32":
-        pf = Path("C:/Program Files")
-        return {
-            "orca": pf / "OrcaSlicer/orca-slicer.exe",
-            "cura": pf / "UltiMaker Cura/CuraEngine.exe",
-        }
-    else:  # Linux and other Unix
-        return {
-            "orca": Path("/usr/bin/orca-slicer"),
-            "cura": Path("/usr/local/bin/CuraEngine"),
-        }
+def _get_engine_module(engine: str):  # noqa: ANN202
+    """Return the engine module for the given engine key."""
+    from estampo import cura, orca
 
-
-SLICER_PATHS = _slicer_paths()
+    engines = {"orca": orca, "cura": cura}
+    if engine not in engines:
+        raise ValueError(f"Unknown slicer engine: '{engine}'. Supported: {list(engines)}")
+    return engines[engine]
 
 
 def find_slicer(engine: str) -> Path:
     """Find the slicer executable for the given engine.
 
-    Checks the platform-specific default path first, then falls back
-    to searching PATH (useful on Linux or custom installs).
+    Delegates to the engine module's ``find_binary()`` function.
     """
-    if engine not in SLICER_PATHS:
-        raise ValueError(f"Unknown slicer engine: '{engine}'. Supported: {list(SLICER_PATHS)}")
-
-    path = SLICER_PATHS[engine]
-    if path.exists():
-        return path
-
-    # Fall back to PATH lookup (handles AppImage, Flatpak, AUR, custom installs)
-    path_names = {
-        "orca": ("orca-slicer", "OrcaSlicer", "OrcaSlicer.AppImage"),
-        "cura": ("CuraEngine", "curaengine"),
-    }
-    for name in path_names.get(engine, ()):
-        found = shutil.which(name)
-        if found:
-            return Path(found)
-
-    raise FileNotFoundError(f"Slicer ({engine}) not found at {path} or on PATH. Is it installed?")
+    return _get_engine_module(engine).find_binary()
 
 
 # ---------------------------------------------------------------------------

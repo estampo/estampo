@@ -24,6 +24,38 @@ log = logging.getLogger(__name__)
 ENGINE_NAME = "OrcaSlicer"
 ENGINE_KEY = "orca"
 
+
+# ---------------------------------------------------------------------------
+# Binary discovery
+# ---------------------------------------------------------------------------
+
+
+def _default_binary_path() -> Path:
+    """Return the platform-specific default path for OrcaSlicer."""
+    if sys.platform == "darwin":
+        return Path("/Applications/OrcaSlicer.app/Contents/MacOS/OrcaSlicer")
+    elif sys.platform == "win32":
+        return Path("C:/Program Files/OrcaSlicer/orca-slicer.exe")
+    return Path("/usr/bin/orca-slicer")
+
+
+def find_binary() -> Path:
+    """Locate the OrcaSlicer executable on this system.
+
+    Raises ``FileNotFoundError`` if not found.
+    """
+    path = _default_binary_path()
+    if path.exists():
+        return path
+
+    for name in ("orca-slicer", "OrcaSlicer", "OrcaSlicer.AppImage"):
+        found = shutil.which(name)
+        if found:
+            return Path(found)
+
+    raise FileNotFoundError(f"OrcaSlicer not found at {path} or on PATH. Is it installed?")
+
+
 # ---------------------------------------------------------------------------
 # Docker image naming
 # ---------------------------------------------------------------------------
@@ -766,12 +798,9 @@ def _detect_orca_version() -> str | None:
     if skip_detect:
         return None
     try:
-        from estampo.slicer import SLICER_PATHS
-
-        slicer = SLICER_PATHS.get("orca")
-        if slicer and slicer.exists():
-            return _detect_slicer_version(slicer)
-    except (OSError, ImportError):
+        slicer = find_binary()
+        return _detect_slicer_version(slicer)
+    except (FileNotFoundError, OSError):
         log.debug("Failed to detect OrcaSlicer version", exc_info=True)
     return None
 

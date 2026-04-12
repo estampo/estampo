@@ -15,6 +15,7 @@ import logging
 import re
 import shutil
 import subprocess
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -23,8 +24,43 @@ from estampo.constants import DEFAULT_PLATE_SIZE
 
 log = logging.getLogger(__name__)
 
+ENGINE_NAME = "CuraEngine"
+ENGINE_KEY = "cura"
+
 DOCKERHUB_REPO = "estampo/estampo"
 CURAENGINE_VERSION = "5.12.0"
+
+
+# ---------------------------------------------------------------------------
+# Binary discovery
+# ---------------------------------------------------------------------------
+
+
+def _default_binary_path() -> Path:
+    """Return the platform-specific default path for CuraEngine."""
+    if sys.platform == "darwin":
+        return Path("/Applications/UltiMaker Cura.app/Contents/MacOS/CuraEngine")
+    elif sys.platform == "win32":
+        return Path("C:/Program Files/UltiMaker Cura/CuraEngine.exe")
+    return Path("/usr/local/bin/CuraEngine")
+
+
+def find_binary() -> Path:
+    """Locate the CuraEngine executable on this system.
+
+    Raises ``FileNotFoundError`` if not found.
+    """
+    path = _default_binary_path()
+    if path.exists():
+        return path
+
+    for name in ("CuraEngine", "curaengine"):
+        found = shutil.which(name)
+        if found:
+            return Path(found)
+
+    raise FileNotFoundError(f"CuraEngine not found at {path} or on PATH. Is it installed?")
+
 
 # Definitions directory inside the Docker image (fdmprinter.def.json etc.)
 _DEFS_DIR = "/opt/cura/definitions"
@@ -305,6 +341,9 @@ def cura_docker_image(version: str | None = None) -> str:
     if version:
         return f"{DOCKERHUB_REPO}:cura-{version}"
     return f"{DOCKERHUB_REPO}:cura-{CURAENGINE_VERSION}"
+
+
+docker_image = cura_docker_image
 
 
 # ---------------------------------------------------------------------------
