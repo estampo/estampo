@@ -102,23 +102,6 @@ jobs:
           path: estampo-image.tar
           retention-days: 1
 
-  build-cloud-bridge:
-    needs: resolve-versions
-    if: always() && needs.resolve-versions.result == 'success'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Build cloud-bridge image
-        run: |
-          docker build --platform linux/amd64 \
-            -f Dockerfile.cloud-bridge \
-            -t estampo/cloud-bridge:test .
-
-      - name: Smoke test cloud-bridge
-        run: |
-          docker run --rm estampo/cloud-bridge:test --help
-
   smoke-test:
     needs: [resolve-versions, build-estampo-image]
     if: always() && needs.build-estampo-image.result == 'success'

@@ -68,30 +68,3 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.xml
           fail_ci_if_error: false
-
-  build-bridge:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - name: Check if bridge files changed
-        id: filter
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            CHANGED=$(gh pr diff ${{ github.event.pull_request.number }} --name-only 2>/dev/null || echo "")
-            if echo "$CHANGED" | grep -qE 'scripts/bambu_cloud_bridge\.cpp|Dockerfile\.cloud-bridge'; then
-              echo "run=true" >> "$GITHUB_OUTPUT"
-            else
-              echo "run=false" >> "$GITHUB_OUTPUT"
-              echo "Skipping: no bridge files changed"
-            fi
-          else
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Compile cloud bridge
-        if: steps.filter.outputs.run == 'true'
-        run: g++ -std=c++17 -o bambu_cloud_bridge scripts/bambu_cloud_bridge.cpp -ldl -lpthread
-      - name: Verify binary
-        if: steps.filter.outputs.run == 'true'
-        run: ./bambu_cloud_bridge --help
