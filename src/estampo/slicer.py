@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import subprocess
 from pathlib import Path
 
 from estampo.gcode import parse_gcode_metadata
@@ -43,64 +42,6 @@ def find_slicer(engine: str) -> Path:
     Delegates to the engine module's ``find_binary()`` function.
     """
     return _get_engine_module(engine).find_binary()
-
-
-# ---------------------------------------------------------------------------
-# Shared Docker utilities (used by both orca and cura engines)
-# ---------------------------------------------------------------------------
-
-
-def _has_docker_image(image: str) -> bool:
-    """Check if the given Docker image exists locally."""
-    try:
-        r = subprocess.run(
-            ["docker", "image", "inspect", image],
-            capture_output=True,
-            timeout=10,
-        )
-        return r.returncode == 0
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        return False
-
-
-def _pull_docker_image(image: str, *, cached: bool) -> bool:
-    """Pull a Docker image from the registry. Returns True on success."""
-    from estampo import ui
-
-    label = "Checking for updated image" if cached else "Pulling Docker image"
-    log.info("Pulling Docker image %s ...", image)
-    try:
-        with ui.status(f"{label} [bold]{image}[/bold]"):
-            r = subprocess.run(
-                ["docker", "pull", image],
-                capture_output=True,
-                text=True,
-                timeout=300,
-            )
-        if r.returncode == 0:
-            return True
-        log.debug("docker pull failed: %s", r.stderr.strip())
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        pass
-    return False
-
-
-def _ensure_docker_image(image: str) -> bool:
-    """Ensure an up-to-date Docker image is available locally.
-
-    Always attempts a pull so that image updates are picked up
-    automatically.  If the pull fails (no network, registry down)
-    the locally cached image is used instead.  Returns False only
-    when no usable image is available at all.
-    """
-    cached = _has_docker_image(image)
-    if _pull_docker_image(image, cached=cached):
-        return True
-    # Pull failed — fall back to local cache if available
-    if cached:
-        log.warning("Could not pull %s — using locally cached image", image)
-        return True
-    return False
 
 
 # ---------------------------------------------------------------------------

@@ -414,56 +414,17 @@ def extract_cura_docker_defs(
     Returns a Path to a temporary directory containing ``*.def.json`` files.
     The caller is responsible for cleanup.
     """
-    import tempfile
+    from estampo.docker import extract_files
 
     if not image:
         image = cura_docker_image(version)
 
-    from estampo.slicer import _ensure_docker_image
-
-    if not _ensure_docker_image(image):
-        raise EstampoError(f"Docker image {image} is not available and could not be pulled.")
-
-    from estampo import ui
-
-    tmp_dir = Path(tempfile.mkdtemp(prefix="estampo_cura_defs_"))
-    container_id = None
-    try:
-        with ui.status("Extracting CuraEngine definitions from Docker image"):
-            result = subprocess.run(
-                ["docker", "create", "--platform", "linux/amd64", image, "true"],
-                capture_output=True,
-                text=True,
-                timeout=30,
-            )
-            if result.returncode != 0:
-                raise EstampoError(f"docker create failed: {result.stderr.strip()}")
-            container_id = result.stdout.strip()
-
-            cp_result = subprocess.run(
-                [
-                    "docker",
-                    "cp",
-                    f"{container_id}:{_DEFS_DIR}/.",
-                    str(tmp_dir),
-                ],
-                capture_output=True,
-                text=True,
-                timeout=60,
-            )
-            if cp_result.returncode != 0:
-                raise EstampoError(
-                    f"Failed to copy definitions from Docker: {cp_result.stderr.strip()}"
-                )
-    finally:
-        if container_id:
-            subprocess.run(
-                ["docker", "rm", "-f", container_id],
-                capture_output=True,
-                timeout=15,
-            )
-
-    return tmp_dir
+    return extract_files(
+        image,
+        _DEFS_DIR,
+        tmp_prefix="estampo_cura_defs_",
+        status_label="Extracting CuraEngine definitions from Docker image",
+    )
 
 
 def _squash_cura_def(def_id: str, defs_dir: Path) -> dict:

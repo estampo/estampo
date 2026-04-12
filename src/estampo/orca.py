@@ -380,8 +380,9 @@ def orca_slice_plate(
 
     Returns the output directory containing the sliced gcode.
     """
+    from estampo.docker import ensure_image as _ensure_docker_image
     from estampo.profiles import pinned_profiles_version
-    from estampo.slicer import _ensure_docker_image, find_slicer
+    from estampo.slicer import find_slicer
 
     # If config specifies a version and no explicit docker_version was given,
     # use it as the docker_version for Docker-based slicing.
@@ -620,53 +621,31 @@ def extract_docker_profiles(
     ``<tmpdir>/{machine,process,filament}/*.json``.
     The caller is responsible for cleanup.
     """
+    from estampo import docker, ui
+
     if not image:
         image = docker_image(version)
 
-    from estampo.slicer import _ensure_docker_image
-
-    if not _ensure_docker_image(image):
+    if not docker.ensure_image(image):
         raise EstampoError(
             f"Docker image {image} is not available and could not be pulled. "
             "Check your Docker setup or install the slicer locally."
         )
 
-    from estampo import ui
-
     tmp_dir = Path(tempfile.mkdtemp(prefix="estampo_profiles_"))
-    container_id = None
-    try:
-        with ui.status("Extracting profiles from Docker image"):
-            # Create a stopped container (does not start it)
-            result = subprocess.run(
-                ["docker", "create", "--platform", "linux/amd64", image, "true"],
-                capture_output=True,
-                text=True,
-                timeout=30,
-            )
-            if result.returncode != 0:
-                raise EstampoError(f"docker create failed: {result.stderr.strip()}")
-            container_id = result.stdout.strip()
 
-            # Copy the entire BBL profile tree (includes root-level base profiles
-            # that category profiles may inherit from).
-            # docker cp copies directory contents into the destination, so
-            # the result is bbl_dest/{machine,process,filament,...}
+    with ui.status("Extracting profiles from Docker image"):
+        with docker.stopped_container(image) as container_id:
             bbl_dest = tmp_dir / "_bbl"
-            cp_result = subprocess.run(
-                ["docker", "cp", f"{container_id}:{_DOCKER_PROFILE_ROOT}/.", str(bbl_dest)],
-                capture_output=True,
-                text=True,
-                timeout=30,
+            cp_result = docker.copy_from_container(
+                container_id, f"{_DOCKER_PROFILE_ROOT}/.", bbl_dest
             )
             if cp_result.returncode == 0 and bbl_dest.is_dir():
-                # Move category dirs up to tmp_dir for backwards compatibility
                 for category in CATEGORIES:
                     src_cat = bbl_dest / category
                     dest_cat = tmp_dir / category
                     if src_cat.is_dir():
                         src_cat.rename(dest_cat)
-                # Move any remaining files/dirs (root-level base profiles, common/, etc.)
                 for item in list(bbl_dest.iterdir()):
                     item.rename(tmp_dir / item.name)
                 if not any(bbl_dest.iterdir()):
@@ -677,25 +656,17 @@ def extract_docker_profiles(
                     cp_result.stderr.strip(),
                 )
                 for category in CATEGORIES:
-                    src = f"{container_id}:{_DOCKER_PROFILE_ROOT}/{category}"
-                    dest = tmp_dir / category
-                    cat_result = subprocess.run(
-                        ["docker", "cp", src, str(dest)],
-                        capture_output=True,
-                        text=True,
-                        timeout=30,
+                    cat_result = docker.copy_from_container(
+                        container_id,
+                        f"{_DOCKER_PROFILE_ROOT}/{category}",
+                        tmp_dir / category,
                     )
                     if cat_result.returncode != 0:
-                        log.debug("docker cp %s failed: %s", category, cat_result.stderr.strip())
-
-    finally:
-        # Clean up the container
-        if container_id:
-            subprocess.run(
-                ["docker", "rm", container_id],
-                capture_output=True,
-                timeout=10,
-            )
+                        log.debug(
+                            "docker cp %s failed: %s",
+                            category,
+                            cat_result.stderr.strip(),
+                        )
 
     return tmp_dir
 

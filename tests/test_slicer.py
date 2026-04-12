@@ -6,10 +6,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from estampo import EstampoError
+from estampo.docker import ensure_image, has_image
 from estampo.slicer import (
     _apply_overrides,
-    _ensure_docker_image,
-    _has_docker_image,
     _resolve_profiles,
     _slice_via_docker,
     docker_image,
@@ -244,8 +243,8 @@ def test_docker_image_tag_consistency():
 
 def test_has_docker_image_true():
     mock_result = MagicMock(returncode=0)
-    with patch("estampo.slicer.subprocess.run", return_value=mock_result) as mock_run:
-        assert _has_docker_image("estampo:orca-2.3.1") is True
+    with patch("estampo.docker.subprocess.run", return_value=mock_result) as mock_run:
+        assert has_image("estampo:orca-2.3.1") is True
         mock_run.assert_called_once_with(
             ["docker", "image", "inspect", "estampo:orca-2.3.1"],
             capture_output=True,
@@ -255,13 +254,13 @@ def test_has_docker_image_true():
 
 def test_has_docker_image_false_no_image():
     mock_result = MagicMock(returncode=1)
-    with patch("estampo.slicer.subprocess.run", return_value=mock_result):
-        assert _has_docker_image("estampo:orca-2.3.1") is False
+    with patch("estampo.docker.subprocess.run", return_value=mock_result):
+        assert has_image("estampo:orca-2.3.1") is False
 
 
 def test_has_docker_image_false_no_docker():
-    with patch("estampo.slicer.subprocess.run", side_effect=FileNotFoundError):
-        assert _has_docker_image("estampo:orca-2.3.1") is False
+    with patch("estampo.docker.subprocess.run", side_effect=FileNotFoundError):
+        assert has_image("estampo:orca-2.3.1") is False
 
 
 # --- _ensure_docker_image ---
@@ -270,29 +269,29 @@ def test_has_docker_image_false_no_docker():
 def test_ensure_docker_image_pulls_even_when_cached():
     """Always pulls to pick up updates, even when image is cached locally."""
     with (
-        patch("estampo.slicer._has_docker_image", return_value=True),
-        patch("estampo.slicer._pull_docker_image", return_value=True) as mock_pull,
+        patch("estampo.docker.has_image", return_value=True),
+        patch("estampo.docker.pull_image", return_value=True) as mock_pull,
     ):
-        assert _ensure_docker_image("estampo:orca-2.3.1") is True
+        assert ensure_image("estampo:orca-2.3.1") is True
     mock_pull.assert_called_once_with("estampo:orca-2.3.1", cached=True)
 
 
 def test_ensure_docker_image_falls_back_to_cache_on_pull_failure():
     """Uses cached image when pull fails (offline, registry down)."""
     with (
-        patch("estampo.slicer._has_docker_image", return_value=True),
-        patch("estampo.slicer._pull_docker_image", return_value=False),
+        patch("estampo.docker.has_image", return_value=True),
+        patch("estampo.docker.pull_image", return_value=False),
     ):
-        assert _ensure_docker_image("estampo:orca-2.3.1") is True
+        assert ensure_image("estampo:orca-2.3.1") is True
 
 
 def test_ensure_docker_image_fails_when_no_cache_and_pull_fails():
     """Returns False when no cached image and pull fails."""
     with (
-        patch("estampo.slicer._has_docker_image", return_value=False),
-        patch("estampo.slicer._pull_docker_image", return_value=False),
+        patch("estampo.docker.has_image", return_value=False),
+        patch("estampo.docker.pull_image", return_value=False),
     ):
-        assert _ensure_docker_image("estampo:orca-2.3.1") is False
+        assert ensure_image("estampo:orca-2.3.1") is False
 
 
 # --- _slice_via_docker ---
@@ -500,7 +499,7 @@ def test_slice_plate_local_fallback(tmp_path):
     slicer_path = Path("/usr/bin/orca-slicer")
 
     with (
-        patch("estampo.slicer._ensure_docker_image", return_value=False),
+        patch("estampo.docker.ensure_image", return_value=False),
         patch("estampo.slicer.find_slicer", return_value=slicer_path),
         patch("estampo.profiles.resolve_profile_data", side_effect=_mock_resolve),
         patch("estampo.orca.subprocess.run", return_value=mock_result) as mock_run,
@@ -525,7 +524,7 @@ def test_slice_plate_docker_default(tmp_path):
     mock_result = MagicMock(returncode=0, stdout="", stderr="")
 
     with (
-        patch("estampo.slicer._ensure_docker_image", return_value=True),
+        patch("estampo.docker.ensure_image", return_value=True),
         patch("estampo.profiles.resolve_profile_data", side_effect=_mock_resolve),
         patch("estampo.orca.subprocess.run", return_value=mock_result) as mock_run,
     ):
@@ -550,7 +549,7 @@ def test_slice_plate_docker_version(tmp_path):
     mock_result = MagicMock(returncode=0, stdout="", stderr="")
 
     with (
-        patch("estampo.slicer._ensure_docker_image", return_value=True),
+        patch("estampo.docker.ensure_image", return_value=True),
         patch("estampo.profiles.resolve_profile_data", side_effect=_mock_resolve),
         patch("estampo.orca.subprocess.run", return_value=mock_result) as mock_run,
     ):
@@ -573,7 +572,7 @@ def test_slice_plate_docker_image_missing_no_local(tmp_path):
     input_3mf.write_text("fake")
 
     with (
-        patch("estampo.slicer._ensure_docker_image", return_value=False),
+        patch("estampo.docker.ensure_image", return_value=False),
         patch("estampo.slicer.find_slicer", side_effect=FileNotFoundError("not found")),
     ):
         with pytest.raises(FileNotFoundError, match="Docker image.*not found"):
@@ -594,7 +593,7 @@ def test_slice_plate_docker_fallback_to_local(tmp_path):
     slicer_path = Path("/usr/bin/orca-slicer")
 
     with (
-        patch("estampo.slicer._ensure_docker_image", return_value=False),
+        patch("estampo.docker.ensure_image", return_value=False),
         patch("estampo.slicer.find_slicer", return_value=slicer_path),
         patch("estampo.profiles.resolve_profile_data", side_effect=_mock_resolve),
         patch("estampo.orca.subprocess.run", return_value=mock_result) as mock_run,
@@ -623,7 +622,7 @@ def test_slice_plate_allow_mix_temp_on_232(tmp_path):
     mock_result = MagicMock(returncode=0, stdout="", stderr="")
 
     with (
-        patch("estampo.slicer._ensure_docker_image", return_value=True),
+        patch("estampo.docker.ensure_image", return_value=True),
         patch("estampo.profiles.resolve_profile_data", side_effect=_mock_resolve),
         patch("estampo.orca.subprocess.run", return_value=mock_result) as mock_run,
     ):
@@ -649,7 +648,7 @@ def test_slice_plate_no_allow_mix_temp_on_231(tmp_path):
     mock_result = MagicMock(returncode=0, stdout="", stderr="")
 
     with (
-        patch("estampo.slicer._ensure_docker_image", return_value=True),
+        patch("estampo.docker.ensure_image", return_value=True),
         patch("estampo.profiles.resolve_profile_data", side_effect=_mock_resolve),
         patch("estampo.orca.subprocess.run", return_value=mock_result) as mock_run,
     ):
@@ -675,7 +674,7 @@ def test_slice_plate_allow_mix_temp_single_filament_232(tmp_path):
     mock_result = MagicMock(returncode=0, stdout="", stderr="")
 
     with (
-        patch("estampo.slicer._ensure_docker_image", return_value=True),
+        patch("estampo.docker.ensure_image", return_value=True),
         patch("estampo.profiles.resolve_profile_data", side_effect=_mock_resolve),
         patch("estampo.orca.subprocess.run", return_value=mock_result) as mock_run,
     ):
@@ -706,7 +705,7 @@ def test_slice_plate_errors_on_stale_pinned_profiles_no_marker(tmp_path):
     (profiles / "Printer.json").write_text('{"name": "Printer"}')
 
     with (
-        patch("estampo.slicer._ensure_docker_image", return_value=True),
+        patch("estampo.docker.ensure_image", return_value=True),
         pytest.raises(EstampoError, match="no version marker"),
     ):
         slice_plate(
@@ -730,7 +729,7 @@ def test_slice_plate_errors_on_version_mismatch(tmp_path):
     (tmp_path / "profiles" / "orca" / ".slicer-version").write_text("2.3.1\n")
 
     with (
-        patch("estampo.slicer._ensure_docker_image", return_value=True),
+        patch("estampo.docker.ensure_image", return_value=True),
         pytest.raises(EstampoError, match="created for slicer 2.3.1"),
     ):
         slice_plate(
@@ -755,7 +754,7 @@ def test_slice_plate_ok_with_matching_version(tmp_path):
     (tmp_path / "profiles" / "orca" / ".slicer-version").write_text("2.3.2\n")
 
     with (
-        patch("estampo.slicer._ensure_docker_image", return_value=True),
+        patch("estampo.docker.ensure_image", return_value=True),
         patch("estampo.orca._slice_via_docker", return_value=output_dir) as mock_docker,
         patch("estampo.orca.extract_docker_profiles", return_value=tmp_path / "docker"),
     ):
