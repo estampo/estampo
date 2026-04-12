@@ -350,15 +350,15 @@ docker_image = cura_docker_image
 # Bundled manifest and definition map
 # ---------------------------------------------------------------------------
 
-_BUNDLED_DIR = Path(__file__).parent / "data"
-
 
 def load_cura_definition_map(version: str | None = None) -> dict[str, str]:
     """Load a mapping of CuraEngine definition names to IDs.
 
     Returns ``{"Ultimaker 2": "ultimaker2", ...}``.
     """
-    data = _load_bundled_manifest(version)
+    from estampo.profiles import _load_bundled_manifest
+
+    data = _load_bundled_manifest("cura", version)
     if not data:
         return {}
     result: dict[str, str] = {}
@@ -366,23 +366,6 @@ def load_cura_definition_map(version: str | None = None) -> dict[str, str]:
         if isinstance(item, dict) and "name" in item and "id" in item:
             result[item["name"]] = item["id"]
     return result
-
-
-def _load_bundled_manifest(version: str | None = None) -> dict | None:
-    """Load the raw bundled CuraEngine manifest JSON."""
-    if version:
-        exact = _BUNDLED_DIR / f"profiles.cura.{version}.json"
-        if exact.exists():
-            with open(exact) as f:
-                return json.load(f)
-
-    # Fall back to highest bundled version
-    candidates = sorted(_BUNDLED_DIR.glob("profiles.cura.*.json"))
-    if candidates:
-        with open(candidates[-1]) as f:
-            return json.load(f)
-
-    return None
 
 
 # ---------------------------------------------------------------------------
