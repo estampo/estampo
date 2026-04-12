@@ -357,9 +357,11 @@ def orca_slice_plate(
         docker_version = required_version
 
     if not docker_version and not local:
-        print(
-            "  \033[33mWarning: No slicer.version set in config. "
-            'Pin a version (e.g. version = "2.3.1") for reproducible builds.\033[0m'
+        from estampo import ui
+
+        ui.warn(
+            "No slicer.version set in config. "
+            'Pin a version (e.g. version = "2.3.1") for reproducible builds.'
         )
 
     image = docker_image(docker_version)
@@ -376,10 +378,9 @@ def orca_slice_plate(
             try:
                 slicer = find_slicer("orca")
                 use_docker = False
-                print(
-                    f"  \033[33mWarning: Docker image '{image}' not available, "
-                    f"using local slicer.\033[0m"
-                )
+                from estampo import ui
+
+                ui.warn(f"Docker image '{image}' not available, using local slicer.")
             except FileNotFoundError:
                 raise FileNotFoundError(
                     f"Docker image '{image}' not found locally or on Docker Hub, "
@@ -395,9 +396,11 @@ def orca_slice_plate(
             try:
                 slicer = find_slicer("orca")
                 use_docker = False
-                print(
-                    "  \033[33mWarning: Docker not available, using local slicer. "
-                    "Builds may not be reproducible across machines.\033[0m"
+                from estampo import ui
+
+                ui.warn(
+                    "Docker not available, using local slicer. "
+                    "Builds may not be reproducible across machines."
                 )
             except FileNotFoundError:
                 raise FileNotFoundError(
