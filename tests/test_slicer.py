@@ -7,7 +7,6 @@ import pytest
 
 from estampo import EstampoError
 from estampo.slicer import (
-    SLICER_PATHS,
     _apply_overrides,
     _ensure_docker_image,
     _has_docker_image,
@@ -23,9 +22,11 @@ from estampo.slicer import (
 
 
 def test_find_orca():
-    if not SLICER_PATHS["orca"].exists():
+    from estampo.orca import _default_binary_path
+
+    if not _default_binary_path().exists():
         pytest.skip("OrcaSlicer not installed")
-    assert find_slicer("orca") == SLICER_PATHS["orca"]
+    assert find_slicer("orca") == _default_binary_path()
 
 
 def test_find_unknown():
@@ -35,16 +36,16 @@ def test_find_unknown():
 
 def test_find_slicer_path_fallback():
     """Falls back to shutil.which when default path doesn't exist."""
-    with patch.dict("estampo.slicer.SLICER_PATHS", {"orca": Path("/nonexistent/orca")}):
-        with patch("estampo.slicer.shutil.which", return_value="/usr/local/bin/orca-slicer"):
+    with patch("estampo.orca._default_binary_path", return_value=Path("/nonexistent/orca")):
+        with patch("estampo.orca.shutil.which", return_value="/usr/local/bin/orca-slicer"):
             result = find_slicer("orca")
             assert result == Path("/usr/local/bin/orca-slicer")
 
 
 def test_find_slicer_not_found():
     """Raises FileNotFoundError when slicer not at default path or on PATH."""
-    with patch.dict("estampo.slicer.SLICER_PATHS", {"orca": Path("/nonexistent/orca")}):
-        with patch("estampo.slicer.shutil.which", return_value=None):
+    with patch("estampo.orca._default_binary_path", return_value=Path("/nonexistent/orca")):
+        with patch("estampo.orca.shutil.which", return_value=None):
             with pytest.raises(FileNotFoundError, match="not found"):
                 find_slicer("orca")
 
