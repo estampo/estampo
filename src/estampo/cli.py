@@ -211,10 +211,12 @@ def watch(
     for part in cfg.parts:
         watch_paths.add(part.file.resolve())
 
-    print(f"Watching {len(watch_paths)} file(s) for changes (Ctrl-C to stop):")
+    from estampo import ui
+
+    ui.info(f"Watching {len(watch_paths)} file(s) for changes (Ctrl-C to stop):")
     for p in sorted(watch_paths):
-        print(f"  {p}")
-    print()
+        ui.info(f"  {p}")
+    ui.console.print()
 
     # Initial run
     _run_pipeline(resolved_config, output_dir, until, None, local, docker_version, verbose)
@@ -223,7 +225,7 @@ def watch(
     try:
         for changes in watchfiles_watch(*watch_paths):
             changed_names = ", ".join(Path(c[1]).name for c in changes)
-            print(f"\n--- {changed_names} changed, re-running ---\n")
+            ui.console.print(f"\n--- {changed_names} changed, re-running ---\n")
             # Reload config in case it changed
             resolved_config = _resolve_config_path(config)
             try:
@@ -231,9 +233,9 @@ def watch(
                     resolved_config, output_dir, until, None, local, docker_version, verbose
                 )
             except Exception as e:
-                print(f"\033[31mError: {e}\033[0m\n")
+                ui.error(f"{e}")
     except KeyboardInterrupt:
-        print("\n")
+        ui.console.print()
 
 
 def _run_pipeline(
@@ -372,12 +374,16 @@ def init(
         toml = extract_from_3mf(from_3mf)
         dest = output or Path("estampo.toml")
         if dest.exists():
-            print(f"  \033[33m{dest} already exists — printing to stdout\033[0m")
+            from estampo import ui
+
+            ui.warn(f"{dest} already exists — printing to stdout")
             print(toml, end="")
         else:
+            from estampo import ui
+
             dest.write_text(toml)
-            print(f"  Wrote {dest}")
-            print("  Review the file and add your [[parts]] entries.")
+            ui.success(f"Wrote {dest}")
+            ui.info("Review the file and add your [[parts]] entries.")
     elif template:
         from estampo.init import dump_template
 
@@ -435,16 +441,20 @@ def profiles_list(
     )
 
     if engine in _INLINE_ENGINES:
-        print(f"Engine '{engine}' uses inline settings — no extractable profiles.")
+        from estampo import ui
+
+        ui.info(f"Engine '{engine}' uses inline settings — no extractable profiles.")
         raise typer.Exit(0)
+
+    from estampo import ui
 
     profiles = discover_profiles(engine)
     categories = [category] if category else list(CATEGORIES)
     for cat in categories:
         names = profiles.get(cat, {})
-        print(f"\n{cat} ({len(names)} profiles):")
+        ui.console.print(f"\n{cat} ({len(names)} profiles):")
         for name in names:
-            print(f"  {name}")
+            ui.console.print(f"  {name}")
 
 
 @profiles_app.command("pin")
@@ -465,22 +475,24 @@ def profiles_pin(
     cfg = load_config(resolved_config)
     profiles_dir = cfg.slicer.profiles_dir
 
+    from estampo import ui
+
     if cfg.slicer.engine in _INLINE_ENGINES:
-        print(f"Engine '{cfg.slicer.engine}' uses inline settings — no profiles to pin.")
+        ui.info(f"Engine '{cfg.slicer.engine}' uses inline settings — no profiles to pin.")
         raise typer.Exit(0)
 
     # If profiles directory already exists, ask what to do
     target = cfg.base_dir / profiles_dir
     if target.exists() and any(target.iterdir()):
-        print(f"Profiles directory '{profiles_dir}/' already exists.")
+        ui.warn(f"Profiles directory '{profiles_dir}/' already exists.")
         choice = input("  [o]verwrite, use [d]ifferent directory, or [c]ancel? ").strip().lower()
         if choice.startswith("d"):
             profiles_dir = input("  New directory name: ").strip()
             if not profiles_dir:
-                print("Cancelled.")
+                ui.info("Cancelled.")
                 raise typer.Exit(1)
         elif choice.startswith("c"):
-            print("Cancelled.")
+            ui.info("Cancelled.")
             raise typer.Exit(0)
         # else: overwrite
 
@@ -495,9 +507,9 @@ def profiles_pin(
         docker_version=cfg.slicer.version,
         profiles_dir=profiles_dir,
     )
-    print(f"Pinned {len(pinned)} profile(s) to {profiles_dir}/")
+    ui.success(f"Pinned {len(pinned)} profile(s) to {profiles_dir}/")
     for p in pinned:
-        print(f"  {p}")
+        ui.info(f"  {p}")
 
     # Update estampo.toml if needed
     toml_text = resolved_config.read_text()
@@ -522,7 +534,7 @@ def profiles_pin(
                 f'profiles_dir = "{profiles_dir}"',
             )
             resolved_config.write_text(toml_text)
-            print(f"  Updated profiles_dir in {resolved_config.name}")
+            ui.success(f"Updated profiles_dir in {resolved_config.name}")
     elif profiles_dir != "profiles":
         # Non-default dir, need to add it to TOML
         if "[slicer]" in toml_text:
@@ -531,9 +543,9 @@ def profiles_pin(
                 f'[slicer]\nprofiles_dir = "{profiles_dir}"',
             )
         resolved_config.write_text(toml_text)
-        print(f'  Added profiles_dir = "{profiles_dir}" to {resolved_config.name}')
+        ui.success(f'Added profiles_dir = "{profiles_dir}" to {resolved_config.name}')
     else:
-        print("  Using default profiles directory — no config change needed")
+        ui.info("Using default profiles directory — no config change needed")
 
 
 @profiles_app.command("add")
@@ -564,7 +576,9 @@ def profiles_add(
     except (EstampoError, OSError, tomllib.TOMLDecodeError, KeyError):
         pass
     dest = add_profile(source, project_dir, category=category, name=name, engine=engine)
-    print(f"Added profile: {dest}")
+    from estampo import ui
+
+    ui.success(f"Added profile: {dest}")
 
 
 # ---------------------------------------------------------------------------
