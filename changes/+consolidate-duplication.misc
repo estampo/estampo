@@ -1,0 +1,1 @@
+Consolidate duplicated filament conversion logic in ``gcode.py`` and remove duplicate ``_load_bundled_manifest()`` from ``cura.py``
