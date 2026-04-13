@@ -657,8 +657,8 @@ class TestWizard:
             lambda engine: {"machine": {}, "process": {}, "filament": {}},
         )
         # Mock slicer version discovery so we don't hit DockerHub
-        monkeypatch.setattr("estampo.init._fetch_available_versions", lambda: [])
-        monkeypatch.setattr("estampo.init._detect_orca_version", lambda: None)
+        monkeypatch.setattr("estampo.orca._fetch_available_versions", lambda: [])
+        monkeypatch.setattr("estampo.orca._detect_orca_version", lambda: None)
 
         result = run_wizard()
         assert "[slicer]" in result
@@ -695,8 +695,8 @@ class TestWizard:
             lambda engine: {"machine": {}, "process": {}, "filament": {}},
         )
         # Mock slicer version discovery so we don't hit DockerHub
-        monkeypatch.setattr("estampo.init._fetch_available_versions", lambda: [])
-        monkeypatch.setattr("estampo.init._detect_orca_version", lambda: None)
+        monkeypatch.setattr("estampo.orca._fetch_available_versions", lambda: [])
+        monkeypatch.setattr("estampo.orca._detect_orca_version", lambda: None)
 
         run_wizard()
         assert not (tmp_path / "estampo.toml").exists()

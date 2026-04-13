@@ -793,7 +793,6 @@ def _fetch_available_versions() -> list[str]:
 def _prompt_slicer_version() -> str | None:
     """Prompt for OrcaSlicer version, offering available Docker image versions."""
     from estampo import ui
-    from estampo.init import _prompt_int, _prompt_str
 
     detected = _detect_orca_version()
     available = _fetch_available_versions()
@@ -809,7 +808,7 @@ def _prompt_slicer_version() -> str | None:
             [(v,) for v in options],
             ["Available versions"],
         )
-        pick = _prompt_int("Pick version", default_idx)
+        pick = ui.prompt_int("Pick version", default_idx)
         idx = pick - 1
         if 0 <= idx < len(available):
             version = available[idx]
@@ -819,9 +818,9 @@ def _prompt_slicer_version() -> str | None:
 
     # Fallback: no Docker images found, prompt manually
     if detected:
-        version = _prompt_str("OrcaSlicer version to pin (leave blank to skip)", detected)
+        version = ui.prompt_str("OrcaSlicer version to pin (leave blank to skip)", detected)
     else:
-        version = _prompt_str("OrcaSlicer version to pin (leave blank to skip)")
+        version = ui.prompt_str("OrcaSlicer version to pin (leave blank to skip)")
     return version or None
 
 
