@@ -64,6 +64,8 @@ def find_binary() -> Path:
 
 # Definitions directory inside the Docker image (fdmprinter.def.json etc.)
 _DEFS_DIR = "/opt/cura/definitions"
+# Extruder definitions directory inside the Docker image
+_EXTRUDERS_DIR = "/opt/cura/extruders"
 
 # Bundled definition files shipped with estampo
 _DATA_PKG = "estampo.data"
@@ -394,20 +396,36 @@ def extract_cura_docker_defs(
 ) -> Path:
     """Extract CuraEngine definitions from a Docker image to a temp directory.
 
+    Extracts both machine definitions (``/opt/cura/definitions``) and extruder
+    definitions (``/opt/cura/extruders``) into a single flat directory.
+
     Returns a Path to a temporary directory containing ``*.def.json`` files.
     The caller is responsible for cleanup.
     """
-    from estampo.docker import extract_files
+    import tempfile
+
+    from estampo.docker import copy_from_container, ensure_image, stopped_container
 
     if not image:
         image = cura_docker_image(version)
 
-    return extract_files(
-        image,
-        _DEFS_DIR,
-        tmp_prefix="estampo_cura_defs_",
-        status_label="Extracting CuraEngine definitions from Docker image",
-    )
+    if not ensure_image(image):
+        raise EstampoError(f"Docker image {image} is not available and could not be pulled.")
+
+    from estampo import ui
+
+    tmp_dir = Path(tempfile.mkdtemp(prefix="estampo_cura_defs_"))
+
+    with ui.status("Extracting CuraEngine definitions from Docker image"):
+        with stopped_container(image) as container_id:
+            for container_path in (_DEFS_DIR, _EXTRUDERS_DIR):
+                cp = copy_from_container(container_id, f"{container_path}/.", tmp_dir, timeout=60)
+                if cp.returncode != 0:
+                    raise EstampoError(
+                        f"Failed to copy {container_path} from Docker: {cp.stderr.strip()}"
+                    )
+
+    return tmp_dir
 
 
 def _squash_cura_def(def_id: str, defs_dir: Path) -> dict:

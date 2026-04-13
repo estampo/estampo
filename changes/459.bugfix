@@ -1,0 +1,1 @@
+Extract CuraEngine extruder definitions from Docker image and copy them automatically on ``profiles add``
