@@ -596,6 +596,26 @@ def add_profile(
     with open(dest, "w") as fh:
         json.dump(data, fh, indent=4)
 
+    # For CuraEngine machine defs, copy referenced extruder definitions
+    # from the same source directory.
+    if (
+        engine == "cura"
+        and is_cura_definition(data)
+        and not source.startswith(("http://", "https://"))
+    ):
+        src_dir = Path(source).parent
+        trains = data.get("metadata", {}).get("machine_extruder_trains", {})
+        for extruder_id in trains.values():
+            ext_filename = f"{extruder_id}.def.json"
+            ext_src = src_dir / ext_filename
+            ext_dest = dest_dir / ext_filename
+            if ext_src.exists() and not ext_dest.exists():
+                with open(ext_src) as f:
+                    ext_data = json.load(f)
+                with open(ext_dest, "w") as fh:
+                    json.dump(ext_data, fh, indent=4)
+                log.info("Added extruder definition → %s", ext_dest)
+
     # Warn about unresolved inheritance
     if data.get("inherits"):
         parent = data["inherits"]
