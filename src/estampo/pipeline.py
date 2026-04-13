@@ -23,6 +23,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import trimesh
+from hamilton.function_modifiers import tag
 
 from estampo.arrange import Placement, arrange
 from estampo.config import EstampoConfig, load_config
@@ -325,6 +326,7 @@ def config(config_path: Path) -> EstampoConfig:
     return load_config(config_path)
 
 
+@tag(stage="Loading parts", spinner="true")
 def loaded_parts(config: EstampoConfig, global_scale: float | None) -> LoadedParts:
     """Load, orient, and scale all meshes from the config."""
     return load_parts(config, global_scale)
@@ -335,6 +337,7 @@ def part_summary(loaded_parts: LoadedParts, config: EstampoConfig) -> str:
     return format_summary(loaded_parts, config.plate.size)
 
 
+@tag(stage="Arranging onto plate", spinner="true")
 def placements(loaded_parts: LoadedParts, config: EstampoConfig) -> list[Placement]:
     """Arrange parts on the build plate via 2D bin-packing."""
     return arrange(
@@ -350,6 +353,7 @@ def plate_scene(placements: list[Placement], config: EstampoConfig) -> trimesh.S
     return build_plate(placements, config.plate.size)
 
 
+@tag(stage="Exporting plate", spinner="true")
 def plate_3mf_path(plate_scene: trimesh.Scene, loaded_parts: LoadedParts, output_3mf: Path) -> Path:
     """Export the plate scene to a 3MF file."""
     export_plate(plate_scene, output_3mf)
@@ -357,6 +361,7 @@ def plate_3mf_path(plate_scene: trimesh.Scene, loaded_parts: LoadedParts, output
     return output_3mf
 
 
+@tag(stage="Exporting preview", spinner="true")
 def preview_path(placements: list[Placement], config: EstampoConfig, output_3mf: Path) -> Path:
     """Export a preview 3MF with bed outline."""
     preview_scene = build_plate(placements, config.plate.size, include_bed=True)
@@ -391,6 +396,7 @@ def resolved_filaments(
         )
 
 
+@tag(stage="Slicing", spinner="true")
 def sliced_output_dir(
     plate_3mf_path: Path,
     config: EstampoConfig,
@@ -424,6 +430,7 @@ def sliced_output_dir(
     )
 
 
+@tag(stage="Packaging output", spinner="true")
 def packaged_output(
     sliced_output_dir: Path,
 ) -> Path:
@@ -435,6 +442,7 @@ def packaged_output(
     return sliced_output_dir
 
 
+@tag(stage="Reading gcode", spinner="false")
 def gcode_stats(packaged_output: Path) -> dict:
     """Parse print time and filament usage from sliced gcode, write stats JSON."""
     import json
