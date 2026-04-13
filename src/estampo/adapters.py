@@ -72,30 +72,11 @@ class TimingAdapter(NodeExecutionHook):
 
 
 class ProgressAdapter(NodeExecutionHook):
-    """Rich spinner + checkmark progress for user-visible pipeline stages."""
+    """Rich spinner + checkmark progress for user-visible pipeline stages.
 
-    # Only these Hamilton nodes get a visible spinner / checkmark line.
-    _STAGE_NODES: frozenset[str] = frozenset(
-        {
-            "loaded_parts",
-            "placements",
-            "plate_3mf_path",
-            "preview_path",
-            "sliced_output_dir",
-            "packaged_output",
-            "gcode_stats",
-        }
-    )
-
-    _SPINNER_LABELS: dict[str, str] = {
-        "loaded_parts": "Loading parts",
-        "placements": "Arranging onto plate",
-        "plate_3mf_path": "Exporting plate",
-        "preview_path": "Exporting preview",
-        "sliced_output_dir": "Slicing",
-        "packaged_output": "Packaging output",
-        "gcode_stats": "Reading gcode",
-    }
+    Stages are discovered via Hamilton ``@tag(stage="...", spinner="true")``
+    decorators on pipeline nodes — no hardcoded node names here.
+    """
 
     def __init__(self) -> None:
         from rich.console import Console
@@ -153,11 +134,11 @@ class ProgressAdapter(NodeExecutionHook):
         run_id: str,
         **future_kwargs,
     ) -> None:
-        if node_name not in self._STAGE_NODES:
+        label = node_tags.get("stage")
+        if label is None:
             return
 
         self._starts[node_name] = time.monotonic()
-        label = self._SPINNER_LABELS.get(node_name, node_name)
 
         if node_name == "sliced_output_dir":
             cfg = node_kwargs.get("config")
@@ -171,8 +152,7 @@ class ProgressAdapter(NodeExecutionHook):
                 label = f"Slicing with {engine_name} {ver}"
                 self._slice_version = ver
 
-        # gcode_stats is fast — skip spinner, just print the result line
-        if node_name != "gcode_stats":
+        if node_tags.get("spinner") != "false":
             self._start_spinner(label)
 
     def run_after_node_execution(
@@ -189,14 +169,14 @@ class ProgressAdapter(NodeExecutionHook):
         run_id: str,
         **future_kwargs,
     ) -> None:
-        if node_name not in self._STAGE_NODES:
+        label = node_tags.get("stage")
+        if label is None:
             return
 
         elapsed = time.monotonic() - self._starts.pop(node_name, time.monotonic())
         self._stop_spinner()
 
         if not success:
-            label = self._SPINNER_LABELS.get(node_name, node_name)
             self._err(f"{label} failed — {error}")
             return
 

@@ -9,6 +9,17 @@ from unittest.mock import MagicMock, patch
 
 from estampo.adapters import ProgressAdapter, TimingAdapter
 
+# Tags that pipeline.py attaches to stage nodes via @tag(...)
+_STAGE_TAGS: dict[str, dict[str, str]] = {
+    "loaded_parts": {"stage": "Loading parts", "spinner": "true"},
+    "placements": {"stage": "Arranging onto plate", "spinner": "true"},
+    "plate_3mf_path": {"stage": "Exporting plate", "spinner": "true"},
+    "preview_path": {"stage": "Exporting preview", "spinner": "true"},
+    "sliced_output_dir": {"stage": "Slicing", "spinner": "true"},
+    "packaged_output": {"stage": "Packaging output", "spinner": "true"},
+    "gcode_stats": {"stage": "Reading gcode", "spinner": "false"},
+}
+
 # Common kwargs template for hook calls
 _BASE_KWARGS = {
     "node_tags": {},
@@ -19,9 +30,15 @@ _BASE_KWARGS = {
 }
 
 
-def _kw(**overrides):
-    """Return base kwargs merged with overrides."""
+def _kw(node_name: str | None = None, **overrides):
+    """Return base kwargs merged with overrides.
+
+    If *node_name* is a known stage, its tags are injected automatically
+    unless the caller supplies explicit ``node_tags``.
+    """
     merged = {**_BASE_KWARGS, **overrides}
+    if node_name and "node_tags" not in overrides and node_name in _STAGE_TAGS:
+        merged["node_tags"] = _STAGE_TAGS[node_name]
     return merged
 
 
@@ -177,13 +194,13 @@ class TestProgressAdapterBefore:
     def test_loaded_parts_starts_spinner(self):
         adapter = self._make_adapter()
         with patch.object(adapter, "_start_spinner") as mock:
-            adapter.run_before_node_execution(node_name="loaded_parts", **_kw())
+            adapter.run_before_node_execution(node_name="loaded_parts", **_kw("loaded_parts"))
         mock.assert_called_once_with("Loading parts")
 
     def test_gcode_stats_no_spinner(self):
         adapter = self._make_adapter()
         with patch.object(adapter, "_start_spinner") as mock:
-            adapter.run_before_node_execution(node_name="gcode_stats", **_kw())
+            adapter.run_before_node_execution(node_name="gcode_stats", **_kw("gcode_stats"))
         mock.assert_not_called()
         # But start time should still be recorded
         assert "gcode_stats" in adapter._starts
@@ -194,7 +211,7 @@ class TestProgressAdapterBefore:
         with patch.object(adapter, "_start_spinner") as mock:
             adapter.run_before_node_execution(
                 node_name="sliced_output_dir",
-                **_kw(node_kwargs={"config": cfg}),
+                **_kw("sliced_output_dir", node_kwargs={"config": cfg}),
             )
         mock.assert_called_once_with("Slicing with OrcaSlicer 2.1.0")
         assert adapter._slice_version == "2.1.0"
@@ -205,7 +222,7 @@ class TestProgressAdapterBefore:
         with patch.object(adapter, "_start_spinner") as mock:
             adapter.run_before_node_execution(
                 node_name="sliced_output_dir",
-                **_kw(node_kwargs={"config": cfg}),
+                **_kw("sliced_output_dir", node_kwargs={"config": cfg}),
             )
         mock.assert_called_once_with("Slicing with CuraEngine 5.12.0")
         assert adapter._slice_engine == "CuraEngine"
@@ -215,7 +232,7 @@ class TestProgressAdapterBefore:
         with patch.object(adapter, "_start_spinner") as mock:
             adapter.run_before_node_execution(
                 node_name="sliced_output_dir",
-                **_kw(node_kwargs={"docker_version": "1.9.0"}),
+                **_kw("sliced_output_dir", node_kwargs={"docker_version": "1.9.0"}),
             )
         mock.assert_called_once_with("Slicing with OrcaSlicer 1.9.0")
         assert adapter._slice_version == "1.9.0"
@@ -223,7 +240,9 @@ class TestProgressAdapterBefore:
     def test_sliced_output_dir_no_version(self):
         adapter = self._make_adapter()
         with patch.object(adapter, "_start_spinner") as mock:
-            adapter.run_before_node_execution(node_name="sliced_output_dir", **_kw())
+            adapter.run_before_node_execution(
+                node_name="sliced_output_dir", **_kw("sliced_output_dir")
+            )
         mock.assert_called_once_with("Slicing")
 
 
@@ -241,7 +260,7 @@ class TestProgressAdapterAfter:
     def _run_after(self, adapter, node_name, result, success=True, error=None, **kw):
         # Prime the start time so elapsed calculation works
         adapter._starts[node_name] = 0  # will give large elapsed but we don't care
-        merged = _kw(node_kwargs=kw.get("node_kwargs", {}))
+        merged = _kw(node_name, node_kwargs=kw.get("node_kwargs", {}))
         with patch("time.monotonic", return_value=1.0):
             adapter.run_after_node_execution(
                 node_name=node_name,
@@ -271,7 +290,7 @@ class TestProgressAdapterAfter:
                     result=None,
                     error=RuntimeError("file not found"),
                     success=False,
-                    **_kw(),
+                    **_kw("loaded_parts"),
                 )
         stop_mock.assert_called_once()
         err_mock.assert_called_once()
@@ -341,7 +360,7 @@ class TestProgressAdapterAfter:
                 result=mock_dir,
                 error=None,
                 success=True,
-                **_kw(),
+                **_kw("sliced_output_dir"),
             )
         msg = ok_mock.call_args[0][0]
         assert "OrcaSlicer 2.1.0" in msg
@@ -363,7 +382,7 @@ class TestProgressAdapterAfter:
                 result=mock_dir,
                 error=None,
                 success=True,
-                **_kw(),
+                **_kw("sliced_output_dir"),
             )
         msg = ok_mock.call_args[0][0]
         assert "Sliced" in msg
@@ -383,7 +402,7 @@ class TestProgressAdapterAfter:
                 result="not-a-path",
                 error=None,
                 success=True,
-                **_kw(),
+                **_kw("sliced_output_dir"),
             )
         ok_mock.assert_called_once()
         # No gcode filename printed
