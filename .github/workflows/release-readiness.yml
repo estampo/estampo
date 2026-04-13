@@ -183,7 +183,7 @@ jobs:
         run: |
           git add src/estampo/data/
           git diff --cached --quiet src/estampo/data/ && echo "No profile changes" && exit 0
-          BRANCH="update-orca-profiles-${{ matrix.orca_version }}-$(date +%Y%m%d)"
+          BRANCH="update-orca-profiles-${{ matrix.orca_version }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$BRANCH"
@@ -198,7 +198,7 @@ jobs:
             --head "$BRANCH" \
           || echo "::warning::Could not create PR automatically. Branch '$BRANCH' pushed — create the PR manually."
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
 
   slice-test:
     needs: [resolve-versions, build-estampo-image]
@@ -386,7 +386,7 @@ jobs:
         run: |
           git add src/estampo/data/
           git diff --cached --quiet src/estampo/data/ && echo "No definition changes" && exit 0
-          BRANCH="update-cura-definitions-${{ matrix.cura_version }}-$(date +%Y%m%d)"
+          BRANCH="update-cura-definitions-${{ matrix.cura_version }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$BRANCH"
@@ -401,7 +401,7 @@ jobs:
             --head "$BRANCH" \
           || echo "::warning::Could not create PR automatically. Branch '$BRANCH' pushed — create the PR manually."
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
 
   cura-slice-test:
     needs: build-cura-image
