@@ -942,7 +942,7 @@ def test_load_cura_definition_map():
     from estampo.profiles import load_cura_definition_map
 
     def_map = load_cura_definition_map()
-    assert def_map.get("BambuLab P1S") == "bambulab_p1s"
+    assert def_map.get("Ultimaker 2") == "ultimaker2"
 
 
 # ---------------------------------------------------------------------------
