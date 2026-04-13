@@ -481,10 +481,14 @@ def profiles_pin(
         ui.info(f"Engine '{cfg.slicer.engine}' uses inline settings — no profiles to pin.")
         raise typer.Exit(0)
 
-    # If profiles directory already exists, ask what to do
+    # If pinned output already exists, ask what to do.
+    # Only check engine-specific subdirectories — user-added files in the
+    # top-level profiles dir (e.g. from 'profiles add') should not trigger
+    # the overwrite prompt.
     target = cfg.base_dir / profiles_dir
-    if target.exists() and any(target.iterdir()):
-        ui.warn(f"Profiles directory '{profiles_dir}/' already exists.")
+    engine_subdir = target / cfg.slicer.engine
+    if engine_subdir.exists() and any(engine_subdir.iterdir()):
+        ui.warn(f"Pinned profiles already exist in '{profiles_dir}/{cfg.slicer.engine}/'.")
         choice = input("  [o]verwrite, use [d]ifferent directory, or [c]ancel? ").strip().lower()
         if choice.startswith("d"):
             profiles_dir = input("  New directory name: ").strip()

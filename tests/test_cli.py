@@ -618,9 +618,9 @@ def test_profiles_pin_existing_dir_overwrite(mock_load, mock_pin, tmp_path, caps
     """profiles pin should allow overwriting an existing profiles directory."""
     config = tmp_path / "estampo.toml"
     config.write_text("[slicer]\n")
-    # Create existing profiles dir with content
-    (tmp_path / "profiles" / "machine").mkdir(parents=True)
-    (tmp_path / "profiles" / "machine" / "old.json").write_text("{}")
+    # Create existing engine-specific profiles dir with content
+    (tmp_path / "profiles" / "orca").mkdir(parents=True)
+    (tmp_path / "profiles" / "orca" / "old.json").write_text("{}")
     mock_load.return_value = _mock_pin_cfg(tmp_path)
 
     with patch("builtins.input", return_value="o"):
@@ -635,8 +635,8 @@ def test_profiles_pin_existing_dir_cancel(mock_load, mock_pin, tmp_path, capsys)
     """profiles pin should allow cancelling when dir exists."""
     config = tmp_path / "estampo.toml"
     config.write_text("[slicer]\n")
-    (tmp_path / "profiles" / "machine").mkdir(parents=True)
-    (tmp_path / "profiles" / "machine" / "old.json").write_text("{}")
+    (tmp_path / "profiles" / "orca").mkdir(parents=True)
+    (tmp_path / "profiles" / "orca" / "old.json").write_text("{}")
     mock_load.return_value = _mock_pin_cfg(tmp_path)
 
     with patch("builtins.input", return_value="c"):
@@ -651,8 +651,8 @@ def test_profiles_pin_existing_dir_different(mock_load, mock_pin, tmp_path, caps
     """profiles pin should allow choosing a different directory."""
     config = tmp_path / "estampo.toml"
     config.write_text('[slicer]\nengine = "orca"\n')
-    (tmp_path / "profiles" / "machine").mkdir(parents=True)
-    (tmp_path / "profiles" / "machine" / "old.json").write_text("{}")
+    (tmp_path / "profiles" / "orca").mkdir(parents=True)
+    (tmp_path / "profiles" / "orca" / "old.json").write_text("{}")
     mock_load.return_value = _mock_pin_cfg(tmp_path)
 
     with patch("builtins.input", side_effect=["d", "my-profiles"]):
@@ -712,8 +712,8 @@ def test_profiles_pin_empty_dir_name_cancels(mock_load, mock_pin, tmp_path, caps
     """profiles pin should cancel when user enters empty directory name."""
     config = tmp_path / "estampo.toml"
     config.write_text("[slicer]\n")
-    (tmp_path / "profiles" / "machine").mkdir(parents=True)
-    (tmp_path / "profiles" / "machine" / "old.json").write_text("{}")
+    (tmp_path / "profiles" / "orca").mkdir(parents=True)
+    (tmp_path / "profiles" / "orca" / "old.json").write_text("{}")
     mock_load.return_value = _mock_pin_cfg(tmp_path)
 
     with patch("builtins.input", side_effect=["d", ""]):
