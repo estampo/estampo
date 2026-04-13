@@ -515,13 +515,25 @@ def pin_cura_definitions(
             json.dump(squashed, fh, indent=4)
         log.info("Pinned CuraEngine definition %s → %s (squashed)", printer, dest)
 
+        # Pin extruder definitions referenced by the machine def
+        pinned = [dest]
+        trains = squashed.get("metadata", {}).get("machine_extruder_trains", {})
+        for extruder_id in trains.values():
+            ext_filename = f"{extruder_id}.def.json"
+            ext_src = defs_dir / ext_filename
+            ext_dest = dest_dir / ext_filename
+            if ext_src.exists() and not ext_dest.exists():
+                shutil.copy2(ext_src, ext_dest)
+                log.info("Pinned extruder definition → %s", ext_dest)
+                pinned.append(ext_dest)
+
         # Write version marker
         if docker_version:
             marker = project_dir / profiles_dir / "cura" / ".slicer-version"
             marker.parent.mkdir(parents=True, exist_ok=True)
             marker.write_text(docker_version + "\n")
 
-        return [dest]
+        return pinned
     finally:
         if cleanup_dir:
             shutil.rmtree(cleanup_dir, ignore_errors=True)
