@@ -438,55 +438,6 @@ def _read_machine_info(profile_name: str, engine: str) -> _MachineInfo:
     return info
 
 
-def _detect_orca_version() -> str | None:
-    """Try to detect the installed OrcaSlicer version."""
-    from estampo.orca import _detect_orca_version as _impl
-
-    return _impl()
-
-
-def _fetch_available_versions() -> list[str]:
-    """Return OrcaSlicer versions available as Docker images."""
-    from estampo.orca import _fetch_available_versions as _impl
-
-    return _impl()
-
-
-def _prompt_slicer_version() -> str | None:
-    """Prompt for OrcaSlicer version, offering available Docker image versions."""
-    from estampo.orca import _prompt_slicer_version as _impl
-
-    return _impl()
-
-
-def _prompt_choice(prompt: str, options: list[str], allow_multi: bool = False) -> list[int]:
-    """Interactive picker — delegates to ``ui.pick``."""
-    from estampo import ui
-
-    return ui.pick(options, prompt=prompt, allow_multi=allow_multi)
-
-
-def _prompt_str(prompt: str, default: str | None = None) -> str:
-    """Prompt for a string value with optional default."""
-    from estampo import ui
-
-    return ui.prompt_str(prompt, default)
-
-
-def _prompt_int(prompt: str, default: int) -> int:
-    """Prompt for an integer with a default."""
-    from estampo import ui
-
-    return ui.prompt_int(prompt, default)
-
-
-def _prompt_yn(prompt: str, default: bool = True) -> bool:
-    """Prompt yes/no with a default."""
-    from estampo import ui
-
-    return ui.prompt_yn(prompt, default)
-
-
 # ---------------------------------------------------------------------------
 # Common slicer overrides
 # ---------------------------------------------------------------------------
@@ -612,7 +563,7 @@ def _prompt_overrides() -> dict[str, str]:
         items.append(("Custom key...", ""))
         ui.choice_table(items, ["Name", "Slicer key"])
 
-        raw_pick = _prompt_str("Pick override (or N to finish)", "n")
+        raw_pick = ui.prompt_str("Pick override (or N to finish)", "n")
         if raw_pick.strip().lower() in ("n", "no", ""):
             break
 
@@ -629,10 +580,10 @@ def _prompt_overrides() -> dict[str, str]:
 
         if idx == len(COMMON_OVERRIDES):
             # Custom key
-            key = _prompt_str("Slicer key name")
+            key = ui.prompt_str("Slicer key name")
             if not key:
                 continue
-            value = _prompt_str(f"Value for {key}")
+            value = ui.prompt_str(f"Value for {key}")
             if value:
                 overrides[key] = value
                 ui.success(f'{key} = "{value}"')
@@ -643,7 +594,7 @@ def _prompt_overrides() -> dict[str, str]:
             if spec[0] == "choice" and isinstance(spec[1], list):
                 choices = spec[1]
                 ui.choice_table([(c,) for c in choices], ["Option"])
-                cpick = _prompt_int("Pick value", 1)
+                cpick = ui.prompt_int("Pick value", 1)
                 cidx = cpick - 1
                 if 0 <= cidx < len(choices):
                     raw = choices[cidx]
@@ -657,7 +608,7 @@ def _prompt_overrides() -> dict[str, str]:
             else:
                 hint = spec[1]
                 spec_type = spec[0]
-                raw = _prompt_str(f"Value for {key} ({hint})")
+                raw = ui.prompt_str(f"Value for {key} ({hint})")
                 validated = _validate_override(raw, spec_type) if raw else None
                 if validated:
                     overrides[key] = validated
@@ -686,12 +637,12 @@ def _wizard_pick_profiles(
     machines = sorted(profiles.get("machine", []))
     if machines:
         ui.heading("Printer Profile")
-        chosen = _prompt_choice("Pick a printer profile", machines)
+        chosen = ui.pick(machines, prompt="Pick a printer profile")
         printer_profile = machines[chosen[0]]
         machine_info = _read_machine_info(printer_profile, engine)
         ui.console.print()
     else:
-        printer_profile = _prompt_str("Printer profile name (e.g. 'My Printer 0.4 nozzle')")
+        printer_profile = ui.prompt_str("Printer profile name (e.g. 'My Printer 0.4 nozzle')")
         ui.console.print()
 
     # --- Step 4: Pick process profile ---
@@ -699,11 +650,11 @@ def _wizard_pick_profiles(
     processes = sorted(profiles.get("process", []))
     if processes:
         ui.heading("Process Profile")
-        chosen = _prompt_choice("Pick a process profile", processes)
+        chosen = ui.pick(processes, prompt="Pick a process profile")
         process_profile = processes[chosen[0]]
         ui.console.print()
     else:
-        process_profile = _prompt_str("Process profile name (e.g. '0.20mm Standard @base')")
+        process_profile = ui.prompt_str("Process profile name (e.g. '0.20mm Standard @base')")
         ui.console.print()
 
     return printer_profile, process_profile, machine_info
@@ -728,21 +679,21 @@ def _wizard_pick_filaments(
             ui.info("Printer supports multi-material. Pick a filament for each slot.")
             slot = 1
             while True:
-                chosen = _prompt_choice(f"Pick filament for slot {slot}", filament_options)
+                chosen = ui.pick(filament_options, prompt=f"Pick filament for slot {slot}")
                 filament_names.append(filament_options[chosen[0]])
                 ui.success(f"Slot {slot}: {filament_names[-1]}")
                 if slot >= 4:
                     break
-                if not _prompt_yn(f"Add slot {slot + 1}?", default=slot < 2):
+                if not ui.prompt_yn(f"Add slot {slot + 1}?", default=slot < 2):
                     break
                 slot += 1
         else:
-            chosen = _prompt_choice("Pick a filament", filament_options)
+            chosen = ui.pick(filament_options, prompt="Pick a filament")
             filament_names.append(filament_options[chosen[0]])
         ui.console.print()
 
     if not filament_names:
-        fil = _prompt_str("Filament profile name", "Generic PLA @base")
+        fil = ui.prompt_str("Filament profile name", "Generic PLA @base")
         filament_names = [fil]
         ui.console.print()
 
@@ -767,7 +718,7 @@ def _wizard_pick_parts(
         ui.info(f"Existing parts ({len(existing_parts)}):")
         for p in existing_parts:
             ui.info(f"  • {p.get('file')}")
-        if _prompt_yn("Keep existing parts?"):
+        if ui.prompt_yn("Keep existing parts?"):
             parts_config = list(existing_parts)
         ui.console.print()
 
@@ -783,17 +734,17 @@ def _wizard_pick_parts(
     if candidates:
         ui.info(f"Found {len(candidates)} CAD file(s) in current directory")
         names = [p.name for p in candidates]
-        chosen = _prompt_choice(
-            "Select files",
+        chosen = ui.pick(
             names,
+            prompt="Select files",
             allow_multi=True,
         )
         ui.console.print()
         for idx in chosen:
             f = candidates[idx]
-            copies = _prompt_int(f"{f.name} — copies?", 1)
+            copies = ui.prompt_int(f"{f.name} — copies?", 1)
             orient_options = ["flat", "upright", "upside-down", "side", "custom rotation"]
-            selected = _prompt_choice(f"{f.name} — orientation", orient_options)
+            selected = ui.pick(orient_options, prompt=f"{f.name} — orientation")
             pick = orient_options[selected[0]]
             part: dict[str, object] = {
                 "file": f.name,
@@ -802,9 +753,9 @@ def _wizard_pick_parts(
                 "filament": 1,
             }
             if pick == "custom rotation":
-                rx = _prompt_int("  X rotation (degrees)", 0)
-                ry = _prompt_int("  Y rotation (degrees)", 0)
-                rz = _prompt_int("  Z rotation (degrees)", 0)
+                rx = ui.prompt_int("  X rotation (degrees)", 0)
+                ry = ui.prompt_int("  Y rotation (degrees)", 0)
+                rz = ui.prompt_int("  Z rotation (degrees)", 0)
                 part["rotate"] = [rx, ry, rz]
             else:
                 part["orient"] = pick
@@ -813,7 +764,7 @@ def _wizard_pick_parts(
 
     if not parts_config:
         # No CAD files found or selected — add a placeholder
-        file_name = _prompt_str("Part file path (relative to this directory)", "my-part.stl")
+        file_name = ui.prompt_str("Part file path (relative to this directory)", "my-part.stl")
         parts_config.append({"file": file_name, "copies": 1, "orient": "flat", "filament": 1})
         ui.console.print()
 
@@ -832,7 +783,7 @@ def _wizard_assign_filament_slots(parts_config: list[dict], filament_names: list
 
     ui.heading("Filament Assignment")
     for p in parts_config:
-        fil_slot = _prompt_int(f"{p['file']} — filament slot (1-{len(filament_names)})?", 1)
+        fil_slot = ui.prompt_int(f"{p['file']} — filament slot (1-{len(filament_names)})?", 1)
         p["filament"] = fil_slot
     ui.console.print()
 
@@ -851,8 +802,8 @@ def _wizard_pick_plate(machine_info: _MachineInfo) -> tuple[int, int]:
 
     # Fallback if no printer profile was selected
     ui.heading("Build Plate")
-    plate_x = _prompt_int("Plate width (mm)?", 256)
-    plate_y = _prompt_int("Plate depth (mm)?", 256)
+    plate_x = ui.prompt_int("Plate width (mm)?", 256)
+    plate_y = ui.prompt_int("Plate depth (mm)?", 256)
     ui.console.print()
     return plate_x, plate_y
 
@@ -868,12 +819,14 @@ def _wizard_pick_slicer_version(engine: str = "orca") -> str | None:
     if engine == "cura":
         from estampo.cura import CURAENGINE_VERSION
 
-        version = _prompt_str(
+        version = ui.prompt_str(
             f"CuraEngine version to pin (default: {CURAENGINE_VERSION})",
             CURAENGINE_VERSION,
         )
         ui.console.print()
         return version or None
+
+    from estampo.orca import _prompt_slicer_version
 
     slicer_version = _prompt_slicer_version()
     ui.console.print()
@@ -912,7 +865,7 @@ def run_wizard(output: Path | None = None) -> str:
     for i, eng in enumerate(engines, 1):
         marker = " ←" if eng == existing_engine else ""
         ui.info(f"  {i}. {engine_labels[eng]}{marker}")
-    engine_pick = _prompt_str(
+    engine_pick = ui.prompt_str(
         f"Pick engine (default: {engine_labels[default_engine]})", str(default_idx)
     ).strip()
     if engine_pick.isdigit() and 1 <= int(engine_pick) <= len(engines):
@@ -953,11 +906,11 @@ def run_wizard(output: Path | None = None) -> str:
         machines = sorted(profiles.get("machine", []))
         ui.heading("CuraEngine Printer Definition")
         if machines:
-            chosen = _prompt_choice("Pick a printer", machines)
+            chosen = ui.pick(machines, prompt="Pick a printer")
             printer_profile: str | None = machines[chosen[0]]
         else:
             ui.warn("No CuraEngine printer definitions found.")
-            printer_profile = _prompt_str("Printer definition name").strip()
+            printer_profile = ui.prompt_str("Printer definition name").strip()
         ui.console.print()
 
         # Derive plate size from the .def.json
@@ -1004,7 +957,7 @@ def run_wizard(output: Path | None = None) -> str:
         ui.info(f"  {i}. {bt}{marker}")
         if bt == existing_bed:
             bed_default = str(i)
-    bed_pick = _prompt_str("Pick bed type (or Enter to skip)", bed_default).strip()
+    bed_pick = ui.prompt_str("Pick bed type (or Enter to skip)", bed_default).strip()
     bed_type: str | None = None
     if bed_pick.isdigit() and 1 <= int(bed_pick) <= len(BED_TYPES):
         bed_type = BED_TYPES[int(bed_pick) - 1]
@@ -1023,7 +976,7 @@ def run_wizard(output: Path | None = None) -> str:
         if nt == existing_nozzle:
             nozzle_default = str(i)
     nozzle_prompt = f"Pick nozzle type (default: {existing_nozzle})"
-    nozzle_pick = _prompt_str(nozzle_prompt, nozzle_default).strip()
+    nozzle_pick = ui.prompt_str(nozzle_prompt, nozzle_default).strip()
     machine_overrides: dict[str, str] = {}
     if nozzle_pick.isdigit() and 1 <= int(nozzle_pick) <= len(NOZZLE_TYPES):
         picked_nozzle = NOZZLE_TYPES[int(nozzle_pick) - 1]
@@ -1064,11 +1017,11 @@ def run_wizard(output: Path | None = None) -> str:
         ui.heading("Preview")
         ui.preview_toml(toml)
 
-        answer = _prompt_str("Write / Go back / Quit? (W/g/q)", "w").strip().lower()
+        answer = ui.prompt_str("Write / Go back / Quit? (W/g/q)", "w").strip().lower()
 
         if answer in ("w", "write", "y", "yes", ""):
             if dest.exists():
-                if not _prompt_yn(f"{dest} already exists. Overwrite?", default=False):
+                if not ui.prompt_yn(f"{dest} already exists. Overwrite?", default=False):
                     continue
             dest.write_text(toml)
             ui.success(f"Wrote {dest}")
