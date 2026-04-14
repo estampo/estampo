@@ -35,6 +35,7 @@ filament = 1
 
 [[parts]]
 file = "cylinder_5x20mm.stl"
+orient = "upright"
 filament = 1
 
 [pack]
