@@ -17,3 +17,4 @@ estampo run examples/multi-part/estampo.toml
 - `scale` — uniform scale factor on a part
 - `padding` — spacing between parts during arrangement
 - `[slicer.orca.overrides]` — gyroid infill at 25% without editing slicer profiles
+- `[pack]` command stage — `bambox repack` for Bambu-compatible output

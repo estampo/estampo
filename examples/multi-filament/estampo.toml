@@ -2,6 +2,11 @@
 #
 # Run:
 #   estampo run examples/multi-filament/estampo.toml
+#
+# Requires: bambox (pipx install bambox)
+
+[pipeline]
+stages = ["load", "arrange", "plate", "slice", "pack"]
 
 [plate]
 size = [256, 256]
@@ -24,3 +29,7 @@ filament = 1
 [[parts]]
 file = "box_20x20x10.step"
 filament = 2
+
+[pack]
+command = "bambox repack {sliced_3mf} -o {output_dir}/plate.gcode.3mf"
+output = "{output_dir}/plate.gcode.3mf"

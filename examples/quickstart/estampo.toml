@@ -1,7 +1,12 @@
-# Minimal estampo config — one part, OrcaSlicer, default settings.
+# Minimal estampo config — one part, OrcaSlicer, bambox repack for Bambu P1S.
 #
 # Run:
 #   estampo run examples/quickstart/estampo.toml
+#
+# Requires: bambox (pipx install bambox)
+
+[pipeline]
+stages = ["load", "arrange", "plate", "slice", "pack"]
 
 [slicer]
 engine = "orca"
@@ -12,3 +17,7 @@ process = "0.20mm Standard @BBL X1C"
 
 [[parts]]
 file = "cube_10mm.stl"
+
+[pack]
+command = "bambox repack {sliced_3mf} -o {output_dir}/plate.gcode.3mf"
+output = "{output_dir}/plate.gcode.3mf"
