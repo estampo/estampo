@@ -1,0 +1,14 @@
+# Minimal estampo config — one part, OrcaSlicer, default settings.
+#
+# Run:
+#   estampo run examples/quickstart/estampo.toml
+
+[slicer]
+engine = "orca"
+
+[slicer.orca]
+printer = "Bambu Lab P1S 0.4 nozzle"
+process = "0.20mm Standard @BBL X1C"
+
+[[parts]]
+file = "../../tests/fixtures/cube_10mm.stl"
