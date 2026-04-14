@@ -14,4 +14,6 @@ estampo run examples/multi-filament/estampo.toml
 - Per-part `filament` — assigns each part to an AMS slot by index
 - Mixed file formats — STL and STEP on the same multi-material plate
 - `bed_type` — selects bed surface for temperature/adhesion settings
+- `[slicer.orca.overrides]` — process overrides (infill, shells, seam position)
+- `[slicer.orca.filament_overrides]` — override applied to all filament profiles (initial layer temp)
 - `[pack]` command stage — `bambox repack` for Bambu-compatible output

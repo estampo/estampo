@@ -22,6 +22,14 @@ printer = "Bambu Lab P1S 0.4 nozzle"
 process = "0.20mm Standard @BBL X1C"
 filaments = ["Generic PLA @base", "Generic PETG @base"]
 
+[slicer.orca.overrides]
+sparse_infill_density = "20%"
+bottom_shell_layers = "4"
+seam_position = "random"
+
+[slicer.orca.filament_overrides]
+nozzle_temperature_initial_layer = "220"
+
 [[parts]]
 file = "cube_10mm.stl"
 copies = 2

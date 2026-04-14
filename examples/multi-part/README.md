@@ -16,5 +16,5 @@ estampo run examples/multi-part/estampo.toml
 - `rotate` — explicit rotation in degrees `[rx, ry, rz]`
 - `scale` — uniform scale factor on a part
 - `padding` — spacing between parts during arrangement
-- `[slicer.orca.overrides]` — gyroid infill at 25% without editing slicer profiles
+- `[slicer.orca.overrides]` — infill, walls, supports, and ironing without editing slicer profiles
 - `[pack]` command stage — `bambox repack` for Bambu-compatible output
