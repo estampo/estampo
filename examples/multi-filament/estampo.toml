@@ -14,6 +14,7 @@ padding = 8.0
 
 [slicer]
 engine = "orca"
+version = "2.3.1"
 bed_type = "Textured PEI Plate"
 
 [slicer.orca]
