@@ -8,6 +8,27 @@ Two-filament print using OrcaSlicer with AMS slot assignment per part.
 estampo run examples/multi-filament/estampo.toml
 ```
 
+## Printing
+
+Send the output to your printer with bambox:
+
+```sh
+bambox print estampo_output/plate.gcode.3mf --serial YOUR_PRINTER_SERIAL
+```
+
+Find your printer's serial number with `bambox discover`.
+
+To automate this as a pipeline stage, add a `[print]` section to
+`estampo.toml`:
+
+```toml
+[pipeline]
+stages = ["load", "arrange", "plate", "slice", "pack", "print"]
+
+[print]
+command = "bambox print {output_dir}/plate.gcode.3mf --serial YOUR_PRINTER_SERIAL"
+```
+
 ## What it demonstrates
 
 - `filaments` list — declares available AMS slots (PLA in slot 1, PETG in slot 2)
