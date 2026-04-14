@@ -14,5 +14,6 @@ Output is standard G-code — no post-processing or repacking needed.
 
 - CuraEngine as an alternative slicer engine
 - Ultimaker 2 printer definition (bundled with estampo)
+- `[slicer.cura.overrides]` — infill, walls, speed, and adhesion overrides
 - Pinned slicer version for reproducibility
 - Default pipeline stages: load → arrange → plate → slice
