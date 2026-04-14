@@ -10,6 +10,7 @@ stages = ["load", "arrange", "plate", "slice", "pack"]
 
 [slicer]
 engine = "orca"
+version = "2.3.1"
 
 [slicer.orca]
 printer = "Bambu Lab P1S 0.4 nozzle"

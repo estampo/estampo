@@ -14,6 +14,7 @@ padding = 8.0
 
 [slicer]
 engine = "orca"
+version = "2.3.1"
 
 [slicer.orca]
 printer = "Bambu Lab P1S 0.4 nozzle"
