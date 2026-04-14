@@ -14,3 +14,4 @@ estampo run examples/multi-filament/estampo.toml
 - Per-part `filament` — assigns each part to an AMS slot by index
 - Mixed file formats — STL and STEP on the same multi-material plate
 - `bed_type` — selects bed surface for temperature/adhesion settings
+- `[pack]` command stage — `bambox repack` for Bambu-compatible output

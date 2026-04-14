@@ -1,0 +1,21 @@
+# CuraEngine example — single filament, Ultimaker 2.
+#
+# Run:
+#   estampo run examples/cura/estampo.toml
+#
+# Output is standard G-code, ready to use without post-processing.
+
+[plate]
+size = [223, 223]
+padding = 5.0
+
+[slicer]
+engine = "cura"
+version = "5.12.0"
+
+[slicer.cura]
+printer = "Ultimaker 2"
+
+[[parts]]
+file = "cube_10mm.stl"
+copies = 2
