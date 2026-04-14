@@ -19,16 +19,16 @@ sparse_infill_density = "25%"
 sparse_infill_pattern = "gyroid"
 
 [[parts]]
-file = "../../tests/fixtures/cube_10mm.stl"
+file = "cube_10mm.stl"
 copies = 3
 orient = "flat"
 
 [[parts]]
-file = "../../tests/fixtures/cylinder_5x20mm.stl"
+file = "cylinder_5x20mm.stl"
 orient = "upright"
 scale = 1.5
 
 [[parts]]
-file = "../../tests/fixtures/cylinder_5x20mm.stl"
+file = "cylinder_5x20mm.stl"
 orient = "side"
 rotate = [0, 0, 45]

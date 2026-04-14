@@ -11,4 +11,4 @@ printer = "Bambu Lab P1S 0.4 nozzle"
 process = "0.20mm Standard @BBL X1C"
 
 [[parts]]
-file = "../../tests/fixtures/cube_10mm.stl"
+file = "cube_10mm.stl"
