@@ -11,6 +11,7 @@ estampo run examples/multi-part/estampo.toml
 ## What it demonstrates
 
 - `copies` — three identical cubes from one STL
+- STEP file support — `box_20x20x10.step` loaded alongside STLs
 - `orient` — `flat`, `upright`, and `side` orientations
 - `rotate` — explicit rotation in degrees `[rx, ry, rz]`
 - `scale` — uniform scale factor on a part

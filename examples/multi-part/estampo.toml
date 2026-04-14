@@ -29,6 +29,6 @@ orient = "upright"
 scale = 1.5
 
 [[parts]]
-file = "cylinder_5x20mm.stl"
-orient = "side"
+file = "box_20x20x10.step"
+orient = "upright"
 rotate = [0, 0, 45]
