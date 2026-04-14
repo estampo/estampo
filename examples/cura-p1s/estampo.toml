@@ -1,0 +1,42 @@
+# CuraEngine slicing for Bambu Lab P1S, packed by bambox.
+#
+# The printer definition comes from bambox — see README.md for setup.
+#
+# Run:
+#   estampo run examples/cura-p1s/estampo.toml
+#
+# Requires: bambox (pipx install bambox)
+
+[pipeline]
+stages = ["load", "arrange", "plate", "slice", "pack"]
+
+[plate]
+size = [256, 256]
+padding = 5.0
+
+[slicer]
+engine = "cura"
+version = "5.12.0"
+
+[slicer.cura]
+printer = "bambox_p1s_ams"
+filaments = ["PLA"]
+
+[slicer.cura.overrides]
+infill_sparse_density = 20
+infill_pattern = "gyroid"
+wall_line_count = 3
+speed_print = 60
+layer_height = 0.2
+
+[[parts]]
+file = "cube_10mm.stl"
+filament = 1
+
+[[parts]]
+file = "cylinder_5x20mm.stl"
+filament = 1
+
+[pack]
+command = "bambox pack {sliced_dir}/plate.gcode -o {output_dir}/plate.gcode.3mf"
+output = "{output_dir}/plate.gcode.3mf"

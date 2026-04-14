@@ -1,0 +1,94 @@
+{
+    "version": 2,
+    "name": "Bambu Lab P1S AMS (bambox)",
+    "inherits": "fdmprinter",
+    "metadata":
+    {
+        "visible": true,
+        "author": "bambox",
+        "manufacturer": "Bambu Lab",
+        "has_machine_quality": true,
+        "has_material": true,
+        "has_textured_buildplate": true,
+        "has_variant_buildplates": false,
+        "has_variants": false,
+        "machine_extruder_trains":
+        {
+            "0": "bambox_p1s_ams_extruder_0",
+            "1": "bambox_p1s_ams_extruder_1",
+            "2": "bambox_p1s_ams_extruder_2",
+            "3": "bambox_p1s_ams_extruder_3"
+        }
+    },
+    "overrides":
+    {
+        "machine_name": { "default_value": "Bambu Lab P1S" },
+        "machine_width": { "value": 256 },
+        "machine_depth": { "value": 256 },
+        "machine_height": { "value": 250 },
+        "machine_heated_bed": { "default_value": true },
+        "machine_center_is_zero": { "default_value": false },
+        "machine_gcode_flavor": { "default_value": "Marlin" },
+        "machine_extruder_count": { "value": 4 },
+
+        "machine_nozzle_size": { "default_value": 0.4 },
+        "material_diameter": { "default_value": 1.75 },
+        "machine_nozzle_cool_down_speed": { "default_value": 1.3 },
+        "machine_nozzle_heat_up_speed": { "default_value": 1.9 },
+
+        "machine_max_feedrate_x": { "value": 500 },
+        "machine_max_feedrate_y": { "value": 500 },
+        "machine_max_feedrate_z": { "value": 15 },
+        "machine_max_feedrate_e": { "value": 150 },
+        "machine_max_jerk_xy": { "default_value": 5000 },
+        "machine_max_jerk_z": { "default_value": 100 },
+        "machine_max_jerk_e": { "default_value": 100 },
+        "machine_acceleration": { "value": 10000 },
+
+        "acceleration_print": { "value": 20000 },
+        "acceleration_travel": { "value": 20000 },
+        "acceleration_layer_0": { "value": 2000 },
+        "speed_print": { "maximum_value_warning": 500, "value": 300 },
+        "speed_layer_0": { "maximum_value_warning": 500, "value": "speed_print/6" },
+
+        "relative_extrusion": { "value": true },
+        "retraction_amount": { "value": 0.5 },
+        "retraction_speed": { "value": 30 },
+        "retraction_prime_speed": { "value": 15 },
+        "retraction_hop": { "value": 0.2 },
+        "retraction_hop_enabled": { "value": true },
+        "retraction_hop_after_extruder_switch_height": { "value": 2 },
+
+        "line_width": { "value": 0.42 },
+        "infill_sparse_density": { "value": 15 },
+        "infill_pattern": { "value": "'zigzag' if infill_sparse_density > 80 else 'gyroid'" },
+        "adhesion_type": { "value": "'skirt'" },
+        "skirt_line_count": { "value": 5 },
+
+        "prime_tower_enable": { "default_value": true },
+        "prime_tower_size": { "default_value": 40 },
+        "prime_tower_min_volume": { "default_value": 250 },
+
+        "roofing_layer_count": { "default_value": 0 },
+        "flooring_layer_count": { "default_value": 0 },
+
+        "machine_buildplate_type":
+        {
+            "default_value": "textured_pei_plate",
+            "options":
+            {
+                "cool_plate": "Cool Plate",
+                "engineering_plate": "Engineering Plate",
+                "high_temp_plate": "High Temp Plate",
+                "textured_pei_plate": "Textured PEI Plate"
+            }
+        },
+
+        "machine_start_gcode": {
+            "default_value": "; BAMBOX_PRINTER=p1s\n; BAMBOX_EXTRUDERS=4\n; BAMBOX_BED_TEMP={material_bed_temperature_layer_0}\n; BAMBOX_NOZZLE_TEMP={material_print_temperature_layer_0}\n; BAMBOX_NOZZLE_DIAMETER={machine_nozzle_size}\n; BAMBOX_BED_TYPE={machine_buildplate_type}\n; BAMBOX_ASSEMBLE=true\n"
+        },
+        "machine_end_gcode": {
+            "default_value": "; BAMBOX_END\n"
+        }
+    }
+}
