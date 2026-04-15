@@ -803,7 +803,7 @@ def test_safe_eval_condition_rejects_function_calls():
 def test_fetch_printer_def_returns_none_for_plain_name(tmp_path):
     staging = tmp_path / "staging"
     staging.mkdir()
-    result = _fetch_printer_def("bambox_p1s_ams", project_dir=None, staging=staging)
+    result = _fetch_printer_def("bambox_p1s", project_dir=None, staging=staging)
     assert result is None
 
 
