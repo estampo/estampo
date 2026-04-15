@@ -77,10 +77,10 @@ command stages — never as a Python import.
 
 1. **`.gcode.3mf` packager** — takes plain G-code and produces a
    printer-ready BBL archive (ZIP structure, MD5 checksums, metadata)
-2. **BBL G-code templates** — Jinja2-based start/end/toolchange macros
-   with BAMBOX header contract for auto-configuration
-3. **CuraEngine printer definitions** — `bambox_p1s_ams.def.json` and
-   related extruder definitions for Bambu printers
+2. **G-code compatibility** — translates generic slicer G-code to BBL
+   firmware format (progress markers, layer notifications, header block)
+3. **CuraEngine printer definitions** — `bambox_p1s.def.json` with native
+   start/end G-code for Bambu printers (no post-processing required)
 4. **Printer communication** — cloud/LAN printing, status monitoring,
    AMS mapping, Bambu Cloud authentication
 5. **Bridge** — Docker-based BNL bridge binary for cloud printing

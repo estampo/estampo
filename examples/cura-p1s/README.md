@@ -17,12 +17,9 @@ a new project from scratch, import the definitions with `estampo profiles add`:
 # Find where bambox installed its definitions
 bambox cura-defs --path
 
-# Import the P1S AMS definition and its extruder files
-estampo profiles add "$(bambox cura-defs --path)/bambox_p1s_ams.def.json"
-estampo profiles add "$(bambox cura-defs --path)/bambox_p1s_ams_extruder_0.def.json"
-estampo profiles add "$(bambox cura-defs --path)/bambox_p1s_ams_extruder_1.def.json"
-estampo profiles add "$(bambox cura-defs --path)/bambox_p1s_ams_extruder_2.def.json"
-estampo profiles add "$(bambox cura-defs --path)/bambox_p1s_ams_extruder_3.def.json"
+# Import the P1S definition and its extruder file
+estampo profiles add "$(bambox cura-defs --path)/bambox_p1s.def.json"
+estampo profiles add "$(bambox cura-defs --path)/bambox_p1s_extruder_0.def.json"
 ```
 
 This example has the definitions pre-committed in `profiles/cura/definitions/`
@@ -63,9 +60,9 @@ command = "bambox print {output_dir}/plate.gcode.3mf"
 
 ## What it demonstrates
 
-- CuraEngine with a third-party printer definition (from bambox)
+- CuraEngine with a native Bambu P1S definition (from bambox)
 - Importing printer definitions via `estampo profiles add`
-- `filaments` — single-filament PLA on AMS slot 1
+- Single-filament PLA printing
 - `[slicer.cura.overrides]` — infill, walls, speed, layer height
 - `[pack]` command stage — `bambox pack` converts CuraEngine G-code to Bambu `.gcode.3mf`
 - Pinned profiles committed to the repo for reproducibility

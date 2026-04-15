@@ -104,7 +104,7 @@ def _fetch_printer_def(
 ) -> str | None:
     """If *printer* is a URL or file path, put the definition in *staging*.
 
-    Returns the definition filename (e.g. ``bambox_p1s_ams.def.json``), or
+    Returns the definition filename (e.g. ``bambox_p1s.def.json``), or
     None if *printer* is a plain name/ID that should go through normal resolution.
     """
     import urllib.request
@@ -156,7 +156,7 @@ def _resolve_def_name(printer_name: str | None) -> str:
     if printer_name in ids:
         return printer_name
 
-    # 2b. Looks like a raw definition ID (no spaces, e.g. "bambox_p1s_ams").
+    # 2b. Looks like a raw definition ID (no spaces, e.g. "bambox_p1s").
     # Accept it and let _resolve_def_chain find the file in pinned/bundled defs.
     if " " not in printer_name and printer_name.replace("_", "").replace("-", "").isalnum():
         return printer_name
