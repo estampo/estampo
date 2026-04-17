@@ -1,9 +1,9 @@
 # Add estampo to a 3D printing project
 
-> **What this is:** A prompt template you can give to an AI assistant (Claude,
+> **What this is:** A prompt you can paste as-is into any AI assistant (Claude,
 > ChatGPT, Copilot, etc.) to add estampo support to a GitHub project that
-> contains 3D-printable models. Replace the `{PLACEHOLDERS}` with your
-> project-specific values and paste the whole thing as a prompt.
+> contains 3D-printable models. No editing needed — just copy, paste, and the
+> AI will ask you the questions it needs answered.
 
 ---
 
@@ -18,27 +18,36 @@ post-processing command stages.
 
 ### What I need you to do
 
-1. Install estampo (add it to the project's dev dependencies or document the
+1. Look at this project and find the 3D model files (STL, STEP, 3MF).
+2. Ask me the questions listed below to fill in the details you can't determine
+   from the repo.
+3. Install estampo (add it to the project's dev dependencies or document the
    install command).
-2. Create an `estampo.toml` config file in the repo root.
-3. Validate the config.
-4. Optionally add a GitHub Actions workflow that slices on every push.
+4. Create an `estampo.toml` config file in the repo root.
+5. Validate the config with `estampo validate`.
+6. Optionally add a GitHub Actions workflow that slices on every push.
 
-### My project details
+### What to ask me
 
-- **Model files:** `{MODEL_FILES}`
-  (e.g. `bracket.stl`, `housing.step`, `parts/*.3mf`)
-- **Slicer engine:** `{ENGINE}`
-  (`orca` for OrcaSlicer, or `cura` for CuraEngine)
-- **Printer:** `{PRINTER}`
-  (e.g. `Bambu Lab P1S 0.4 nozzle` for OrcaSlicer, `bambox_p1s` for CuraEngine)
-- **Quality preset:** `{PROCESS}`
-  (e.g. `0.20mm Standard @BBL X1C` — OrcaSlicer only, omit for CuraEngine)
-- **Filament(s):** `{FILAMENTS}`
-  (e.g. `Generic PLA @base`, `Generic PETG @base`)
-- **Print goals:** `{GOALS}`
-  (e.g. "strong functional part", "fast draft", "smooth top surface",
-  "flexible TPU part", "multi-color decorative")
+Before creating the config, ask me these questions (skip any you can infer from
+the repo context):
+
+1. **Which slicer engine?** — `orca` (OrcaSlicer) or `cura` (CuraEngine).
+   Default to `orca` if I have a Bambu Lab printer.
+2. **Which printer?** — e.g. `Bambu Lab P1S 0.4 nozzle` (OrcaSlicer) or
+   `bambox_p1s` (CuraEngine). Run `estampo profiles list --engine orca --category machine`
+   to see available profiles.
+3. **Which quality preset?** — OrcaSlicer only, e.g. `0.20mm Standard @BBL X1C`.
+   Run `estampo profiles list --engine orca --category process` to see options.
+4. **Which filament(s)?** — e.g. `Generic PLA @base`, `Generic PETG @base`.
+   Run `estampo profiles list --engine orca --category filament` to see options.
+5. **Print goals?** — e.g. "strong functional part", "fast draft", "smooth
+   surface", "dimensional accuracy". This determines which override recipe to
+   apply.
+6. **Do you want a GitHub Actions workflow?** — slices on every push and posts
+   build metrics as a PR comment.
+7. **Is this a Bambu Lab printer?** — if yes, a `pack` stage is required to
+   produce the `.gcode.3mf` format Bambu printers need.
 
 ### How to install
 
@@ -55,15 +64,15 @@ uv tool install estampo
 
 ### How to create the config
 
-Use the non-interactive init command:
+Use the non-interactive init command (substitute the answers from above):
 
 ```bash
 estampo init \
-  --engine {ENGINE} \
-  --printer "{PRINTER}" \
-  --filament "{FILAMENT_1}" \
-  --part {MODEL_FILE_1} \
-  --part {MODEL_FILE_2}
+  --engine ENGINE \
+  --printer "PRINTER" \
+  --filament "FILAMENT" \
+  --part MODEL_FILE_1 \
+  --part MODEL_FILE_2
 ```
 
 Or create `estampo.toml` directly. Here is the structure:
@@ -76,22 +85,22 @@ stages = ["load", "arrange", "plate", "slice"]
 size = [256, 256]        # bed size in mm [width, depth]
 
 [slicer]
-engine = "{ENGINE}"
-version = "{VERSION}"    # "2.3.1" for orca, "5.12.0" for cura
+engine = "orca"          # or "cura"
+version = "2.3.1"        # "2.3.1" for orca, "5.12.0" for cura
 
 # --- OrcaSlicer config ---
 [slicer.orca]
-printer = "{PRINTER}"
-process = "{PROCESS}"
-filaments = ["{FILAMENT_1}"]
+printer = "Bambu Lab P1S 0.4 nozzle"
+process = "0.20mm Standard @BBL X1C"
+filaments = ["Generic PLA @base"]
 
 # --- OR CuraEngine config ---
 [slicer.cura]
-printer = "{PRINTER}"
-filaments = ["{FILAMENT_1}"]
+printer = "bambox_p1s"
+filaments = ["PLA"]
 
 [[parts]]
-file = "{MODEL_FILE}"
+file = "model.stl"
 
 # Add overrides to tune print settings:
 # [slicer.orca.overrides]
@@ -399,15 +408,6 @@ stage can reference `{resolve_templates}`.
 ## How to use this prompt
 
 1. Copy the prompt above (everything between the ```` ``` ```` fences).
-2. Replace the `{PLACEHOLDERS}` with your project details.
-3. Paste into your AI assistant.
-4. The AI will create the config, validate it, and optionally set up CI.
-
-### Example: filled-in prompt for a Bambu P1S with PLA
-
-> - **Model files:** `case.stl`, `lid.stl`
-> - **Slicer engine:** `orca`
-> - **Printer:** `Bambu Lab P1S 0.4 nozzle`
-> - **Quality preset:** `0.20mm Standard @BBL X1C`
-> - **Filament(s):** `Generic PLA @base`
-> - **Print goals:** strong functional part with tree supports
+2. Paste it into your AI assistant — no editing needed.
+3. The AI will scan your project for model files, ask you a few questions
+   (printer, filament, print goals), then create the config and validate it.
