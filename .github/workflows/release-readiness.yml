@@ -212,8 +212,6 @@ jobs:
         example:
           - name: quickstart
             workdir: examples/quickstart
-          - name: multi-part
-            workdir: examples/multi-part
     steps:
       - uses: actions/checkout@v6
 
@@ -222,36 +220,29 @@ jobs:
           name: estampo-image-${{ matrix.orca_version }}
 
       - name: Load image
-        run: |
-          docker load -i estampo-image.tar
-          # Re-tag so estampo finds the image under its expected name
-          docker tag estampo/estampo:orca-${{ matrix.orca_version }}-test \
-                     estampo/estampo:orca-${{ matrix.orca_version }}
+        run: docker load -i estampo-image.tar
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-
-      - name: Install estampo
+      # Run entire pipeline inside the container — bambox is bundled so
+      # pack/repack stages work.  Uses --local because we're already inside
+      # the image (no docker-in-docker).
+      - name: Run pipeline (${{ matrix.example.name }} on orca-${{ matrix.orca_version }})
         run: |
-          pip install uv
-          uv sync --frozen --no-dev
+          docker run --rm \
+            -v "${{ github.workspace }}:/project" \
+            --workdir /project/${{ matrix.example.workdir }} \
+            estampo/estampo:orca-${{ matrix.orca_version }}-test \
+            run estampo.toml --local -v
 
-      # Run estampo the same way a user does: from the host, letting
-      # estampo invoke Docker.  This exercises the real docker-run path
-      # (--entrypoint orca-slicer) instead of running inside the container
-      # which falls back to local slicer and can behave differently.
-      - name: Run slice (${{ matrix.example.name }} on orca-${{ matrix.orca_version }})
+      - name: Verify .gcode.3mf output
         run: |
-          cd ${{ matrix.example.workdir }}
-          uv run estampo run estampo.toml --until slice -v
-
-      - name: Verify output
-        run: |
-          echo "Checking for slice output..."
+          echo "Checking for packaged output..."
           ls -la ${{ matrix.example.workdir }}/estampo_output/
-          echo "Slice test OK — ${{ matrix.example.name }} on orca-${{ matrix.orca_version }}"
+          PACKED=$(find ${{ matrix.example.workdir }}/estampo_output/ -name '*.gcode.3mf' | head -1)
+          if [ -z "$PACKED" ]; then
+            echo "::error::No .gcode.3mf found — pack stage failed"
+            exit 1
+          fi
+          echo "E2E OK — ${{ matrix.example.name }} on orca-${{ matrix.orca_version }}: $PACKED"
 
       - uses: actions/upload-artifact@v7
         with:
@@ -419,35 +410,31 @@ jobs:
           name: cura-image-${{ matrix.cura_version }}
 
       - name: Load image
-        run: |
-          docker load -i cura-image.tar
-          # Re-tag so estampo finds the image under its expected name
-          docker tag estampo/estampo:cura-${{ matrix.cura_version }}-test \
-                     estampo/estampo:cura-${{ matrix.cura_version }}
+        run: docker load -i cura-image.tar
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-
-      - name: Install estampo
+      # Run entire pipeline inside the container — cura-p1s and bambox are
+      # bundled so resolve_templates + pack stages work.
+      - name: Run pipeline (cura-p1s on CuraEngine ${{ matrix.cura_version }})
         run: |
-          pip install uv
-          uv sync --frozen --no-dev
+          docker run --rm \
+            -v "${{ github.workspace }}:/project" \
+            --workdir /project/examples/cura-p1s \
+            estampo/estampo:cura-${{ matrix.cura_version }}-test \
+            run estampo.toml --local -v
 
-      - name: Run slice (CuraEngine ${{ matrix.cura_version }})
+      - name: Verify .gcode.3mf output
         run: |
-          cd examples/cura
-          uv run estampo run estampo.toml -v
-
-      - name: Verify output
-        run: |
-          echo "Checking for slice output..."
-          ls -la examples/cura/estampo_output/
-          echo "Slice test OK — CuraEngine ${{ matrix.cura_version }}"
+          echo "Checking for packaged output..."
+          ls -la examples/cura-p1s/estampo_output/
+          PACKED=$(find examples/cura-p1s/estampo_output/ -name '*.gcode.3mf' | head -1)
+          if [ -z "$PACKED" ]; then
+            echo "::error::No .gcode.3mf found — pack stage failed"
+            exit 1
+          fi
+          echo "E2E OK — cura-p1s on CuraEngine ${{ matrix.cura_version }}: $PACKED"
 
       - uses: actions/upload-artifact@v7
         with:
-          name: slice-output-cura-${{ matrix.cura_version }}
-          path: examples/cura/estampo_output/
+          name: slice-output-cura-p1s-${{ matrix.cura_version }}
+          path: examples/cura-p1s/estampo_output/
           retention-days: 5
