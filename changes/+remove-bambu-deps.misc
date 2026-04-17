@@ -1,1 +1,0 @@
-Remove unused ``bambulabs-api`` and ``bambu-lab-cloud-api`` dependencies, and remove ``_find_in_bambox()`` from ``cura.py`` per ADR-005

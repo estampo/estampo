@@ -1,1 +1,0 @@
-Fix ``pin_cura_definitions()`` to also copy extruder definitions referenced by the machine definition

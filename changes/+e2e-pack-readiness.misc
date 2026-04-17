@@ -1,1 +1,0 @@
-Release-readiness tests now run full pipeline inside Docker (including pack/repack) and verify ``.gcode.3mf`` output

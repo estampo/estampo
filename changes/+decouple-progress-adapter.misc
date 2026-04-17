@@ -1,1 +1,0 @@
-Decouple progress adapter from hardcoded Hamilton node names using ``@tag`` decorators

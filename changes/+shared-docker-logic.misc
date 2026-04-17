@@ -1,1 +1,0 @@
-Extract shared Docker utilities into ``docker.py`` module, removing duplication from engine modules
