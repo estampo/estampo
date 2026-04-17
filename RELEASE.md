@@ -43,6 +43,17 @@ This creates a `release/v0.3.0` branch with:
 - `CHANGELOG.md` updated by towncrier (fragments compiled and deleted)
 - A PR titled "Release v0.3.0"
 
+**Pre-release versions** follow [PEP 440](https://peps.python.org/pep-0440/):
+
+```bash
+gh workflow run prepare-release.yml -f version=0.4.0a1   # alpha
+gh workflow run prepare-release.yml -f version=0.4.0b1   # beta
+gh workflow run prepare-release.yml -f version=0.4.0rc1  # release candidate
+```
+
+Pre-releases create GitHub Releases marked as "Pre-release" and are not
+installed by `pip install estampo` unless the user opts in with `--pre`.
+
 ### 2. Review
 
 Open the PR, review the changelog, edit if needed, then merge.

@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag (e.g. v0.2.3) — use only as fallback"
+        description: "Release tag (e.g. v0.2.3, v0.4.0a1) — use only as fallback"
         required: true
 
 jobs:
@@ -35,7 +35,7 @@ jobs:
           echo "Associated PR branches: ${BRANCHES:-<none>}"
 
           VERSION=$(echo "$BRANCHES" \
-            | grep -oP '^release/v\K\d+\.\d+\.\d+$' \
+            | grep -oP '^release/v\K\d+\.\d+\.\d+((a|b|rc)\d+)?$' \
             | head -1 || true)
 
           if [[ -n "$VERSION" ]]; then
@@ -447,6 +447,10 @@ jobs:
           VERSION="${{ needs.version.outputs.version }}"
           WHEEL=$(ls dist/*.whl 2>/dev/null | head -1)
           ARGS=(gh release create "v${VERSION}" --title "v${VERSION}" --notes-file /tmp/release-body.md)
+          # Mark alpha/beta/rc versions as pre-release
+          if [[ "$VERSION" =~ (a|b|rc)[0-9]+$ ]]; then
+            ARGS+=(--prerelease)
+          fi
           if [[ -n "$WHEEL" ]]; then
             ARGS+=("$WHEEL")
           fi
