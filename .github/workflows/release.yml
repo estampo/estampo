@@ -159,7 +159,9 @@ jobs:
           push: false
           load: true
           tags: estampo/estampo:orca-${{ matrix.orca-version }}
-          build-args: ORCA_VERSION=${{ matrix.orca-version }}
+          build-args: |
+            ORCA_VERSION=${{ matrix.orca-version }}
+            BNL_TOKEN=${{ secrets.BNL_TOKEN }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -226,7 +228,9 @@ jobs:
           push: false
           load: true
           tags: estampo/estampo:cura-${{ matrix.cura-version }}
-          build-args: CURA_VERSION=${{ matrix.cura-version }}
+          build-args: |
+            CURA_VERSION=${{ matrix.cura-version }}
+            BNL_TOKEN=${{ secrets.BNL_TOKEN }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

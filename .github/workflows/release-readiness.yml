@@ -89,6 +89,7 @@ jobs:
         run: |
           docker build --platform linux/amd64 \
             --build-arg ORCA_VERSION=${{ matrix.orca_version }} \
+            --build-arg BNL_TOKEN=${{ secrets.BNL_TOKEN }} \
             -t estampo/estampo:orca-${{ matrix.orca_version }}-test .
 
       - name: Save image as artifact
@@ -289,6 +290,7 @@ jobs:
           docker build --platform linux/amd64 \
             -f Dockerfile.cura \
             --build-arg CURA_VERSION=${{ matrix.cura_version }} \
+            --build-arg BNL_TOKEN=${{ secrets.BNL_TOKEN }} \
             -t estampo/estampo:cura-${{ matrix.cura_version }}-test .
 
       - name: Save image as artifact
