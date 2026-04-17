@@ -260,13 +260,18 @@ filament = "decorative"
 Custom pipeline stages that run external CLI tools. Add the stage name to
 `[pipeline].stages` and define a matching TOML section with a `command` key.
 
+**OrcaSlicer** (patches existing `.gcode.3mf`):
 ```toml
-[pipeline]
-stages = ["load", "arrange", "plate", "slice", "pack"]
-
 [pack]
-command = "bambox repack {output_dir}/plate_sliced.gcode.3mf"
-output = "{output_dir}/plate_sliced.gcode.3mf"
+command = "bambox repack {sliced_3mf}"
+output = "{sliced_3mf}"
+```
+
+**CuraEngine** (creates `.gcode.3mf` from plain G-code):
+```toml
+[pack]
+command = "bambox pack {sliced_dir}/plate.gcode -o {output_dir}/plate.gcode.3mf"
+output = "{output_dir}/plate.gcode.3mf"
 ```
 
 ### Available variables
