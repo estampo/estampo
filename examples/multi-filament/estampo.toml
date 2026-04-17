@@ -6,7 +6,7 @@
 # Requires: bambox (pipx install bambox)
 
 [pipeline]
-stages = ["load", "arrange", "plate", "slice", "pack"]
+stages = ["load", "arrange", "plate", "slice", "gcode-info", "pack"]
 
 [plate]
 size = [256, 256]
@@ -40,5 +40,5 @@ file = "box_20x20x10.step"
 filament = 2
 
 [pack]
-command = "bambox repack {output_dir}/plate_sliced.gcode.3mf"
-output = "{output_dir}/plate_sliced.gcode.3mf"
+command = "bambox repack {sliced_3mf}"
+output = "{sliced_3mf}"

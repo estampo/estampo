@@ -100,6 +100,41 @@ file = "{MODEL_FILE}"
 # wall_loops = "3"
 ```
 
+#### Additional config features
+
+These are optional — skip them for simple setups:
+
+- **`output_dir`** (top-level) — output directory, default `"estampo_output"`.
+- **`gcode-info`** stage — add to pipeline to see print time and filament usage after slicing.
+- **`bed_type`** in `[slicer]` — bed surface (e.g. `"Textured PEI Plate"`).
+- **`profiles_dir`** in `[slicer]` — directory for pinned profiles (default `"profiles"`).
+- **`machine_overrides`** / **`filament_overrides`** in `[slicer.orca]` — override machine or filament profile settings (separate from process `overrides`).
+- **`[slicer.orca.slots]`** — explicit AMS slot-to-filament mapping:
+  ```toml
+  [slicer.orca.slots]
+  1 = "Generic PLA @base"
+  3 = "Generic PETG-CF @base"
+  ```
+- **`[filaments]`** — material alias table, decoupling parts from specific profiles:
+  ```toml
+  [filaments]
+  structural = "Generic PETG-CF @BBL P1S"
+  decorative = "Generic PLA @BBL P1S"
+  ```
+- **`scale`** on `[[parts]]` — uniform scale factor (default 1.0). Also available as `--scale` CLI flag.
+- **`object`** on `[[parts]]` — select a named object from a multi-object 3MF file.
+- **`sequence`** on `[[parts]]` — print order for sequential printing.
+- **Per-object filament overrides** via `[parts.filaments]`:
+  ```toml
+  [[parts]]
+  file = "widget.3mf"
+  filament = "Generic PETG-CF @base"
+  [parts.filaments]
+  inlay = "Bambu PLA Basic @BBL X1C"
+  ```
+- **`estampo profiles pin`** — copies referenced profiles into a local `profiles/` directory for reproducible builds across machines.
+- **Code-CAD workflow** — estampo works with OpenSCAD, build123d, and CadQuery. Generate STL/3MF from code-CAD scripts, then configure estampo to slice the output.
+
 ### Discovering available profiles
 
 ```bash
