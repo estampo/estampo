@@ -350,23 +350,123 @@ def validate_override_keys(
 ) -> list[str]:
     """Check that override keys exist in the resolved process profile.
 
-    Returns a list of warning strings for unknown keys.
+    Returns a list of warning strings for unknown keys, including
+    cross-engine detection (e.g. OrcaSlicer key used in CuraEngine config)
+    and "did you mean?" suggestions.
     """
-    if not overrides or not process:
+    if not overrides:
         return []
 
+    profile_keys: set[str] = set()
+    if process:
+        try:
+            data = resolve_profile_data(process, engine, "process", project_dir)
+            profile_keys = set(data.keys())
+        except (EstampoError, FileNotFoundError, OSError):
+            log.debug("Cannot resolve process profile for override validation", exc_info=True)
+
+    # Load known settings from bundled settings JSON files
+    engine_keys = _load_engine_settings(engine)
+    other_engine = "cura" if engine == "orca" else "orca"
+    other_keys = _load_engine_settings(other_engine)
+    cross_map = _cross_engine_map()
+
+    all_valid = profile_keys | engine_keys
+    warnings: list[str] = []
+
+    for key in overrides:
+        if key in all_valid:
+            continue
+
+        # Cross-engine detection: key belongs to the other engine
+        if key in other_keys:
+            suggestion = cross_map.get(key)
+            if suggestion and suggestion in all_valid:
+                warnings.append(
+                    f"slicer.overrides key '{key}' is an {other_engine} setting "
+                    f"— did you mean '{suggestion}'?"
+                )
+            else:
+                warnings.append(
+                    f"slicer.overrides key '{key}' is an {other_engine} setting, "
+                    f"not a valid {engine} key"
+                )
+        else:
+            # Unknown key — try fuzzy match against engine keys
+            hint = _closest_setting(key, all_valid)
+            msg = f"slicer.overrides key '{key}' not found in {engine} settings"
+            if hint:
+                msg += f" — did you mean '{hint}'?"
+            warnings.append(msg)
+
+    return warnings
+
+
+def _load_engine_settings(engine: str) -> set[str]:
+    """Load known setting keys from bundled settings JSON."""
+    settings_file = Path(__file__).parent / "data" / f"{engine}-settings.json"
+    if not settings_file.exists():
+        return set()
     try:
-        data = resolve_profile_data(process, engine, "process", project_dir)
-    except (EstampoError, FileNotFoundError, OSError):
-        log.debug("Cannot resolve process profile for override validation", exc_info=True)
-        return []
+        data = json.loads(settings_file.read_text())
+        return {s["key"] for s in data.get("settings", [])}
+    except (json.JSONDecodeError, KeyError, OSError):
+        return set()
 
-    unknown = [k for k in overrides if k not in data]
-    return [
-        f"slicer.overrides key '{k}' not found in process profile '{process}' "
-        f"— it will be injected but may be ignored by the slicer"
-        for k in unknown
-    ]
+
+def _cross_engine_map() -> dict[str, str]:
+    """Bidirectional mapping between OrcaSlicer and CuraEngine setting names."""
+    orca_to_cura = {
+        "wall_loops": "wall_line_count",
+        "top_shell_layers": "top_layers",
+        "bottom_shell_layers": "bottom_layers",
+        "sparse_infill_density": "infill_sparse_density",
+        "sparse_infill_pattern": "infill_pattern",
+        "initial_layer_print_height": "layer_height_0",
+        "enable_support": "support_enable",
+        "support_threshold_angle": "support_angle",
+        "nozzle_temperature": "material_print_temperature",
+        "bed_temperature": "material_bed_temperature",
+        "outer_wall_speed": "speed_wall_0",
+        "inner_wall_speed": "speed_wall_x",
+        "sparse_infill_speed": "speed_infill",
+        "travel_speed": "speed_travel",
+        "retraction_length": "retraction_amount",
+        "brim_type": "adhesion_type",
+        "seam_position": "z_seam_type",
+        "fan_min_speed": "cool_fan_speed_min",
+        "fan_max_speed": "cool_fan_speed_max",
+        "ironing_type": "ironing_enabled",
+        "xy_hole_compensation": "hole_xy_offset",
+        "xy_contour_compensation": "xy_offset",
+    }
+    # Build bidirectional map
+    cross: dict[str, str] = {}
+    cross.update(orca_to_cura)
+    cross.update({v: k for k, v in orca_to_cura.items()})
+    return cross
+
+
+def _closest_setting(name: str, candidates: set[str]) -> str | None:
+    """Find the closest matching setting key."""
+    if not candidates:
+        return None
+    name_lower = name.lower()
+    # Substring match
+    for c in sorted(candidates):
+        if name_lower in c.lower() or c.lower() in name_lower:
+            return c
+    # Common word overlap (split on underscores)
+    name_parts = set(name_lower.split("_"))
+    best = None
+    best_score = 0
+    for c in candidates:
+        c_parts = set(c.lower().split("_"))
+        overlap = len(name_parts & c_parts)
+        if overlap > best_score:
+            best_score = overlap
+            best = c
+    return best if best_score >= 2 else None
 
 
 def pin_profiles(
