@@ -89,6 +89,7 @@ jobs:
         run: |
           docker build --platform linux/amd64 \
             --build-arg ORCA_VERSION=${{ matrix.orca_version }} \
+            --build-arg BNL_TOKEN=${{ secrets.BNL_TOKEN }} \
             -t estampo/estampo:orca-${{ matrix.orca_version }}-test .
 
       - name: Save image as artifact
@@ -209,10 +210,10 @@ jobs:
       matrix:
         orca_version: ${{ fromJson(needs.resolve-versions.outputs.versions) }}
         example:
-          - name: generic
-            workdir: examples
-          - name: decoy-case
-            workdir: examples/decoy-case
+          - name: quickstart
+            workdir: examples/quickstart
+          - name: multi-part
+            workdir: examples/multi-part
     steps:
       - uses: actions/checkout@v6
 
@@ -243,9 +244,8 @@ jobs:
       # which falls back to local slicer and can behave differently.
       - name: Run slice (${{ matrix.example.name }} on orca-${{ matrix.orca_version }})
         run: |
-          SHORT=$(echo "${{ matrix.orca_version }}" | tr -d '.')
           cd ${{ matrix.example.workdir }}
-          uv run estampo run "estampo-${SHORT}.toml" -v
+          uv run estampo run estampo.toml --until slice -v
 
       - name: Verify output
         run: |
@@ -290,6 +290,7 @@ jobs:
           docker build --platform linux/amd64 \
             -f Dockerfile.cura \
             --build-arg CURA_VERSION=${{ matrix.cura_version }} \
+            --build-arg BNL_TOKEN=${{ secrets.BNL_TOKEN }} \
             -t estampo/estampo:cura-${{ matrix.cura_version }}-test .
 
       - name: Save image as artifact
@@ -436,17 +437,17 @@ jobs:
 
       - name: Run slice (CuraEngine ${{ matrix.cura_version }})
         run: |
-          cd examples
-          uv run estampo run estampo-cura.toml -v
+          cd examples/cura
+          uv run estampo run estampo.toml -v
 
       - name: Verify output
         run: |
           echo "Checking for slice output..."
-          ls -la examples/estampo_output/
+          ls -la examples/cura/estampo_output/
           echo "Slice test OK — CuraEngine ${{ matrix.cura_version }}"
 
       - uses: actions/upload-artifact@v7
         with:
           name: slice-output-cura-${{ matrix.cura_version }}
-          path: examples/estampo_output/
+          path: examples/cura/estampo_output/
           retention-days: 5

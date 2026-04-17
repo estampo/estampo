@@ -9,6 +9,7 @@ from estampo import EstampoError
 from estampo.commands import (
     COMMAND_VARIABLES,
     CommandStageConfig,
+    _wrap_docker_command,
     build_command_context,
     parse_command_stage,
     run_command_stage,
@@ -164,6 +165,18 @@ class TestBuildCommandContext:
         ctx = build_command_context(cfg, tmp_path / "out", {})
         assert ctx["cura_settings"] == ""
 
+    def test_slicer_image_orca(self, tmp_path):
+        cfg = _make_config(tmp_path, engine="orca")
+        cfg.slicer.version = "2.3.1"
+        ctx = build_command_context(cfg, tmp_path / "out", {})
+        assert ctx["slicer_image"] == "estampo/estampo:orca-2.3.1"
+
+    def test_slicer_image_cura(self, tmp_path):
+        cfg = _make_config(tmp_path, engine="cura")
+        cfg.slicer.version = "5.12.0"
+        ctx = build_command_context(cfg, tmp_path / "out", {})
+        assert ctx["slicer_image"] == "estampo/estampo:cura-5.12.0"
+
 
 # ---------------------------------------------------------------------------
 # parse_command_stage
@@ -195,6 +208,37 @@ class TestParseCommandStage:
     def test_empty_output_raises(self):
         with pytest.raises(EstampoError, match="non-empty string"):
             parse_command_stage("bad", {"command": "echo", "output": ""})
+
+    def test_docker_flag_defaults_false(self):
+        raw = {"command": "echo hello"}
+        stage = parse_command_stage("test", raw)
+        assert stage.docker is False
+        assert stage.image is None
+
+    def test_docker_flag_true(self):
+        raw = {"command": "cura-p1s resolve {sliced_dir}", "docker": True}
+        stage = parse_command_stage("resolve", raw)
+        assert stage.docker is True
+
+    def test_docker_with_image_override(self):
+        raw = {
+            "command": "cura-p1s resolve {sliced_dir}",
+            "docker": True,
+            "image": "estampo/estampo:cura-5.12.0",
+        }
+        stage = parse_command_stage("resolve", raw)
+        assert stage.docker is True
+        assert stage.image == "estampo/estampo:cura-5.12.0"
+
+    def test_docker_invalid_type_raises(self):
+        raw = {"command": "echo", "docker": "yes"}
+        with pytest.raises(EstampoError, match="docker must be true or false"):
+            parse_command_stage("bad", raw)
+
+    def test_docker_empty_image_raises(self):
+        raw = {"command": "echo", "docker": True, "image": ""}
+        with pytest.raises(EstampoError, match="image must be a non-empty string"):
+            parse_command_stage("bad", raw)
 
 
 # ---------------------------------------------------------------------------
@@ -258,6 +302,68 @@ class TestRunCommandStage:
         ctx = {}
         with pytest.raises(subprocess.TimeoutExpired):
             run_command_stage(stage, ctx, timeout=1)
+
+    def test_docker_true_no_image_raises(self, monkeypatch):
+        monkeypatch.setattr("estampo.commands._is_inside_container", lambda: False)
+        stage = CommandStageConfig(name="test", command="echo hello", docker=True)
+        ctx = {"slicer_image": "", "output_dir": "/tmp"}
+        with pytest.raises(EstampoError, match="no image specified"):
+            run_command_stage(stage, ctx)
+
+    def test_docker_uses_explicit_image(self, tmp_path, monkeypatch):
+        """When docker=true with explicit image, the command is wrapped in docker run."""
+        monkeypatch.setattr("estampo.commands._is_inside_container", lambda: False)
+        stage = CommandStageConfig(
+            name="test",
+            command="echo hello",
+            docker=True,
+            image="myimage:latest",
+        )
+        out = tmp_path / "output"
+        out.mkdir()
+        ctx = {"output_dir": str(out)}
+        # echo hello through docker will fail (no docker), but we can test the
+        # error message contains "docker"
+        with pytest.raises(EstampoError, match="failed"):
+            run_command_stage(stage, ctx)
+
+
+# ---------------------------------------------------------------------------
+# _wrap_docker_command
+# ---------------------------------------------------------------------------
+
+
+class TestWrapDockerCommand:
+    def test_basic_wrapping(self, tmp_path):
+        out = tmp_path / "output"
+        out.mkdir()
+        cmd = ["bambox", "repack", str(out / "plate.3mf")]
+        wrapped = _wrap_docker_command(cmd, "estampo/estampo:orca-2.3.1", str(out))
+        assert wrapped[0] == "docker"
+        assert "run" in wrapped
+        assert "--rm" in wrapped
+        assert "estampo/estampo:orca-2.3.1" in wrapped
+        # The output path should be rewritten to container path
+        assert "/work/output/plate.3mf" in wrapped
+
+    def test_volume_mount(self, tmp_path):
+        out = tmp_path / "output"
+        out.mkdir()
+        cmd = ["echo", "hello"]
+        wrapped = _wrap_docker_command(cmd, "img:latest", str(out))
+        # Find the -v argument
+        v_idx = wrapped.index("-v")
+        mount = wrapped[v_idx + 1]
+        assert mount.endswith(":/work/output")
+        assert str(out.resolve()) in mount
+
+    def test_entrypoint_is_first_cmd_element(self, tmp_path):
+        out = tmp_path / "output"
+        out.mkdir()
+        cmd = ["bambox", "repack", "file.3mf"]
+        wrapped = _wrap_docker_command(cmd, "img:latest", str(out))
+        ep_idx = wrapped.index("--entrypoint")
+        assert wrapped[ep_idx + 1] == "bambox"
 
 
 # ---------------------------------------------------------------------------
@@ -333,6 +439,33 @@ file = "{_posix(stl)}"
         cfg = load_config(toml)
         assert cfg.pipeline.command_stages == {}
         assert cfg.pipeline.stages == ["load", "arrange", "plate"]
+
+    def test_docker_flag_parsed_from_toml(self, tmp_path):
+        toml = tmp_path / "estampo.toml"
+        stl = tmp_path / "cube.stl"
+        stl.touch()
+        toml.write_text(f"""
+[pipeline]
+stages = ["load", "arrange", "plate", "slice", "resolve"]
+
+[plate]
+size = [256, 256]
+
+[slicer]
+engine = "cura"
+
+[resolve]
+command = "cura-p1s resolve {{sliced_dir}}"
+docker = true
+image = "estampo/estampo:cura-5.12.0"
+
+[[parts]]
+file = "{_posix(stl)}"
+""")
+        cfg = load_config(toml)
+        resolve = cfg.pipeline.command_stages["resolve"]
+        assert resolve.docker is True
+        assert resolve.image == "estampo/estampo:cura-5.12.0"
 
     def test_mixed_builtin_and_command_stages(self, tmp_path):
         toml = tmp_path / "estampo.toml"
