@@ -155,10 +155,11 @@ def _wrap_docker_command(
     abs_output = str(Path(output_dir).resolve())
     container_output = "/work/output"
 
-    # Rewrite host paths to container paths in arguments
+    # Rewrite host paths to container paths in arguments.
+    # Normalise backslashes — the target is always a Linux container.
     rewritten = []
     for arg in cmd:
-        rewritten.append(arg.replace(abs_output, container_output))
+        rewritten.append(arg.replace(abs_output, container_output).replace("\\", "/"))
 
     docker_cmd = [
         "docker",
