@@ -261,6 +261,124 @@ def _parse_cura_config(raw: dict) -> CuraSlicerConfig:
     )
 
 
+def _parse_parts(
+    parts_raw: list[dict],
+    base_dir: Path,
+) -> tuple[list[PartConfig], list[int | str], list[dict[str, int | str]]]:
+    """Parse [[parts]] entries into PartConfig objects.
+
+    Returns (parts, raw_filaments, raw_obj_filaments) — filament indices are
+    placeholders until resolved by ``_resolve_filaments()``.
+    """
+    if not parts_raw:
+        raise EstampoError("At least one [[parts]] entry is required")
+
+    parts: list[PartConfig] = []
+    raw_filaments: list[int | str] = []
+    raw_obj_filaments: list[dict[str, int | str]] = []
+
+    for i, p in enumerate(parts_raw):
+        if "file" not in p:
+            raise EstampoError(f"parts[{i}]: 'file' is required")
+        orient = p.get("orient", "flat")
+        if orient not in VALID_ORIENTS:
+            raise EstampoError(f"parts[{i}]: orient must be one of {VALID_ORIENTS}, got '{orient}'")
+        file_path = base_dir / p["file"]
+        if not file_path.exists():
+            raise EstampoError(f"parts[{i}]: file not found: {file_path}")
+        copies = int(p.get("copies", 1))
+        if copies < 1:
+            raise EstampoError(f"parts[{i}]: copies must be >= 1, got {copies}")
+        raw_fil = p.get("filament", 1)
+        if isinstance(raw_fil, str):
+            if not raw_fil.strip():
+                raise EstampoError(f"parts[{i}]: filament name must not be empty")
+        else:
+            raw_fil = int(raw_fil)
+            if raw_fil < 1:
+                raise EstampoError(f"parts[{i}]: filament must be >= 1, got {raw_fil}")
+        raw_filaments.append(raw_fil)
+
+        # Per-object filament overrides for multi-object 3MF files
+        obj_fils_raw: dict[str, int | str] = {}
+        for obj_name, obj_fil in p.get("filaments", {}).items():
+            if isinstance(obj_fil, str):
+                if not obj_fil.strip():
+                    raise EstampoError(
+                        f"parts[{i}].filaments.{obj_name}: filament name must not be empty"
+                    )
+            else:
+                obj_fil = int(obj_fil)
+                if obj_fil < 1:
+                    raise EstampoError(
+                        f"parts[{i}].filaments.{obj_name}: filament must be >= 1, got {obj_fil}"
+                    )
+            obj_fils_raw[obj_name] = obj_fil
+        raw_obj_filaments.append(obj_fils_raw)
+
+        rotate = p.get("rotate")
+        if rotate is not None:
+            if not isinstance(rotate, list) or len(rotate) != 3:
+                raise EstampoError(f"parts[{i}]: rotate must be [rx, ry, rz], got {rotate}")
+            rotate = [float(r) for r in rotate]
+        scale = float(p.get("scale", 1.0))
+        if scale <= 0:
+            raise EstampoError(f"parts[{i}]: scale must be > 0, got {scale}")
+        obj_name = p.get("object")
+        if obj_name is not None:
+            if not isinstance(obj_name, str) or not obj_name.strip():
+                raise EstampoError(f"parts[{i}]: object must be a non-empty string")
+            if obj_fils_raw:
+                raise EstampoError(f"parts[{i}]: cannot use both 'object' and [parts.filaments]")
+        sequence = int(p.get("sequence", 1))
+        if sequence < 1:
+            raise EstampoError(f"parts[{i}]: sequence must be >= 1, got {sequence}")
+        material_name = raw_fil if isinstance(raw_fil, str) else None
+
+        parts.append(
+            PartConfig(
+                file=file_path,
+                copies=copies,
+                orient=orient,
+                rotate=rotate,
+                filament=1,  # placeholder, resolved below
+                material=material_name,
+                scale=scale,
+                object=obj_name,
+                sequence=sequence,
+            )
+        )
+
+    return parts, raw_filaments, raw_obj_filaments
+
+
+def _parse_pipeline(raw: dict) -> PipelineConfig:
+    """Parse [pipeline] and command stage sections from raw TOML data."""
+    from estampo.pipeline import STAGE_OUTPUTS
+
+    pipeline_raw = raw.get("pipeline", {})
+    pipeline_stages = pipeline_raw.get("stages", list(DEFAULT_STAGES))
+    if not isinstance(pipeline_stages, list):
+        raise EstampoError("pipeline.stages must be a list of stage names")
+
+    command_stages: dict[str, CommandStageConfig] = {}
+    for s in pipeline_stages:
+        if not isinstance(s, str) or not s.strip():
+            raise EstampoError(f"pipeline.stages: each stage must be a non-empty string, got {s!r}")
+        if s in STAGE_OUTPUTS:
+            continue
+        stage_raw = raw.get(s)
+        if stage_raw is None or not isinstance(stage_raw, dict) or "command" not in stage_raw:
+            raise EstampoError(
+                f"pipeline.stages: unknown stage '{s}'. "
+                f"Either use a built-in stage ({sorted(STAGE_OUTPUTS)}) "
+                f"or define a [{s}] section with a 'command' key."
+            )
+        command_stages[s] = parse_command_stage(s, stage_raw)
+
+    return PipelineConfig(stages=pipeline_stages, command_stages=command_stages)
+
+
 def load_config(path: Path) -> EstampoConfig:
     """Load and validate an estampo.toml file."""
     path = path.resolve()
@@ -334,122 +452,17 @@ def load_config(path: Path) -> EstampoConfig:
                 )
             filament_aliases[alias] = profile
 
-    # Parts — first pass: parse everything except filament resolution
-    parts_raw = raw.get("parts", [])
-    if not parts_raw:
-        raise EstampoError("At least one [[parts]] entry is required")
-
-    parts = []
-    raw_filaments: list[int | str] = []  # preserve raw filament values for resolution
-    raw_obj_filaments: list[dict[str, int | str]] = []  # per-part object filament overrides
-    for i, p in enumerate(parts_raw):
-        if "file" not in p:
-            raise EstampoError(f"parts[{i}]: 'file' is required")
-        orient = p.get("orient", "flat")
-        if orient not in VALID_ORIENTS:
-            raise EstampoError(f"parts[{i}]: orient must be one of {VALID_ORIENTS}, got '{orient}'")
-        file_path = base_dir / p["file"]
-        if not file_path.exists():
-            raise EstampoError(f"parts[{i}]: file not found: {file_path}")
-        copies = int(p.get("copies", 1))
-        if copies < 1:
-            raise EstampoError(f"parts[{i}]: copies must be >= 1, got {copies}")
-        raw_fil = p.get("filament", 1)
-        if isinstance(raw_fil, str):
-            if not raw_fil.strip():
-                raise EstampoError(f"parts[{i}]: filament name must not be empty")
-        else:
-            raw_fil = int(raw_fil)
-            if raw_fil < 1:
-                raise EstampoError(f"parts[{i}]: filament must be >= 1, got {raw_fil}")
-        raw_filaments.append(raw_fil)
-
-        # Per-object filament overrides for multi-object 3MF files
-        obj_fils_raw: dict[str, int | str] = {}
-        for obj_name, obj_fil in p.get("filaments", {}).items():
-            if isinstance(obj_fil, str):
-                if not obj_fil.strip():
-                    raise EstampoError(
-                        f"parts[{i}].filaments.{obj_name}: filament name must not be empty"
-                    )
-            else:
-                obj_fil = int(obj_fil)
-                if obj_fil < 1:
-                    raise EstampoError(
-                        f"parts[{i}].filaments.{obj_name}: filament must be >= 1, got {obj_fil}"
-                    )
-            obj_fils_raw[obj_name] = obj_fil
-        raw_obj_filaments.append(obj_fils_raw)
-
-        rotate = p.get("rotate")
-        if rotate is not None:
-            if not isinstance(rotate, list) or len(rotate) != 3:
-                raise EstampoError(f"parts[{i}]: rotate must be [rx, ry, rz], got {rotate}")
-            rotate = [float(r) for r in rotate]
-        scale = float(p.get("scale", 1.0))
-        if scale <= 0:
-            raise EstampoError(f"parts[{i}]: scale must be > 0, got {scale}")
-        obj_name = p.get("object")
-        if obj_name is not None:
-            if not isinstance(obj_name, str) or not obj_name.strip():
-                raise EstampoError(f"parts[{i}]: object must be a non-empty string")
-            if obj_fils_raw:
-                raise EstampoError(f"parts[{i}]: cannot use both 'object' and [parts.filaments]")
-        sequence = int(p.get("sequence", 1))
-        if sequence < 1:
-            raise EstampoError(f"parts[{i}]: sequence must be >= 1, got {sequence}")
-        # Preserve original material name for logging/display
-        material_name = raw_fil if isinstance(raw_fil, str) else None
-
-        parts.append(
-            PartConfig(
-                file=file_path,
-                copies=copies,
-                orient=orient,
-                rotate=rotate,
-                filament=1,  # placeholder, resolved below
-                material=material_name,
-                scale=scale,
-                object=obj_name,
-                sequence=sequence,
-            )
-        )
+    parts, raw_filaments, raw_obj_filaments = _parse_parts(raw.get("parts", []), base_dir)
 
     # Filament resolution (OrcaSlicer only — CuraEngine has no multi-filament slots)
     if engine == "orca":
         _resolve_filaments(parts, orca_cfg, raw_filaments, raw_obj_filaments, filament_aliases)
     else:
-        # CuraEngine: just set integer filament values directly
         for i, raw_fil in enumerate(raw_filaments):
             if isinstance(raw_fil, int):
                 parts[i].filament = raw_fil
 
-    # Pipeline config (optional)
-    from estampo.pipeline import STAGE_OUTPUTS
-
-    pipeline_raw = raw.get("pipeline", {})
-    pipeline_stages = pipeline_raw.get("stages", list(DEFAULT_STAGES))
-    if not isinstance(pipeline_stages, list):
-        raise EstampoError("pipeline.stages must be a list of stage names")
-
-    # Parse command stages: top-level TOML sections with a "command" key
-    command_stages: dict[str, CommandStageConfig] = {}
-    for s in pipeline_stages:
-        if not isinstance(s, str) or not s.strip():
-            raise EstampoError(f"pipeline.stages: each stage must be a non-empty string, got {s!r}")
-        if s in STAGE_OUTPUTS:
-            continue  # built-in stage
-        # Check for a matching TOML section with a command key
-        stage_raw = raw.get(s)
-        if stage_raw is None or not isinstance(stage_raw, dict) or "command" not in stage_raw:
-            raise EstampoError(
-                f"pipeline.stages: unknown stage '{s}'. "
-                f"Either use a built-in stage ({sorted(STAGE_OUTPUTS)}) "
-                f"or define a [{s}] section with a 'command' key."
-            )
-        command_stages[s] = parse_command_stage(s, stage_raw)
-
-    pipeline = PipelineConfig(stages=pipeline_stages, command_stages=command_stages)
+    pipeline = _parse_pipeline(raw)
 
     # Top-level project name (optional)
     project_name: str | None = raw.get("name")

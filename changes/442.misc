@@ -1,0 +1,1 @@
+Decompose ``orca_slice_plate``, ``load_config``, and ``run_wizard`` into smaller focused functions

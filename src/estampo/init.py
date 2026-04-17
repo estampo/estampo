@@ -701,6 +701,91 @@ def _wizard_pick_filaments(
     return filament_names
 
 
+def _wizard_pick_bed_type(existing_bed: str | None) -> str | None:
+    """Prompt for bed/plate type selection."""
+    from estampo import ui
+
+    ui.heading("Bed Type")
+    ui.info("Select bed/plate type (affects filament compatibility):")
+    bed_default = ""
+    for i, bt in enumerate(BED_TYPES, 1):
+        marker = " ←" if bt == existing_bed else ""
+        ui.info(f"  {i}. {bt}{marker}")
+        if bt == existing_bed:
+            bed_default = str(i)
+    bed_pick = ui.prompt_str("Pick bed type (or Enter to skip)", bed_default).strip()
+    bed_type: str | None = None
+    if bed_pick.isdigit() and 1 <= int(bed_pick) <= len(BED_TYPES):
+        bed_type = BED_TYPES[int(bed_pick) - 1]
+        ui.info(f"  → {bed_type}")
+    ui.console.print()
+    return bed_type
+
+
+def _wizard_pick_nozzle_type(existing_nozzle: str) -> dict[str, str]:
+    """Prompt for nozzle type selection.  Returns machine_overrides dict."""
+    from estampo import ui
+
+    ui.heading("Nozzle Type")
+    nozzle_types = ["stainless_steel", "hardened_steel", "brass"]
+    nozzle_default = "1"
+    ui.info("Select your physical nozzle type:")
+    for i, nt in enumerate(nozzle_types, 1):
+        marker = " ←" if nt == existing_nozzle else ""
+        ui.info(f"  {i}. {nt}{marker}")
+        if nt == existing_nozzle:
+            nozzle_default = str(i)
+    nozzle_prompt = f"Pick nozzle type (default: {existing_nozzle})"
+    nozzle_pick = ui.prompt_str(nozzle_prompt, nozzle_default).strip()
+    if nozzle_pick.isdigit() and 1 <= int(nozzle_pick) <= len(nozzle_types):
+        picked_nozzle = nozzle_types[int(nozzle_pick) - 1]
+    elif nozzle_pick in nozzle_types:
+        picked_nozzle = nozzle_pick
+    else:
+        picked_nozzle = "stainless_steel"
+    ui.info(f"  → {picked_nozzle}")
+    ui.console.print()
+    machine_overrides: dict[str, str] = {}
+    if picked_nozzle != "stainless_steel":
+        machine_overrides["nozzle_type"] = picked_nozzle
+    return machine_overrides
+
+
+def _wizard_pick_command_stages(
+    engine: str,
+    printer_profile: str,
+    stages: list[str],
+) -> dict[str, dict[str, str | bool]]:
+    """Prompt for Bambu Lab pack/resolve command stages.  Mutates ``stages`` in place."""
+    from estampo import ui
+
+    command_stages: dict[str, dict[str, str | bool]] = {}
+    if not _is_bambu_printer(printer_profile):
+        return command_stages
+
+    ui.heading("Packaging")
+    ui.info("This printer needs bambox to produce printable .gcode.3mf files.")
+    if ui.prompt_yn("Add a pack stage? (requires: pipx install bambox)", default=True):
+        if engine == "cura":
+            stages.append("resolve_templates")
+            command_stages["resolve_templates"] = {
+                "command": ("cura-p1s resolve {sliced_dir}/plate.gcode --settings {cura_settings}"),
+            }
+            stages.append("pack")
+            command_stages["pack"] = {
+                "command": ("bambox pack {sliced_dir}/plate.gcode -o {output_dir}/plate.gcode.3mf"),
+                "output": "{output_dir}/plate.gcode.3mf",
+            }
+        else:
+            stages.append("pack")
+            command_stages["pack"] = {
+                "command": "bambox repack {output_dir}/plate_sliced.gcode.3mf",
+                "output": "{output_dir}/plate_sliced.gcode.3mf",
+            }
+    ui.console.print()
+    return command_stages
+
+
 def _wizard_pick_parts(
     existing_parts: list[dict] | None = None,
 ) -> list[dict]:
@@ -948,46 +1033,12 @@ def run_wizard(output: Path | None = None) -> str:
     _wizard_assign_filament_slots(parts_config, filament_names)
 
     # --- Step 8: Bed type ---
-    ui.heading("Bed Type")
-    ui.info("Select bed/plate type (affects filament compatibility):")
-    existing_bed = existing.bed_type if existing else None
-    bed_default = ""
-    for i, bt in enumerate(BED_TYPES, 1):
-        marker = " ←" if bt == existing_bed else ""
-        ui.info(f"  {i}. {bt}{marker}")
-        if bt == existing_bed:
-            bed_default = str(i)
-    bed_pick = ui.prompt_str("Pick bed type (or Enter to skip)", bed_default).strip()
-    bed_type: str | None = None
-    if bed_pick.isdigit() and 1 <= int(bed_pick) <= len(BED_TYPES):
-        bed_type = BED_TYPES[int(bed_pick) - 1]
-        ui.info(f"  → {bed_type}")
-    ui.console.print()
+    bed_type = _wizard_pick_bed_type(existing.bed_type if existing else None)
 
     # --- Step 9: Nozzle type ---
-    ui.heading("Nozzle Type")
-    NOZZLE_TYPES = ["stainless_steel", "hardened_steel", "brass"]
-    existing_nozzle = (existing and existing.nozzle_type) or "stainless_steel"
-    nozzle_default = "1"
-    ui.info("Select your physical nozzle type:")
-    for i, nt in enumerate(NOZZLE_TYPES, 1):
-        marker = " ←" if nt == existing_nozzle else ""
-        ui.info(f"  {i}. {nt}{marker}")
-        if nt == existing_nozzle:
-            nozzle_default = str(i)
-    nozzle_prompt = f"Pick nozzle type (default: {existing_nozzle})"
-    nozzle_pick = ui.prompt_str(nozzle_prompt, nozzle_default).strip()
-    machine_overrides: dict[str, str] = {}
-    if nozzle_pick.isdigit() and 1 <= int(nozzle_pick) <= len(NOZZLE_TYPES):
-        picked_nozzle = NOZZLE_TYPES[int(nozzle_pick) - 1]
-    elif nozzle_pick in NOZZLE_TYPES:
-        picked_nozzle = nozzle_pick
-    else:
-        picked_nozzle = "stainless_steel"
-    if picked_nozzle != "stainless_steel":
-        machine_overrides["nozzle_type"] = picked_nozzle
-    ui.info(f"  → {picked_nozzle}")
-    ui.console.print()
+    machine_overrides = _wizard_pick_nozzle_type(
+        (existing and existing.nozzle_type) or "stainless_steel"
+    )
 
     # --- Step 10: Slicer overrides ---
     ui.heading("Slicer Overrides")
@@ -995,35 +1046,7 @@ def run_wizard(output: Path | None = None) -> str:
     ui.console.print()
 
     # --- Step 11: Command stages (pack/resolve) ---
-    command_stages: dict[str, dict[str, str | bool]] = {}
-    is_bambu = _is_bambu_printer(printer_profile or "")
-    if is_bambu:
-        ui.heading("Packaging")
-        ui.info("This printer needs bambox to produce printable .gcode.3mf files.")
-        if ui.prompt_yn("Add a pack stage? (requires: pipx install bambox)", default=True):
-            if engine == "cura":
-                # CuraEngine needs resolve_templates before pack
-                stages.append("resolve_templates")
-                command_stages["resolve_templates"] = {
-                    "command": (
-                        "cura-p1s resolve {sliced_dir}/plate.gcode --settings {cura_settings}"
-                    ),
-                }
-                stages.append("pack")
-                command_stages["pack"] = {
-                    "command": (
-                        "bambox pack {sliced_dir}/plate.gcode -o {output_dir}/plate.gcode.3mf"
-                    ),
-                    "output": "{output_dir}/plate.gcode.3mf",
-                }
-            else:
-                # OrcaSlicer — repack the existing .3mf
-                stages.append("pack")
-                command_stages["pack"] = {
-                    "command": "bambox repack {output_dir}/plate_sliced.gcode.3mf",
-                    "output": "{output_dir}/plate_sliced.gcode.3mf",
-                }
-        ui.console.print()
+    command_stages = _wizard_pick_command_stages(engine, printer_profile or "", stages)
 
     # --- Build TOML ---
     toml = _build_toml(

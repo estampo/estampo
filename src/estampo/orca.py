@@ -346,6 +346,148 @@ def _resolve_profiles(
 # ---------------------------------------------------------------------------
 
 
+def _select_slicer(
+    local: bool,
+    docker_version: str | None,
+    image: str,
+) -> tuple[bool, Path | None]:
+    """Decide whether to use Docker or a local slicer binary.
+
+    Returns (use_docker, slicer_path).  slicer_path is None when use_docker is True.
+    """
+    from estampo.docker import ensure_image as _ensure_docker_image
+    from estampo.slicer import find_slicer
+
+    if local:
+        return False, find_slicer("orca")
+
+    if docker_version is not None:
+        if _ensure_docker_image(image):
+            return True, None
+        try:
+            slicer = find_slicer("orca")
+            from estampo import ui
+
+            ui.warn(f"Docker image '{image}' not available, using local slicer.")
+            return False, slicer
+        except FileNotFoundError:
+            raise FileNotFoundError(
+                f"Docker image '{image}' not found locally or on Docker Hub, "
+                f"and no local slicer installed. Either:\n"
+                f"  docker pull {image}\n"
+                f"  or install the slicer locally"
+            )
+
+    # Default: try Docker first, fall back to local
+    if _ensure_docker_image(image):
+        return True, None
+    try:
+        slicer = find_slicer("orca")
+        from estampo import ui
+
+        ui.warn(
+            "Docker not available, using local slicer. "
+            "Builds may not be reproducible across machines."
+        )
+        return False, slicer
+    except FileNotFoundError:
+        raise FileNotFoundError(
+            f"No slicer available. Pull the Docker image:\n  docker pull {image}"
+        )
+
+
+def _check_pinned_profiles(
+    project_dir: Path,
+    profiles_dir: str,
+    docker_version: str,
+) -> None:
+    """Raise EstampoError if pinned profiles are stale for the target slicer version."""
+    from estampo.profiles import pinned_profiles_version
+
+    engine_pinned = project_dir / profiles_dir / "orca"
+    has_pinned = engine_pinned.is_dir() and any(engine_pinned.rglob("*.json"))
+    if not has_pinned:
+        return
+
+    pinned_ver = pinned_profiles_version(project_dir, profiles_dir, "orca")
+    if pinned_ver and pinned_ver != docker_version:
+        raise EstampoError(
+            f"Pinned profiles were created for slicer {pinned_ver} but "
+            f"slicer.version is {docker_version}. Profile schemas change "
+            f"between slicer versions and loading stale profiles can crash "
+            f"the slicer.\n\n"
+            f"  Run 'estampo profiles pin' to update your pinned profiles "
+            f"for {docker_version}."
+        )
+    elif pinned_ver is None:
+        raise EstampoError(
+            f"Pinned profiles in '{profiles_dir}/' have no version marker "
+            f"and may be incompatible with slicer {docker_version}. Profile "
+            f"schemas change between slicer versions and loading stale "
+            f"profiles can crash the slicer.\n\n"
+            f"  Run 'estampo profiles pin' to update your pinned profiles "
+            f"for {docker_version}."
+        )
+
+
+def _slice_local(
+    slicer: Path,
+    input_3mf: Path,
+    output_dir: Path,
+    settings_arg: str | None,
+    filament_arg: str | None,
+    filament_ids: list[int] | None,
+    allow_mix_temp: bool,
+) -> Path:
+    """Run OrcaSlicer locally via subprocess.  Returns output_dir."""
+    cmd = [str(slicer)]
+    if settings_arg:
+        cmd.extend(["--load-settings", settings_arg])
+    if filament_arg:
+        cmd.extend(["--load-filaments", filament_arg])
+
+    if allow_mix_temp:
+        cmd.append("--allow-mix-temp")
+
+    # --load-filament-ids only works with STL inputs, not 3MF
+    if filament_ids and not str(input_3mf).endswith(".3mf"):
+        cmd.extend(["--load-filament-ids", ",".join(str(i) for i in filament_ids)])
+
+    sliced_3mf_name = input_3mf.stem + "_sliced.gcode.3mf"
+    cmd.extend(
+        [
+            "--slice",
+            "0",
+            "--export-3mf",
+            sliced_3mf_name,
+            "--min-save",
+            "--outputdir",
+            str(output_dir),
+            str(input_3mf),
+        ]
+    )
+
+    log.info("Slicing with OrcaSlicer: %s", " ".join(cmd))
+
+    from estampo import ui
+
+    with ui.status("Slicing"):
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+
+    if result.returncode != 0:
+        log.error("Slicer stderr:\n%s", result.stderr)
+        raise RuntimeError(f"Slicer failed (exit code {result.returncode}):\n{result.stderr[:500]}")
+
+    log.info("Slicer stdout:\n%s", result.stdout)
+    log.info("Slicing complete. Output in %s", output_dir)
+    return output_dir
+
+
 def orca_slice_plate(
     input_3mf: Path,
     output_dir: Path | None = None,
@@ -380,12 +522,6 @@ def orca_slice_plate(
 
     Returns the output directory containing the sliced gcode.
     """
-    from estampo.docker import ensure_image as _ensure_docker_image
-    from estampo.profiles import pinned_profiles_version
-    from estampo.slicer import find_slicer
-
-    # If config specifies a version and no explicit docker_version was given,
-    # use it as the docker_version for Docker-based slicing.
     if required_version and not docker_version:
         docker_version = required_version
 
@@ -398,59 +534,14 @@ def orca_slice_plate(
         )
 
     image = docker_image(docker_version)
-
-    if local:
-        # Force local — no Docker fallback
-        use_docker = False
-        slicer = find_slicer("orca")
-    elif docker_version is not None:
-        # Explicit Docker version requested — try Docker, fall back to local
-        if _ensure_docker_image(image):
-            use_docker = True
-        else:
-            try:
-                slicer = find_slicer("orca")
-                use_docker = False
-                from estampo import ui
-
-                ui.warn(f"Docker image '{image}' not available, using local slicer.")
-            except FileNotFoundError:
-                raise FileNotFoundError(
-                    f"Docker image '{image}' not found locally or on Docker Hub, "
-                    f"and no local slicer installed. Either:\n"
-                    f"  docker pull {image}\n"
-                    f"  or install the slicer locally"
-                )
-    else:
-        # Default: try Docker first, fall back to local
-        if _ensure_docker_image(image):
-            use_docker = True
-        else:
-            try:
-                slicer = find_slicer("orca")
-                use_docker = False
-                from estampo import ui
-
-                ui.warn(
-                    "Docker not available, using local slicer. "
-                    "Builds may not be reproducible across machines."
-                )
-            except FileNotFoundError:
-                raise FileNotFoundError(
-                    f"No slicer available. Pull the Docker image:\n  docker pull {image}"
-                )
+    use_docker, slicer = _select_slicer(local, docker_version, image)
 
     # Detect and verify slicer version
-    if use_docker:
-        detected_version = docker_version
-    else:
-        detected_version = _detect_slicer_version(slicer)
-
+    detected_version = docker_version if use_docker else _detect_slicer_version(slicer)  # type: ignore[arg-type]
     if required_version:
         _check_slicer_version(
             detected_version, required_version, "Docker" if use_docker else "local"
         )
-
     docker_str = " (Docker)" if use_docker else ""
     log.debug("Slicer: OrcaSlicer %s%s", detected_version or "unknown", docker_str)
 
@@ -472,45 +563,16 @@ def orca_slice_plate(
     else:
         tmp_dir = Path(tempfile.mkdtemp(prefix="estampo_"))
 
-    # Detect stale pinned profiles early, before extracting Docker profiles.
-    # Profiles pinned for one slicer version can crash a different version due
-    # to schema changes (array sizes, removed/added keys).
     if project_dir and docker_version:
-        engine_pinned = project_dir / profiles_dir / "orca"
-        has_pinned = engine_pinned.is_dir() and any(engine_pinned.rglob("*.json"))
-        if has_pinned:
-            pinned_ver = pinned_profiles_version(project_dir, profiles_dir, "orca")
-            if pinned_ver and pinned_ver != docker_version:
-                raise EstampoError(
-                    f"Pinned profiles were created for slicer {pinned_ver} but "
-                    f"slicer.version is {docker_version}. Profile schemas change "
-                    f"between slicer versions and loading stale profiles can crash "
-                    f"the slicer.\n\n"
-                    f"  Run 'estampo profiles pin' to update your pinned profiles "
-                    f"for {docker_version}."
-                )
-            elif pinned_ver is None:
-                raise EstampoError(
-                    f"Pinned profiles in '{profiles_dir}/' have no version marker "
-                    f"and may be incompatible with slicer {docker_version}. Profile "
-                    f"schemas change between slicer versions and loading stale "
-                    f"profiles can crash the slicer.\n\n"
-                    f"  Run 'estampo profiles pin' to update your pinned profiles "
-                    f"for {docker_version}."
-                )
+        _check_pinned_profiles(project_dir, profiles_dir, docker_version)
 
-    # When slicing via Docker, extract profiles from the Docker image so we
-    # use version-matched profiles instead of the local system install (which
-    # may be a different OrcaSlicer version with incompatible gcode templates).
+    # Extract version-matched profiles from Docker image
     docker_profile_dir = None
     if use_docker and docker_version:
         docker_profile_dir = extract_docker_profiles(version=docker_version)
         log.info("Extracted Docker image profiles to %s", docker_profile_dir)
 
-    # OrcaSlicer 2.3.2+ has stricter filament-grouping validation that
-    # rejects filaments even in single-filament configs.  Pass
-    # --allow-mix-temp unconditionally on 2.3.2+ to disable the check.
-    # The flag was added in 2.3.2 — older versions reject it as unknown.
+    # OrcaSlicer 2.3.2+ needs --allow-mix-temp for AMS filament validation
     allow_mix_temp = bool(detected_version and detected_version >= "2.3.2")
 
     try:
@@ -530,7 +592,7 @@ def orca_slice_plate(
         )
 
         if use_docker:
-            result_dir = _slice_via_docker(
+            return _slice_via_docker(
                 input_3mf,
                 output_dir,
                 tmp_dir,
@@ -539,59 +601,16 @@ def orca_slice_plate(
                 image,
                 allow_mix_temp,
             )
-            return result_dir
 
-        # Local slicer path
-        cmd = [str(slicer)]
-        if settings_arg:
-            cmd.extend(["--load-settings", settings_arg])
-        if filament_arg:
-            cmd.extend(["--load-filaments", filament_arg])
-
-        # AMS printers load multiple filament types through a single nozzle.
-        if allow_mix_temp:
-            cmd.append("--allow-mix-temp")
-
-        # --load-filament-ids only works with STL inputs, not 3MF
-        if filament_ids and not str(input_3mf).endswith(".3mf"):
-            cmd.extend(["--load-filament-ids", ",".join(str(i) for i in filament_ids)])
-
-        sliced_3mf_name = input_3mf.stem + "_sliced.gcode.3mf"
-        cmd.extend(
-            [
-                "--slice",
-                "0",
-                "--export-3mf",
-                sliced_3mf_name,
-                "--min-save",
-                "--outputdir",
-                str(output_dir),
-                str(input_3mf),
-            ]
+        return _slice_local(
+            slicer,  # type: ignore[arg-type]
+            input_3mf,
+            output_dir,
+            settings_arg,
+            filament_arg,
+            filament_ids,
+            allow_mix_temp,
         )
-
-        log.info("Slicing with OrcaSlicer: %s", " ".join(cmd))
-
-        from estampo import ui
-
-        with ui.status("Slicing"):
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=300,
-            )
-
-        if result.returncode != 0:
-            log.error("Slicer stderr:\n%s", result.stderr)
-            raise RuntimeError(
-                f"Slicer failed (exit code {result.returncode}):\n{result.stderr[:500]}"
-            )
-
-        log.info("Slicer stdout:\n%s", result.stdout)
-        log.info("Slicing complete. Output in %s", output_dir)
-        return output_dir
-
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
         if docker_profile_dir:
