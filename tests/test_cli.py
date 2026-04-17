@@ -763,6 +763,151 @@ def test_init_template(capsys):
 # --- validate ---
 
 
+def test_init_non_interactive(tmp_path, capsys):
+    """init with --engine, --filament, --part should generate TOML without wizard."""
+    dest = tmp_path / "estampo.toml"
+    main(
+        [
+            "init",
+            "--engine",
+            "orca",
+            "--printer",
+            "Bambu Lab P1S 0.4 nozzle",
+            "--process",
+            "0.20mm Standard @BBL X1C",
+            "--filament",
+            "Generic PLA @base",
+            "--part",
+            "cube.stl",
+            "--part",
+            "bracket.stl",
+            "-o",
+            str(dest),
+        ]
+    )
+    toml = dest.read_text()
+    assert 'engine = "orca"' in toml
+    assert 'printer = "Bambu Lab P1S 0.4 nozzle"' in toml
+    assert 'process = "0.20mm Standard @BBL X1C"' in toml
+    assert "Generic PLA @base" in toml
+    assert 'file = "cube.stl"' in toml
+    assert 'file = "bracket.stl"' in toml
+
+
+def test_init_non_interactive_partial_falls_back_to_wizard_warning(capsys):
+    """init with only some non-interactive params should warn about fallback."""
+    # This will fall back to wizard which will fail without a terminal,
+    # but we should see the warning first
+    with pytest.raises((SystemExit, Exception)):
+        main(["init", "--engine", "orca", "--part", "cube.stl"])
+    out = capsys.readouterr().out
+    assert "Non-interactive init requires" in out
+
+
+# --- info ---
+
+
+def test_info_json(capsys):
+    """info --json should output valid JSON with expected keys."""
+    import json as json_mod
+
+    main(["info", "--json"])
+    out = capsys.readouterr().out
+    data = json_mod.loads(out)
+    assert "stages" in data
+    assert "engines" in data
+    assert "orient_values" in data
+    assert "bed_types" in data
+    assert "file_extensions" in data
+    assert "command_variables" in data
+    assert "orca" in data["engines"]
+    assert "cura" in data["engines"]
+    assert "flat" in data["orient_values"]
+    assert ".stl" in data["file_extensions"]
+    assert "output_dir" in data["command_variables"]
+
+
+def test_info_human(capsys):
+    """info without --json should output human-readable text."""
+    main(["info"])
+    out = capsys.readouterr().out
+    assert "Stages" in out
+    assert "Engines" in out
+    assert "flat" in out
+
+
+# --- profiles list --json ---
+
+
+@patch("estampo.profiles.discover_profile_names")
+def test_profiles_list_json(mock_discover, capsys):
+    """profiles list --json should output valid JSON."""
+    import json as json_mod
+
+    mock_discover.return_value = (
+        {"machine": ["Bambu P1S"], "process": ["0.20mm Standard"], "filament": ["PLA"]},
+        "bundled",
+    )
+    main(["profiles", "list", "--engine", "orca", "--json"])
+    out = capsys.readouterr().out
+    data = json_mod.loads(out)
+    assert data["source"] == "bundled"
+    assert data["engine"] == "orca"
+    assert "Bambu P1S" in data["profiles"]["machine"]
+
+
+@patch("estampo.profiles.discover_profile_names")
+def test_profiles_list_json_with_category(mock_discover, capsys):
+    """profiles list --json --category should filter."""
+    import json as json_mod
+
+    mock_discover.return_value = (
+        {"machine": ["P1S"], "process": ["Standard"], "filament": ["PLA"]},
+        "bundled",
+    )
+    main(["profiles", "list", "--engine", "orca", "--category", "machine", "--json"])
+    out = capsys.readouterr().out
+    data = json_mod.loads(out)
+    assert "machine" in data["profiles"]
+    assert "process" not in data["profiles"]
+
+
+# --- profiles pin --yes ---
+
+
+@patch("estampo.profiles.pin_profiles", return_value=[Path("/a/b.json")])
+@patch("estampo.cli.load_config")
+def test_profiles_pin_yes_skips_prompts(mock_load, mock_pin, tmp_path, capsys):
+    """profiles pin --yes should overwrite without prompting."""
+    config = tmp_path / "estampo.toml"
+    config.write_text("[slicer]\n")
+    (tmp_path / "profiles" / "orca").mkdir(parents=True)
+    (tmp_path / "profiles" / "orca" / "old.json").write_text("{}")
+    mock_load.return_value = _mock_pin_cfg(tmp_path)
+
+    # No input() mock needed — --yes should skip prompts
+    main(["profiles", "pin", str(config), "--yes"])
+    out = capsys.readouterr().out
+    assert "Pinned 1 profile(s)" in out
+    mock_pin.assert_called_once()
+
+
+@patch("estampo.profiles.pin_profiles", return_value=[Path("/a/b.json")])
+@patch("estampo.cli.load_config")
+def test_profiles_pin_yes_updates_toml(mock_load, mock_pin, tmp_path, capsys):
+    """profiles pin --yes should auto-accept TOML updates."""
+    config = tmp_path / "estampo.toml"
+    config.write_text('[slicer]\nengine = "orca"\nprofiles_dir = "old"\n')
+    mock_load.return_value = _mock_pin_cfg(tmp_path, profiles_dir="new")
+
+    main(["profiles", "pin", str(config), "--yes"])
+    updated = config.read_text()
+    assert 'profiles_dir = "new"' in updated
+
+
+# --- validate ---
+
+
 def test_validate_missing_config(tmp_path):
     """validate should fail when config file doesn't exist."""
     with pytest.raises(SystemExit):

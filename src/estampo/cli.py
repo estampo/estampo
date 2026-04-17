@@ -1,5 +1,6 @@
 """CLI entry point for estampo."""
 
+import json
 import logging
 import sys
 from pathlib import Path
@@ -346,6 +347,41 @@ def _run_pipeline(
 
 
 @app.command()
+def info(
+    json_flag: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+) -> None:
+    """Show valid config values: stages, engines, orient, bed types, extensions, variables."""
+    from estampo.commands import COMMAND_VARIABLES
+    from estampo.config import SUPPORTED_EXTENSIONS, VALID_ENGINES, VALID_ORIENTS
+    from estampo.init import BED_TYPES
+    from estampo.pipeline import STAGE_OUTPUTS
+
+    data = {
+        "stages": sorted(STAGE_OUTPUTS.keys()),
+        "engines": list(VALID_ENGINES),
+        "orient_values": sorted(VALID_ORIENTS),
+        "bed_types": BED_TYPES,
+        "file_extensions": sorted(SUPPORTED_EXTENSIONS),
+        "command_variables": COMMAND_VARIABLES,
+    }
+
+    if json_flag:
+        print(json.dumps(data, indent=2))
+    else:
+        from estampo import ui
+
+        for key, val in data.items():
+            ui.heading(key.replace("_", " ").title())
+            if isinstance(val, dict):
+                for k, v in val.items():
+                    ui.console.print(f"  {{{k}}}  — {v}")
+            elif isinstance(val, list):
+                for item in val:
+                    ui.console.print(f"  {item}")
+            ui.console.print()
+
+
+@app.command()
 def init(
     template: Annotated[
         bool, typer.Option("--template", help="Dump a commented template to stdout (no wizard)")
@@ -358,40 +394,86 @@ def init(
         Path | None,
         typer.Option("-o", "--output", help="Output file path (default: ./estampo.toml)"),
     ] = None,
+    engine: Annotated[
+        str | None,
+        typer.Option("--engine", help="Slicer engine: orca or cura (non-interactive)"),
+    ] = None,
+    printer: Annotated[
+        str | None,
+        typer.Option("--printer", help="Printer profile name (non-interactive)"),
+    ] = None,
+    process: Annotated[
+        str | None,
+        typer.Option("--process", help="Process/quality profile name (non-interactive)"),
+    ] = None,
+    filament: Annotated[
+        list[str] | None,
+        typer.Option("--filament", help="Filament profile (repeatable, non-interactive)"),
+    ] = None,
+    part: Annotated[
+        list[str] | None,
+        typer.Option("--part", help="Part file path (repeatable, non-interactive)"),
+    ] = None,
     verbose: Annotated[bool, typer.Option("-v", "--verbose", help="Enable debug logging")] = False,
 ) -> None:
     """Create a new estampo.toml config file.
 
-    The interactive wizard requires a Unix terminal (Linux, macOS, or WSL).
+    Non-interactive mode: pass --engine, --printer, --filament, and --part
+    to generate a config without the wizard. Use --process for OrcaSlicer.
+
+    Interactive wizard: requires a Unix terminal (Linux, macOS, or WSL).
     On Windows, use --template to generate a config file manually.
     Use --from-3mf to extract settings from an OrcaSlicer project.
     """
     _setup_logging(verbose)
 
-    if from_3mf:
+    # Non-interactive mode: all required params provided
+    if engine and filament and part:
+        from estampo.init import build_config_toml
+
+        toml = build_config_toml(
+            engine=engine,
+            printer=printer,
+            process=process,
+            filaments=filament,
+            parts=part,
+        )
+        _write_or_print(toml, output)
+    elif from_3mf:
         from estampo.init import extract_from_3mf
 
         toml = extract_from_3mf(from_3mf)
-        dest = output or Path("estampo.toml")
-        if dest.exists():
-            from estampo import ui
-
-            ui.warn(f"{dest} already exists — printing to stdout")
-            print(toml, end="")
-        else:
-            from estampo import ui
-
-            dest.write_text(toml)
-            ui.success(f"Wrote {dest}")
-            ui.info("Review the file and add your [[parts]] entries.")
+        _write_or_print(toml, output)
     elif template:
         from estampo.init import dump_template
 
         print(dump_template(), end="")
     else:
+        if engine or filament or part:
+            from estampo import ui
+
+            ui.warn(
+                "Non-interactive init requires --engine, --filament, and --part. "
+                "Falling back to wizard."
+            )
         from estampo.init import run_wizard
 
         run_wizard(output=output)
+
+
+def _write_or_print(toml: str, output: Path | None) -> None:
+    """Write TOML to file or stdout."""
+    dest = output or Path("estampo.toml")
+    if dest.exists():
+        from estampo import ui
+
+        ui.warn(f"{dest} already exists — printing to stdout")
+        print(toml, end="")
+    else:
+        from estampo import ui
+
+        dest.write_text(toml)
+        ui.success(f"Wrote {dest}")
 
 
 @app.command()
@@ -430,6 +512,7 @@ def profiles_list(
     category: Annotated[
         str | None, typer.Option(help="Filter by category (machine, process, filament)")
     ] = None,
+    json_flag: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
     verbose: Annotated[bool, typer.Option("-v", "--verbose", help="Enable debug logging")] = False,
 ) -> None:
     """List available profiles."""
@@ -437,13 +520,24 @@ def profiles_list(
     from estampo.profiles import (
         _INLINE_ENGINES,
         CATEGORIES,
+        discover_profile_names,
         discover_profiles,
     )
 
     if engine in _INLINE_ENGINES:
-        from estampo import ui
+        if json_flag:
+            print(json.dumps({"profiles": {}, "source": "inline", "engine": engine}, indent=2))
+        else:
+            from estampo import ui
 
-        ui.info(f"Engine '{engine}' uses inline settings — no extractable profiles.")
+            ui.info(f"Engine '{engine}' uses inline settings — no extractable profiles.")
+        raise typer.Exit(0)
+
+    if json_flag:
+        names, source = discover_profile_names(engine)
+        if category:
+            names = {category: names.get(category, [])}
+        print(json.dumps({"profiles": names, "source": source, "engine": engine}, indent=2))
         raise typer.Exit(0)
 
     from estampo import ui
@@ -451,15 +545,19 @@ def profiles_list(
     profiles = discover_profiles(engine)
     categories = [category] if category else list(CATEGORIES)
     for cat in categories:
-        names = profiles.get(cat, {})
-        ui.console.print(f"\n{cat} ({len(names)} profiles):")
-        for name in names:
-            ui.console.print(f"  {name}")
+        cat_profiles = profiles.get(cat, {})
+        ui.console.print(f"\n{cat} ({len(cat_profiles)} profiles):")
+        for profile_name in cat_profiles:
+            ui.console.print(f"  {profile_name}")
 
 
 @profiles_app.command("pin")
 def profiles_pin(
     config: Annotated[Path | None, typer.Argument(help="Path to config file")] = None,
+    yes: Annotated[
+        bool,
+        typer.Option("--yes", "-y", "--force", help="Skip confirmation prompts (auto-overwrite)"),
+    ] = False,
     verbose: Annotated[bool, typer.Option("-v", "--verbose", help="Enable debug logging")] = False,
 ) -> None:
     """Pin profiles from config into local profiles/ dir.
@@ -488,17 +586,22 @@ def profiles_pin(
     target = cfg.base_dir / profiles_dir
     engine_subdir = target / cfg.slicer.engine
     if engine_subdir.exists() and any(engine_subdir.iterdir()):
-        ui.warn(f"Pinned profiles already exist in '{profiles_dir}/{cfg.slicer.engine}/'.")
-        choice = input("  [o]verwrite, use [d]ifferent directory, or [c]ancel? ").strip().lower()
-        if choice.startswith("d"):
-            profiles_dir = input("  New directory name: ").strip()
-            if not profiles_dir:
+        if yes:
+            ui.info(f"Overwriting pinned profiles in '{profiles_dir}/{cfg.slicer.engine}/'.")
+        else:
+            ui.warn(f"Pinned profiles already exist in '{profiles_dir}/{cfg.slicer.engine}/'.")
+            choice = (
+                input("  [o]verwrite, use [d]ifferent directory, or [c]ancel? ").strip().lower()
+            )
+            if choice.startswith("d"):
+                profiles_dir = input("  New directory name: ").strip()
+                if not profiles_dir:
+                    ui.info("Cancelled.")
+                    raise typer.Exit(1)
+            elif choice.startswith("c"):
                 ui.info("Cancelled.")
-                raise typer.Exit(1)
-        elif choice.startswith("c"):
-            ui.info("Cancelled.")
-            raise typer.Exit(0)
-        # else: overwrite
+                raise typer.Exit(0)
+            # else: overwrite
 
     active = cfg.slicer.active
     orca = cfg.slicer.orca if cfg.slicer.engine == "orca" else None
@@ -523,16 +626,20 @@ def profiles_pin(
     if existing_dir == profiles_dir:
         pass  # already correct
     elif existing_dir is not None and existing_dir != profiles_dir:
-        # Different value exists — ask
-        update = (
-            input(
-                f'\n  estampo.toml has profiles_dir = "{existing_dir}". '
-                f'Update to "{profiles_dir}"? [y/n] '
+        # Different value exists — ask (or auto-accept with --yes)
+        if yes:
+            do_update = True
+        else:
+            update = (
+                input(
+                    f'\n  estampo.toml has profiles_dir = "{existing_dir}". '
+                    f'Update to "{profiles_dir}"? [y/n] '
+                )
+                .strip()
+                .lower()
             )
-            .strip()
-            .lower()
-        )
-        if update.startswith("y"):
+            do_update = update.startswith("y")
+        if do_update:
             toml_text = toml_text.replace(
                 f'profiles_dir = "{existing_dir}"',
                 f'profiles_dir = "{profiles_dir}"',

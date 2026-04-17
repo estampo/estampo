@@ -14,6 +14,8 @@ from estampo.constants import DEFAULT_PLATE_SIZE
 log = logging.getLogger(__name__)
 
 VALID_ORIENTS = {"flat", "upright", "side", "upside-down"}
+VALID_ENGINES = ("orca", "cura")
+SUPPORTED_EXTENSIONS = {".stl", ".3mf", ".step", ".stp", ".obj"}
 
 
 @dataclass
@@ -280,7 +282,7 @@ def load_config(path: Path) -> EstampoConfig:
     # Slicer config
     slicer_raw = raw.get("slicer", {})
     engine = slicer_raw.get("engine", "orca")
-    if engine not in ("orca", "cura"):
+    if engine not in VALID_ENGINES:
         raise EstampoError(f"slicer.engine must be 'orca' or 'cura', got '{engine}'")
 
     # Engine-namespaced sections: [slicer.orca] and/or [slicer.cura]
