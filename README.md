@@ -12,13 +12,16 @@
 
 **The build system for reproducible 3D prints.**
 
-3D printing has a reproducibility problem:
+3D printing workflows are trapped in GUIs. Slicer settings get lost between
+sessions, printer configs drift across machines, and there's no way to version,
+diff, or review a print job. None of this is accessible to automation — or to
+AI assistants.
 
-- Slicer settings get lost between sessions or through human error
-- Printer configs drift across machines and slicer versions
-- There's no way to version, diff, or audit a print job
-
-estampo fixes this. Define parts, slicer settings, and printer targets in a single TOML file — git-friendly, diffable, and committable alongside your CAD files. Same repo, same config → same G-code, locally or [in CI](#cicd-example).
+estampo takes a different approach: define parts, slicer settings, and pipeline
+stages in a single TOML file — text that's git-friendly, diffable, and
+committable alongside your CAD files. Because the entire workflow is text,
+it's naturally accessible to AI coding assistants, CI systems, and code review.
+Same repo, same config → same G-code, locally or [in CI](#cicd-example).
 
 > **Warning:** estampo is in active early development. We are moving fast and breaking things — config format, CLI flags, and Python APIs may change between minor versions without deprecation. Pin your version if stability matters to you.
 
@@ -61,12 +64,16 @@ sparse_infill_density = "25%"
 enable_support = 1
 brim_type = "auto_brim"
 
-[printer]
-name = "workshop"
+[pipeline]
+stages = ["load", "arrange", "plate", "slice", "gcode-info", "pack"]
+
+[pack]
+command = "bambox repack {sliced_3mf}"
+output = "{sliced_3mf}"
 ```
 
 ```bash
-estampo run        # arrange → slice → print, one command
+estampo run        # arrange → slice → pack, one command
 ```
 
 ```
@@ -77,7 +84,7 @@ estampo run        # arrange → slice → print, one command
 ✔ Preview exported → plate_preview.3mf
 ✔ Sliced with OrcaSlicer 2.3.1 in 48s
 ✔ Print time: 3h 42m, 24.6g filament
-✔ Sent to printer "workshop"
+✔ Packed → plate_sliced.gcode.3mf
 ```
 
 ## What estampo does
@@ -86,12 +93,11 @@ estampo run        # arrange → slice → print, one command
 
 1. **Define** parts + settings in `estampo.toml`
 2. **Arrange** — bin-packs models onto the build plate
-3. **Slice** — using a pinned OrcaSlicer version (via Docker) for identical G-code across machines
-4. **Print** — sends the result to your printer
+3. **Slice** — using a pinned slicer version (via Docker) for identical G-code across machines
+4. **Post-process** — run command stages (pack for Bambu, template resolution, etc.)
 
-Everything is declared in a single TOML file — git-friendly, diffable, and committable alongside
-your CAD files. Lock the slicer version, pin the profiles, and the output is reproducible on any
-machine or in CI.
+Everything is declared in a single TOML file. Lock the slicer version, pin the
+profiles, and the output is reproducible on any machine or in CI.
 
 ![estampo pipeline](https://raw.githubusercontent.com/estampo/estampo/main/docs/images/pipeline.png)
 
@@ -122,15 +128,29 @@ CuraEngine CLI (`CuraEngine slice -j definition.json -s KEY=VALUE -l model.stl -
 
 estampo handles definition resolution, search paths, extruder context, and setting inheritance — you just declare the printer name and overrides in TOML.
 
+### Works with AI assistants
+
+GUI-based slicers require point-and-click interaction that AI assistants cannot
+drive. estampo's text-based config is different — an AI assistant can read your
+TOML, understand your print setup, suggest overrides, create CI workflows, and
+validate the result, all without leaving the conversation.
+
+We provide a ready-to-paste [AI setup prompt](docs/ai-setup-prompt.md) that
+gives any AI assistant (Claude, ChatGPT, Copilot) enough context to add estampo
+to a project from scratch — it scans the repo for model files, asks you a few
+questions, and generates the config. This isn't an AI feature bolted on — it's
+an architectural property of using text instead of a GUI.
+
 ## Best fit
 
 estampo is best suited to:
 
 - Hardware teams keeping CAD and manufacturing inputs in Git
 - Engineers who want deterministic slicing in CI
+- Teams using AI coding assistants to manage their build and print workflows
 - Makers who want a declarative print workflow instead of slicer click-ops
 
-If you mostly want interactive print setup in a GUI, use OrcaSlicer directly.
+If you mostly want interactive print setup in a GUI, use OrcaSlicer or Cura directly.
 
 ## Status
 
