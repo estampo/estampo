@@ -296,6 +296,14 @@ estampo is printer-agnostic — it produces sliced output but does not send file
 - [Config reference](https://github.com/estampo/estampo/blob/main/docs/config.md) — complete TOML format
 - [Developing](https://github.com/estampo/estampo/blob/main/docs/developing.md) — setup, testing, architecture
 
+## Development
+
+estampo's codebase is authored by [Claude](https://claude.ai), Anthropic's AI
+assistant, under the direction and review of a human maintainer. Architecture
+decisions, priorities, and acceptance criteria are set by the maintainer; Claude
+writes the code, tests, documentation, and CI workflows. Every commit is
+reviewed before merge.
+
 ## License
 
 Apache 2.0
