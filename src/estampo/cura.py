@@ -667,8 +667,8 @@ class CuraProfile:
     per_extruder: list[dict[str, object]] = field(default_factory=list)
 
 
-def _settings_flags(profile: CuraProfile) -> list[str]:
-    """Build -s key=value flags from profile.
+def _settings_dict(profile: CuraProfile) -> dict[str, object]:
+    """Build the flat CuraEngine settings dict from a profile.
 
     Machine settings (bed size, heated bed, start/end gcode) are handled
     by the printer definition — only process/material settings here.
@@ -707,11 +707,18 @@ def _settings_flags(profile: CuraProfile) -> list[str]:
         # CuraEngine 5.12 requires these explicitly (not resolved from def)
         "roofing_layer_count": 0,
         "flooring_layer_count": 0,
+        "machine_nozzle_size": profile.nozzle_diameter,
+        "machine_buildplate_type": profile.bed_type.lower().replace(" ", "_"),
+        "material_type": profile.filament_type,
     }
     pairs.update(profile.overrides)
+    return pairs
 
+
+def _settings_flags(profile: CuraProfile) -> list[str]:
+    """Build -s key=value flags from profile."""
     flags: list[str] = []
-    for k, v in pairs.items():
+    for k, v in _settings_dict(profile).items():
         flags.extend(["-s", f"{k}={v}"])
     return flags
 
@@ -815,143 +822,16 @@ def _place_on_bed(
     return out
 
 
-def _safe_eval_arithmetic(expr: str) -> float:
-    """Safely evaluate a simple arithmetic expression (integers and +-*/).
+def _write_cura_settings(output_dir: Path, profile: CuraProfile) -> Path:
+    """Write CuraEngine settings to JSON for downstream command stages.
 
-    Uses ``ast`` to parse the expression and only allows numeric literals
-    and basic binary operators.  Raises ``ValueError`` for anything else.
+    External tools (e.g. ``cura-p1s resolve``) use this file to resolve
+    template variables in G-code produced by CuraEngine.
     """
-    import ast
-    import operator
-
-    _OPS: dict[type, object] = {
-        ast.Add: operator.add,
-        ast.Sub: operator.sub,
-        ast.Mult: operator.mul,
-        ast.Div: operator.truediv,
-    }
-
-    def _eval_node(node: ast.AST) -> float:
-        if isinstance(node, ast.Expression):
-            return _eval_node(node.body)
-        if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
-            return float(node.value)
-        if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.USub):
-            return -_eval_node(node.operand)
-        if isinstance(node, ast.BinOp) and type(node.op) in _OPS:
-            op = _OPS[type(node.op)]
-            return op(  # type: ignore[operator]
-                _eval_node(node.left), _eval_node(node.right)
-            )
-        raise ValueError(f"Unsupported expression node: {ast.dump(node)}")
-
-    tree = ast.parse(expr.strip(), mode="eval")
-    return _eval_node(tree)
-
-
-def _safe_eval_condition(expr: str) -> bool:
-    """Safely evaluate a simple comparison expression (string == string).
-
-    Uses ``ast`` to parse the expression and only allows string/numeric
-    literals and ``==`` / ``!=`` comparisons.  Raises ``ValueError`` for
-    anything else.
-    """
-    import ast
-
-    tree = ast.parse(expr.strip(), mode="eval")
-    node = tree.body
-
-    if not isinstance(node, ast.Compare):
-        raise ValueError(f"Expected comparison, got: {ast.dump(node)}")
-    if len(node.ops) != 1 or len(node.comparators) != 1:
-        raise ValueError(f"Only single comparisons supported: {ast.dump(node)}")
-
-    def _get_value(n: ast.AST) -> object:
-        if isinstance(n, ast.Constant):
-            return n.value
-        raise ValueError(f"Unsupported node in comparison: {ast.dump(n)}")
-
-    left = _get_value(node.left)
-    right = _get_value(node.comparators[0])
-    op = node.ops[0]
-
-    if isinstance(op, ast.Eq):
-        return left == right
-    if isinstance(op, ast.NotEq):
-        return left != right
-    raise ValueError(f"Unsupported comparison operator: {ast.dump(op)}")
-
-
-def _substitute_gcode_templates(gcode_path: Path, profile: CuraProfile) -> None:
-    """Replace OrcaSlicer-style ``{variable}`` placeholders in G-code.
-
-    CuraEngine emits start/end G-code verbatim from the machine
-    definition — it does not resolve ``{material_bed_temperature_layer_0}``
-    and similar template variables.  This function substitutes them with
-    values from the profile.
-    """
-    text = gcode_path.read_text()
-
-    replacements = {
-        "material_bed_temperature_layer_0": str(profile.material_bed_temperature),
-        "material_bed_temperature": str(profile.material_bed_temperature),
-        "material_print_temperature_layer_0": str(profile.material_print_temperature),
-        "material_print_temperature": str(profile.material_print_temperature),
-        "machine_nozzle_size": str(profile.nozzle_diameter),
-        "machine_buildplate_type": profile.bed_type.lower().replace(" ", "_"),
-        "material_type": profile.filament_type,
-    }
-
-    changed = False
-    for key, value in replacements.items():
-        # Simple {key} replacement
-        placeholder = "{" + key + "}"
-        if placeholder in text:
-            text = text.replace(placeholder, value)
-            changed = True
-
-    # Handle expressions like {material_print_temperature_layer_0 - 20}
-    def _eval_expr(m: re.Match[str]) -> str:
-        expr = m.group(1).strip()
-        for k, v in replacements.items():
-            expr = expr.replace(k, v)
-        try:
-            return str(int(_safe_eval_arithmetic(expr)))
-        except (ValueError, TypeError, SyntaxError):
-            return m.group(0)
-
-    text, n = re.subn(r"\{([^}]*\b(?:material_\w+|machine_\w+)\b[^}]*)\}", _eval_expr, text)
-    if n > 0:
-        changed = True
-
-    # Handle conditionals: {if condition}...{endif}
-    # Simple approach: evaluate the condition and keep/remove the block
-    def _eval_conditional(m: re.Match[str]) -> str:
-        condition = m.group(1).strip()
-        body = m.group(2)
-        # Replace known variables in condition
-        cond_eval = condition
-        cond_eval = cond_eval.replace(
-            "machine_buildplate_type",
-            repr(profile.bed_type.lower().replace(" ", "_")),
-        )
-        try:
-            if _safe_eval_condition(cond_eval):
-                return body
-        except (ValueError, TypeError, SyntaxError):
-            pass
-        return ""
-
-    text, n_cond = re.subn(
-        r"\{if\s+([^}]+)\}(.*?)\{endif\}",
-        _eval_conditional,
-        text,
-        flags=re.DOTALL,
-    )
-
-    if changed or n > 0 or n_cond > 0:
-        gcode_path.write_text(text)
-        log.info("Substituted template variables in G-code")
+    settings_path = output_dir / "cura_settings.json"
+    settings_path.write_text(json.dumps(_settings_dict(profile), indent=2) + "\n")
+    log.info("Wrote CuraEngine settings: %s", settings_path)
+    return settings_path
 
 
 def _prepare_cura_staging(
@@ -1047,7 +927,7 @@ def _run_docker_slice(
         raise EstampoError(f"CuraEngine produced no output:\n{combined[:500]}")
 
     _patch_gcode_header(output_gcode, result.stderr)
-    _substitute_gcode_templates(output_gcode, profile)
+    _write_cura_settings(output_dir, profile)
 
     log.info("CuraEngine output: %s (%d bytes)", output_gcode, output_gcode.stat().st_size)
     return output_dir
@@ -1091,7 +971,7 @@ def _run_local_slice(
         raise EstampoError(f"CuraEngine produced no output:\n{combined[:500]}")
 
     _patch_gcode_header(output_gcode, result.stderr)
-    _substitute_gcode_templates(output_gcode, profile)
+    _write_cura_settings(output_dir, profile)
 
     log.info("CuraEngine output: %s (%d bytes)", output_gcode, output_gcode.stat().st_size)
     return output_dir
