@@ -2,6 +2,8 @@
 
 > This file is a concise reference for both humans and AI assistants.
 > For the full JSON Schema, see [`estampo.schema.json`](estampo.schema.json).
+> For complete slicer setting lists, see [`orca-settings.json`](orca-settings.json)
+> (263 settings) and [`cura-settings.json`](cura-settings.json) (711 settings).
 
 estampo is a declarative build system for reproducible 3D prints. You write
 an `estampo.toml` config file, and estampo handles the pipeline: load meshes,
@@ -70,24 +72,60 @@ filaments = ["Generic PLA @base"]      # one per AMS slot
 
 Run `estampo profiles list --engine orca` to discover available profiles.
 
-Common override keys (OrcaSlicer names):
+Common override keys (OrcaSlicer names) — for all 113 process settings, see
+[`orca-settings.json`](orca-settings.json):
 
 | Setting | Key | Example |
 |---------|-----|---------|
-| Infill density | `sparse_infill_density` | `"20%"` |
-| Infill pattern | `sparse_infill_pattern` | `"gyroid"` |
-| Wall count | `wall_loops` | `3` |
+| **Quality** | | |
 | Layer height | `layer_height` | `0.2` |
-| Supports | `enable_support` | `1` |
-| Support angle | `support_threshold_angle` | `45` |
-| Seam position | `seam_position` | `"random"` |
+| First layer height | `initial_layer_print_height` | `0.28` |
+| Line width | `line_width` | `0.42` |
+| Outer wall line width | `outer_wall_line_width` | `0.42` |
+| **Walls & surfaces** | | |
+| Wall count | `wall_loops` | `3` |
 | Top layers | `top_shell_layers` | `5` |
 | Bottom layers | `bottom_shell_layers` | `4` |
+| Detect thin walls | `detect_thin_wall` | `1` |
+| One wall on top | `only_one_wall_top` | `1` |
+| Seam position | `seam_position` | `"random"` |
 | Ironing | `ironing_type` | `"top surface only"` |
-| Brim | `brim_type` | `"outer_only"` |
-| Print speed | `outer_wall_speed` | `60` |
+| **Infill** | | |
+| Infill density | `sparse_infill_density` | `"20%"` |
+| Infill pattern | `sparse_infill_pattern` | `"gyroid"` |
+| Min sparse area | `minimum_sparse_infill_area` | `15` |
+| **Speed** | | |
+| Outer wall speed | `outer_wall_speed` | `60` |
+| Inner wall speed | `inner_wall_speed` | `80` |
+| Infill speed | `sparse_infill_speed` | `100` |
 | Travel speed | `travel_speed` | `400` |
-| Temperature | `nozzle_temperature` | `"220"` |
+| Bridge speed | `bridge_speed` | `25` |
+| Overhang speed | `overhang_speed_classic` | `20` |
+| **Supports** | | |
+| Enable supports | `enable_support` | `1` |
+| Support type | `support_type` | `"tree(auto)"` |
+| Support angle | `support_threshold_angle` | `45` |
+| **Adhesion** | | |
+| Brim | `brim_type` | `"outer_only"` |
+| Brim width | `brim_width` | `"5mm"` |
+| Skirt loops | `skirt_loops` | `0` |
+| Elephant foot comp. | `elefant_foot_compensation` | `0.1` |
+| **Retraction** | | |
+| Retraction distance | `retraction_length` | `"0.8"` |
+| Retraction speed | `retraction_speed` | `"30"` |
+| Z hop | `z_hop` | `"0.4"` |
+| **Cooling** | | |
+| Min fan speed | `fan_min_speed` | `35` |
+| Max fan speed | `fan_max_speed` | `100` |
+| Overhang fan speed | `overhang_fan_speed` | `100` |
+| **Compensation** | | |
+| XY hole compensation | `xy_hole_compensation` | `0` |
+| XY contour compensation | `xy_contour_compensation` | `0` |
+| **Temperature** (filament overrides) | | |
+| Nozzle temperature | `nozzle_temperature` | `"220"` |
+| Bed temperature | `bed_temperature` | `"55"` |
+| Filament flow ratio | `filament_flow_ratio` | `"0.98"` |
+| Max volumetric speed | `filament_max_volumetric_speed` | `"15"` |
 
 ### CuraEngine (`engine = "cura"`)
 
@@ -102,19 +140,62 @@ version = "5.12.0"                     # current stable
 printer = "bambox_p1s"                 # definition name or ID
 ```
 
-Common override keys (CuraEngine names):
+Common override keys (CuraEngine names) — for all 711 settings, see
+[`cura-settings.json`](cura-settings.json):
 
 | Setting | Key | Example |
 |---------|-----|---------|
-| Infill density | `infill_sparse_density` | `20` |
-| Infill pattern | `infill_pattern` | `"gyroid"` |
-| Wall count | `wall_line_count` | `3` |
+| **Quality** | | |
 | Layer height | `layer_height` | `0.2` |
-| Supports | `support_enable` | `true` |
-| Support angle | `support_angle` | `45` |
-| Print speed | `speed_print` | `60` |
+| First layer height | `layer_height_0` | `0.28` |
+| Line width | `line_width` | `0.4` |
+| Outer wall line width | `wall_line_width_0` | `0.4` |
+| **Walls & surfaces** | | |
+| Wall count | `wall_line_count` | `3` |
 | Top layers | `top_layers` | `5` |
 | Bottom layers | `bottom_layers` | `4` |
+| Fill gaps between walls | `fill_outline_gaps` | `true` |
+| Z seam alignment | `z_seam_type` | `"sharpest_corner"` |
+| Ironing | `ironing_enabled` | `true` |
+| Ironing pattern | `ironing_pattern` | `"zigzag"` |
+| **Infill** | | |
+| Infill density | `infill_sparse_density` | `20` |
+| Infill pattern | `infill_pattern` | `"gyroid"` |
+| **Speed** | | |
+| Print speed | `speed_print` | `60` |
+| Travel speed | `speed_travel` | `150` |
+| Outer wall speed | `speed_wall_0` | `30` |
+| Inner wall speed | `speed_wall_x` | `60` |
+| Infill speed | `speed_infill` | `80` |
+| Top/bottom speed | `speed_topbottom` | `30` |
+| First layer speed | `speed_layer_0` | `20` |
+| **Supports** | | |
+| Enable supports | `support_enable` | `true` |
+| Support structure | `support_structure` | `"tree"` |
+| Support angle | `support_angle` | `45` |
+| Tree support angle | `support_tree_angle` | `45` |
+| **Adhesion** | | |
+| Adhesion type | `adhesion_type` | `"brim"` |
+| Brim width | `brim_width` | `5` |
+| Skirt line count | `skirt_line_count` | `3` |
+| Raft margin | `raft_margin` | `5` |
+| **Retraction** | | |
+| Retraction distance | `retraction_amount` | `0.8` |
+| Retraction speed | `retraction_speed` | `30` |
+| Z hop enabled | `retraction_hop_enabled` | `true` |
+| Z hop height | `retraction_hop` | `0.4` |
+| **Cooling** | | |
+| Min fan speed | `cool_fan_speed_min` | `100` |
+| Max fan speed | `cool_fan_speed_max` | `100` |
+| Min layer time | `cool_min_layer_time` | `5` |
+| **Material** | | |
+| Print temperature | `material_print_temperature` | `215` |
+| Bed temperature | `material_bed_temperature` | `55` |
+| First layer temp | `material_print_temperature_layer_0` | `220` |
+| **Compensation** | | |
+| XY offset | `xy_offset` | `0` |
+| Hole XY offset | `hole_xy_offset` | `0` |
+| Mesh union | `meshfix_union_all` | `true` |
 
 ## Parts
 
@@ -348,15 +429,51 @@ Use the correct names in `[slicer.orca.overrides]` or `[slicer.cura.overrides]`.
 
 | Concept | OrcaSlicer key | CuraEngine key |
 |---------|---------------|----------------|
-| Infill density | `sparse_infill_density` | `infill_sparse_density` |
-| Infill pattern | `sparse_infill_pattern` | `infill_pattern` |
-| Wall count | `wall_loops` | `wall_line_count` |
+| **Quality** | | |
 | Layer height | `layer_height` | `layer_height` |
-| Enable supports | `enable_support` | `support_enable` |
-| Support angle | `support_threshold_angle` | `support_angle` |
+| First layer height | `initial_layer_print_height` | `layer_height_0` |
+| Line width | `line_width` | `line_width` |
+| **Walls** | | |
+| Wall count | `wall_loops` | `wall_line_count` |
 | Top solid layers | `top_shell_layers` | `top_layers` |
 | Bottom solid layers | `bottom_shell_layers` | `bottom_layers` |
-| Print speed | `outer_wall_speed` | `speed_print` |
+| Detect thin walls | `detect_thin_wall` | `fill_outline_gaps` |
 | Seam position | `seam_position` | `z_seam_type` |
+| Ironing | `ironing_type` | `ironing_enabled` |
+| **Infill** | | |
+| Infill density | `sparse_infill_density` | `infill_sparse_density` |
+| Infill pattern | `sparse_infill_pattern` | `infill_pattern` |
+| **Speed** | | |
+| Print speed | `outer_wall_speed` | `speed_print` |
+| Inner wall speed | `inner_wall_speed` | `speed_wall_x` |
+| Infill speed | `sparse_infill_speed` | `speed_infill` |
+| Travel speed | `travel_speed` | `speed_travel` |
+| Bridge speed | `bridge_speed` | `speed_wall_0_roofing` |
+| First layer speed | `initial_layer_speed` | `speed_layer_0` |
+| **Supports** | | |
+| Enable supports | `enable_support` | `support_enable` |
+| Support angle | `support_threshold_angle` | `support_angle` |
+| Tree supports | `support_type` = `"tree(auto)"` | `support_structure` = `"tree"` |
+| **Adhesion** | | |
 | Brim | `brim_type` | `adhesion_type` |
+| Brim width | `brim_width` | `brim_width` |
+| Elephant foot | `elefant_foot_compensation` | *(no direct equivalent)* |
+| **Retraction** | | |
 | Retraction distance | `retraction_length` | `retraction_amount` |
+| Retraction speed | `retraction_speed` | `retraction_speed` |
+| Z hop | `z_hop` | `retraction_hop` |
+| **Cooling** | | |
+| Min fan speed | `fan_min_speed` | `cool_fan_speed_min` |
+| Max fan speed | `fan_max_speed` | `cool_fan_speed_max` |
+| **Temperature** | | |
+| Nozzle temp | `nozzle_temperature` | `material_print_temperature` |
+| Bed temp | `bed_temperature` | `material_bed_temperature` |
+| **Compensation** | | |
+| XY hole compensation | `xy_hole_compensation` | `hole_xy_offset` |
+| XY contour compensation | `xy_contour_compensation` | `xy_offset` |
+| **Flow** | | |
+| Flow ratio | `filament_flow_ratio` | *(per-material)* |
+| Max volumetric speed | `filament_max_volumetric_speed` | *(no equivalent)* |
+
+For the complete setting lists: [`orca-settings.json`](orca-settings.json) (263 settings)
+and [`cura-settings.json`](cura-settings.json) (711 settings with descriptions).
