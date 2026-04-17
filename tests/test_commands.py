@@ -101,6 +101,10 @@ class TestBuildCommandContext:
         cfg = _make_config(tmp_path)
         plate = tmp_path / "plate.3mf"
         sliced = tmp_path / "sliced"
+        sliced.mkdir()
+        # Create a deliverable file so find_deliverable resolves it
+        deliverable = sliced / "plate_sliced.gcode.3mf"
+        deliverable.write_bytes(b"fake")
         results = {
             "plate_3mf_path": plate,
             "packaged_output": sliced,
@@ -108,7 +112,7 @@ class TestBuildCommandContext:
         }
         ctx = build_command_context(cfg, tmp_path / "out", results)
         assert ctx["input_3mf"] == str(plate)
-        assert ctx["sliced_3mf"] == str(sliced)
+        assert ctx["sliced_3mf"] == str(deliverable)
         assert ctx["sliced_dir"] == str(sliced)
 
     def test_missing_results_default_to_empty(self, tmp_path):

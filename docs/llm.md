@@ -285,7 +285,7 @@ output = "{output_dir}/plate.gcode.3mf"
 | `{filament}` | First filament profile | Always |
 | `{filaments}` | All filaments, comma-separated | Always |
 | `{input_3mf}` | Plate 3MF path | After `plate` |
-| `{sliced_3mf}` | Packaged 3MF after slicing | After `slice` |
+| `{sliced_3mf}` | Sliced output file (`.gcode.3mf` or `.gcode`) | After `slice` |
 | `{sliced_dir}` | Slicer output directory | After `slice` |
 | `{cura_settings}` | CuraEngine settings JSON | After `slice` (cura only) |
 | `{slicer_image}` | Docker image tag | Always |

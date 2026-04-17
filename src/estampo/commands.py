@@ -37,8 +37,8 @@ COMMAND_VARIABLES: dict[str, str] = {
     "filament": "First filament profile name (empty string if unset)",
     "filaments": "All filament profiles, comma-separated (empty string if unset)",
     "input_3mf": "Plate 3MF path (available after plate stage)",
-    "sliced_3mf": "Packaged 3MF after slicing (available after slice stage)",
-    "sliced_dir": "Slicer output directory (available after slice stage)",
+    "sliced_3mf": "Sliced output file — .gcode.3mf or .gcode (after slice)",
+    "sliced_dir": "Slicer output directory (after slice)",
     "cura_settings": "CuraEngine settings JSON path (after slice, cura only)",
     "slicer_image": "Docker image tag for the active slicer engine",
 }
@@ -71,6 +71,17 @@ def build_command_context(
 
         slicer_image = cura_docker_image(config.slicer.version)
 
+    # Resolve {sliced_3mf} to the actual deliverable file, not the directory
+    sliced_3mf = ""
+    packaged_dir = stage_results.get("packaged_output")
+    if packaged_dir:
+        from estampo.slicer import find_deliverable
+
+        try:
+            sliced_3mf = str(find_deliverable(Path(str(packaged_dir))))
+        except FileNotFoundError:
+            sliced_3mf = str(packaged_dir)
+
     ctx: dict[str, str] = {
         "name": config.name or "",
         "output_dir": str(output_dir),
@@ -79,7 +90,7 @@ def build_command_context(
         "filament": fils[0] if fils else "",
         "filaments": ",".join(fils) if fils else "",
         "input_3mf": str(stage_results.get("plate_3mf_path", "")),
-        "sliced_3mf": str(stage_results.get("packaged_output", "")),
+        "sliced_3mf": sliced_3mf,
         "sliced_dir": str(stage_results.get("sliced_output_dir", "")),
         "cura_settings": "",
         "slicer_image": slicer_image,
