@@ -159,8 +159,8 @@ If you mostly want interactive print setup in a GUI, use OrcaSlicer or Cura dire
 
 - Declarative print config in `estampo.toml`
 - Multi-part arrangement
-- Docker-based slicing with pinned OrcaSlicer versions
-- Slicing for any printer supported by OrcaSlicer
+- Docker-based slicing with pinned slicer versions (OrcaSlicer, CuraEngine)
+- Slicing for any printer supported by OrcaSlicer or CuraEngine
 - Profile pinning into your repository
 - CI slicing and artifact generation
 - Network print initiation via Bambu Cloud
@@ -169,16 +169,15 @@ If you mostly want interactive print setup in a GUI, use OrcaSlicer or Cura dire
 
 ### Experimental
 
-- CuraEngine as alternative slicer backend (`engine = "cura"`)
 - Bambu LAN printing
 - Moonraker printing
 
 ## Quick start
 
 **Prerequisites:** Python 3.11+ and [Docker](https://docs.docker.com/get-docker/). Docker is
-central to estampo — it runs OrcaSlicer in a container with a pinned version so every machine
-produces identical G-code, and it powers cloud printing via the Bambu Connect bridge. A local
-[OrcaSlicer](https://github.com/SoftFever/OrcaSlicer) install can be used as an alternative but is not recommended.
+central to estampo — it runs the slicer (OrcaSlicer or CuraEngine) in a container with a pinned
+version so every machine produces identical G-code. A locally installed slicer can be used as a
+fallback but is not recommended.
 
 ```bash
 pip install estampo
@@ -251,7 +250,7 @@ estampo profiles pin          # copies slicer profiles into ./profiles/
 git add profiles/              # commit to lock them
 ```
 
-Combined with `version = "2.3.1"` in `[slicer]` (which pins the Docker image), the same config always produces the same gcode.
+Combined with a pinned `version` in `[slicer]` (which locks the Docker image), the same config always produces the same gcode.
 
 ### CI/CD example
 
@@ -267,8 +266,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: estampo/estampo@main
-        with:
-          orca-version: "2.3.1"
 ```
 
 The action slices your model, uploads G-code as an artifact, and posts print time / filament stats as a PR comment. See [`action/README.md`](action/README.md) for all options.
