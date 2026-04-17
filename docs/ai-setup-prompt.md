@@ -254,19 +254,18 @@ When adding a GitHub Actions workflow for a Bambu printer, also install bambox:
 
 ### Cloud printing for Bambu Lab printers (optional)
 
-To send the `.gcode.3mf` directly to a Bambu printer after packing, add a
-`print` stage. This uses `bambox print` which communicates with Bambu Cloud.
+To send the `.gcode.3mf` directly to a Bambu printer, use `bambox print`.
+**Do not add a print stage to `estampo.toml`** — printing should be an
+explicit manual action, not something that runs on every `estampo run` or
+CI push.
 
-```toml
-[pipeline]
-stages = ["load", "arrange", "plate", "slice", "pack", "print"]
-
-[print]
-command = "bambox print {output_dir}/plate.gcode.3mf -d {DEVICE_SERIAL} -y"
+**Local printing** (after `estampo run` produces the `.gcode.3mf`):
+```bash
+bambox print estampo_output/plate.gcode.3mf -y
 ```
 
-Replace `{DEVICE_SERIAL}` with the printer's serial number (found in Bambu
-Handy or the printer's display under Network > Device Info).
+If only one printer is configured, bambox uses it automatically — no
+`-d DEVICE_SERIAL` needed.
 
 **Setup requirements:**
 1. Run `bambox login` once to authenticate with Bambu Cloud — credentials are
@@ -274,10 +273,36 @@ Handy or the printer's display under Network > Device Info).
 2. The bridge is required: native binary on Linux x86_64, Docker on all other
    platforms (macOS, Windows, Linux ARM64)
 
-**For CI (GitHub Actions):** cloud printing from CI requires storing the
-credentials file as a GitHub secret and writing it before the print step.
-This is an advanced setup — most users should print locally with
-`estampo run` after the CI workflow produces the `.gcode.3mf` artifact.
+**For CI:** add a separate manually-triggered workflow (not the slice
+workflow) so printing only happens when explicitly requested:
+
+```yaml
+# .github/workflows/print.yml
+name: Print
+
+on:
+  workflow_dispatch:
+
+jobs:
+  print:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv tool install estampo
+      - run: uv tool install bambox
+      - run: |
+          mkdir -p ~/.config/estampo
+          echo "$BAMBOX_CREDENTIALS" > ~/.config/estampo/credentials.toml
+        env:
+          BAMBOX_CREDENTIALS: ${{ secrets.BAMBOX_CREDENTIALS }}
+      - run: estampo run -v
+      - run: bambox print estampo_output/plate.gcode.3mf -y
+```
+
+To set up the secret: run `bambox login` locally, then copy the contents of
+`~/.config/estampo/credentials.toml` into a GitHub repository secret named
+`BAMBOX_CREDENTIALS`.
 
 ### Important rules
 
