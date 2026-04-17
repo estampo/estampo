@@ -12,6 +12,7 @@ from __future__ import annotations
 import importlib.resources
 import json
 import logging
+import os
 import re
 import shutil
 import subprocess
@@ -73,6 +74,19 @@ _DATA_DIR = Path(__file__).parent / "data"
 
 # Bundled machine profile JSONs (nozzle/material overrides per printer)
 _BUNDLED_MACHINE_DIR = _DATA_DIR / "cura" / "machine"
+
+
+def _local_defs_path(staging: Path) -> str:
+    """Build the ``-d`` search path for local CuraEngine invocation.
+
+    Includes the staging directory, bundled estampo data, and any system
+    paths from ``CURA_ENGINE_SEARCH_PATH`` (set in Docker images).
+    """
+    parts = [str(staging), str(_DATA_DIR)]
+    env_path = os.environ.get("CURA_ENGINE_SEARCH_PATH", "")
+    if env_path:
+        parts.extend(env_path.split(":"))
+    return ":".join(parts)
 
 
 def _bundled_def_path(name: str) -> Path:
@@ -1025,7 +1039,7 @@ def slice_stl(
     settings = _settings_flags(profile)
 
     if local:
-        defs_path = f"{staging}:{_DATA_DIR}"
+        defs_path = _local_defs_path(staging)
         cura_args = [
             "-d",
             defs_path,
@@ -1108,10 +1122,9 @@ def slice_stl_multi(
             shutil.copy2(stl_path, dest)
 
     if local:
-        defs_path = f"{staging}:{_DATA_DIR}"
         cura_args: list[str] = [
             "-d",
-            defs_path,
+            _local_defs_path(staging),
             "-j",
             str(staging / machine_def),
             "-o",
