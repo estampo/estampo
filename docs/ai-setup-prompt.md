@@ -210,26 +210,99 @@ jobs:
       - uses: astral-sh/setup-uv@v5
       - run: uv tool install estampo
       - run: estampo validate
-      - run: estampo run --local -v
+      - run: estampo run -v
       - uses: actions/upload-artifact@v4
         with:
           name: sliced
-          path: output/
+          path: estampo_output/
 ```
 
 ### Post-processing for Bambu Lab printers
 
-If sending to a Bambu Lab printer, add a `pack` stage using
-[bambox](https://github.com/estampo/bambox):
+If the printer is a Bambu Lab printer (P1S, X1C, A1, etc.), you **must** add a
+`pack` stage to produce the `.gcode.3mf` file that Bambu printers require. Use
+[bambox](https://github.com/estampo/bambox) for this. **The pack stage is not
+optional** — without it, the output is plain G-code that Bambu printers cannot
+use.
 
+The command differs by slicer engine:
+
+**CuraEngine** (creates `.gcode.3mf` from plain G-code):
 ```toml
 [pipeline]
 stages = ["load", "arrange", "plate", "slice", "pack"]
 
 [pack]
-command = "bambox repack {output_dir}/plate_sliced.gcode.3mf"
-output = "{output_dir}/plate_sliced.gcode.3mf"
+command = "bambox pack {sliced_dir}/plate.gcode -o {output_dir}/plate.gcode.3mf"
+output = "{output_dir}/plate.gcode.3mf"
 ```
+
+**OrcaSlicer** (patches the existing `.gcode.3mf` for Bambu Connect compatibility):
+```toml
+[pipeline]
+stages = ["load", "arrange", "plate", "slice", "pack"]
+
+[pack]
+command = "bambox repack {sliced_3mf}"
+output = "{sliced_3mf}"
+```
+
+When adding a GitHub Actions workflow for a Bambu printer, also install bambox:
+```yaml
+- run: uv tool install bambox
+```
+
+### Cloud printing for Bambu Lab printers (optional)
+
+To send the `.gcode.3mf` directly to a Bambu printer, use `bambox print`.
+**Do not add a print stage to `estampo.toml`** — printing should be an
+explicit manual action, not something that runs on every `estampo run` or
+CI push.
+
+**Local printing** (after `estampo run` produces the `.gcode.3mf`):
+```bash
+bambox print estampo_output/plate.gcode.3mf -y
+```
+
+If only one printer is configured, bambox uses it automatically — no
+`-d DEVICE_SERIAL` needed.
+
+**Setup requirements:**
+1. Run `bambox login` once to authenticate with Bambu Cloud — credentials are
+   saved to `~/.config/estampo/credentials.toml`
+2. The bridge is required: native binary on Linux x86_64, Docker on all other
+   platforms (macOS, Windows, Linux ARM64)
+
+**For CI:** add a separate manually-triggered workflow (not the slice
+workflow) so printing only happens when explicitly requested:
+
+```yaml
+# .github/workflows/print.yml
+name: Print
+
+on:
+  workflow_dispatch:
+
+jobs:
+  print:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv tool install estampo
+      - run: uv tool install bambox
+      - run: |
+          mkdir -p ~/.config/estampo
+          echo "$BAMBOX_CREDENTIALS" > ~/.config/estampo/credentials.toml
+        env:
+          BAMBOX_CREDENTIALS: ${{ secrets.BAMBOX_CREDENTIALS }}
+      - run: estampo run -v
+      - run: bambox print estampo_output/plate.gcode.3mf -y
+```
+
+To set up the secret: run `bambox login` locally, then copy the contents of
+`~/.config/estampo/credentials.toml` into a GitHub repository secret named
+`BAMBOX_CREDENTIALS`.
 
 ### Important rules
 
@@ -241,9 +314,8 @@ output = "{output_dir}/plate_sliced.gcode.3mf"
 - **Use string values** for OrcaSlicer overrides (they are passed as CLI
   arguments): `layer_height = "0.2"`, not `layer_height = 0.2`.
 - **Pin the slicer version** for reproducibility.
-- estampo runs slicers inside Docker by default. In CI (GitHub Actions), use
-  `--local` since the runner already has the slicer installed via the Docker
-  image.
+- estampo runs slicers inside Docker by default. GitHub Actions runners have
+  Docker available, so `estampo run` works out of the box in CI.
 ````
 
 ---
