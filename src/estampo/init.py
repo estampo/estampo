@@ -769,15 +769,11 @@ def _wizard_pick_command_stages(
         if engine == "cura":
             stages.append("resolve_templates")
             command_stages["resolve_templates"] = {
-                "command": (
-                    "cura-p1s resolve {sliced_dir}/plate.gcode --settings {cura_settings}"
-                ),
+                "command": ("cura-p1s resolve {sliced_dir}/plate.gcode --settings {cura_settings}"),
             }
             stages.append("pack")
             command_stages["pack"] = {
-                "command": (
-                    "bambox pack {sliced_dir}/plate.gcode -o {output_dir}/plate.gcode.3mf"
-                ),
+                "command": ("bambox pack {sliced_dir}/plate.gcode -o {output_dir}/plate.gcode.3mf"),
                 "output": "{output_dir}/plate.gcode.3mf",
             }
         else:
@@ -1050,9 +1046,7 @@ def run_wizard(output: Path | None = None) -> str:
     ui.console.print()
 
     # --- Step 11: Command stages (pack/resolve) ---
-    command_stages = _wizard_pick_command_stages(
-        engine, printer_profile or "", stages
-    )
+    command_stages = _wizard_pick_command_stages(engine, printer_profile or "", stages)
 
     # --- Build TOML ---
     toml = _build_toml(
