@@ -252,6 +252,33 @@ When adding a GitHub Actions workflow for a Bambu printer, also install bambox:
 - run: uv tool install bambox
 ```
 
+### Cloud printing for Bambu Lab printers (optional)
+
+To send the `.gcode.3mf` directly to a Bambu printer after packing, add a
+`print` stage. This uses `bambox print` which communicates with Bambu Cloud.
+
+```toml
+[pipeline]
+stages = ["load", "arrange", "plate", "slice", "pack", "print"]
+
+[print]
+command = "bambox print {output_dir}/plate.gcode.3mf -d {DEVICE_SERIAL} -y"
+```
+
+Replace `{DEVICE_SERIAL}` with the printer's serial number (found in Bambu
+Handy or the printer's display under Network > Device Info).
+
+**Setup requirements:**
+1. Run `bambox login` once to authenticate with Bambu Cloud — credentials are
+   saved to `~/.config/estampo/credentials.toml`
+2. The bridge is required: native binary on Linux x86_64, Docker on all other
+   platforms (macOS, Windows, Linux ARM64)
+
+**For CI (GitHub Actions):** cloud printing from CI requires storing the
+credentials file as a GitHub secret and writing it before the print step.
+This is an advanced setup — most users should print locally with
+`estampo run` after the CI workflow produces the `.gcode.3mf` artifact.
+
 ### Important rules
 
 - **Do not invent setting names.** Only use keys from the setting lists above

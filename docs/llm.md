@@ -35,8 +35,8 @@ filaments = ["Generic PLA @base"]
 file = "model.stl"
 
 [pack]
-command = "bambox repack {output_dir}/plate_sliced.gcode.3mf"
-output = "{output_dir}/plate_sliced.gcode.3mf"
+command = "bambox repack {sliced_3mf}"
+output = "{sliced_3mf}"
 ```
 
 ## Config structure
@@ -326,8 +326,8 @@ filaments = ["Generic PLA @base"]
 file = "model.stl"
 
 [pack]
-command = "bambox repack {output_dir}/plate_sliced.gcode.3mf"
-output = "{output_dir}/plate_sliced.gcode.3mf"
+command = "bambox repack {sliced_3mf}"
+output = "{sliced_3mf}"
 ```
 
 ### CuraEngine + Bambu Lab
