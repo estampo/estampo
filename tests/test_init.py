@@ -9,6 +9,7 @@ from estampo.init import (
     ValidationResult,
     _build_toml,
     _closest_match,
+    _is_bambu_printer,
     _validate_override,
     dump_template,
     validate_config,
@@ -614,10 +615,103 @@ class TestBuildToml:
         assert "orient" not in toml
         assert "filament" not in toml.split("[[parts]]")[1]
 
+    def test_orca_pack_command_stage(self):
+        toml = _build_toml(
+            engine="orca",
+            printer_profile="Bambu Lab P1S 0.4 nozzle",
+            process_profile="0.20mm Standard @BBL X1C",
+            filament_names=["Generic PLA @base"],
+            parts=[{"file": "cube.stl", "copies": 1, "orient": "flat", "filament": 1}],
+            plate_size=(256, 256),
+            slicer_version="2.3.1",
+            stages=["load", "arrange", "plate", "slice", "pack"],
+            command_stages={
+                "pack": {
+                    "command": "bambox repack {output_dir}/plate_sliced.gcode.3mf",
+                    "output": "{output_dir}/plate_sliced.gcode.3mf",
+                },
+            },
+        )
+        assert '"pack"' in toml
+        assert "[pack]" in toml
+        assert "bambox repack" in toml
+        assert 'output = "{output_dir}/plate_sliced.gcode.3mf"' in toml
+
+    def test_cura_resolve_and_pack_stages(self):
+        toml = _build_toml(
+            engine="cura",
+            printer_profile="bambox_p1s",
+            process_profile=None,
+            filament_names=["PLA"],
+            parts=[{"file": "cube.stl", "copies": 1, "orient": "flat", "filament": 1}],
+            plate_size=(256, 256),
+            slicer_version="5.12.0",
+            stages=["load", "arrange", "plate", "slice", "resolve_templates", "pack"],
+            command_stages={
+                "resolve_templates": {
+                    "command": (
+                        "cura-p1s resolve {sliced_dir}/plate.gcode --settings {cura_settings}"
+                    ),
+                },
+                "pack": {
+                    "command": (
+                        "bambox pack {sliced_dir}/plate.gcode -o {output_dir}/plate.gcode.3mf"
+                    ),
+                    "output": "{output_dir}/plate.gcode.3mf",
+                },
+            },
+        )
+        assert '"resolve_templates"' in toml
+        assert '"pack"' in toml
+        assert "[resolve_templates]" in toml
+        assert "cura-p1s resolve" in toml
+        assert "[pack]" in toml
+        assert "bambox pack" in toml
+
+    def test_no_command_stages_when_none(self):
+        toml = _build_toml(
+            engine="orca",
+            printer_profile=None,
+            process_profile=None,
+            filament_names=[],
+            parts=[{"file": "a.stl", "copies": 1, "orient": "flat", "filament": 1}],
+            plate_size=(256, 256),
+            slicer_version=None,
+            stages=["load", "arrange", "plate", "slice"],
+        )
+        assert "[pack]" not in toml
+        assert "[resolve_templates]" not in toml
+
+
+# ---------------------------------------------------------------------------
+# _is_bambu_printer
+# ---------------------------------------------------------------------------
+
+
+class TestIsBambuPrinter:
+    def test_bambu_lab_detected(self):
+        assert _is_bambu_printer("Bambu Lab P1S 0.4 nozzle") is True
+
+    def test_bbl_detected(self):
+        assert _is_bambu_printer("0.20mm Standard @BBL X1C") is True
+
+    def test_bambox_detected(self):
+        assert _is_bambu_printer("bambox_p1s") is True
+
+    def test_other_printer_not_detected(self):
+        assert _is_bambu_printer("Ultimaker 2") is False
+
+    def test_empty_string(self):
+        assert _is_bambu_printer("") is False
+
 
 # ---------------------------------------------------------------------------
 # Wizard (non-interactive, mocked input)
 # ---------------------------------------------------------------------------
+
+
+def _empty_profiles(*args, **kwargs):
+    return {"machine": [], "process": [], "filament": []}, "none"
 
 
 class TestWizard:
@@ -651,11 +745,8 @@ class TestWizard:
             ],
         )
 
-        # Mock discover_profiles to return empty (no slicer installed in CI)
-        monkeypatch.setattr(
-            "estampo.profiles.discover_profiles",
-            lambda engine: {"machine": {}, "process": {}, "filament": {}},
-        )
+        # Mock profile discovery to return empty (no slicer installed in CI)
+        monkeypatch.setattr("estampo.profiles.discover_profile_names", _empty_profiles)
         # Mock slicer version discovery so we don't hit DockerHub
         monkeypatch.setattr("estampo.orca._fetch_available_versions", lambda: [])
         monkeypatch.setattr("estampo.orca._detect_orca_version", lambda: None)
@@ -690,10 +781,7 @@ class TestWizard:
                 "q",  # Write / Go back / Quit
             ],
         )
-        monkeypatch.setattr(
-            "estampo.profiles.discover_profiles",
-            lambda engine: {"machine": {}, "process": {}, "filament": {}},
-        )
+        monkeypatch.setattr("estampo.profiles.discover_profile_names", _empty_profiles)
         # Mock slicer version discovery so we don't hit DockerHub
         monkeypatch.setattr("estampo.orca._fetch_available_versions", lambda: [])
         monkeypatch.setattr("estampo.orca._detect_orca_version", lambda: None)
