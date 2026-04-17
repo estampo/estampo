@@ -1,23 +1,33 @@
 # CLI reference
 
-estampo provides commands for creating configs (`init`, `validate`), setting up printers (`setup`), running the pipeline (`run`), and managing printers (`status`, `profiles`).
+estampo provides commands for creating configs (`init`, `validate`), running the pipeline (`run`), and managing slicer profiles (`profiles`).
 
 ## `estampo init`
 
 Create a new `estampo.toml` config file.
 
 ```
-estampo init [--template] [-o OUTPUT]
+estampo init [--template] [-o OUTPUT] [--engine ENGINE] [--printer PRINTER]
+             [--process PROCESS] [--filament FILAMENT]... [--part PART]...
+             [--from-3mf FILE]
 ```
 
-| Option        | Description                                         |
-|---------------|-----------------------------------------------------|
-| `--template`  | Dump a commented template to stdout (skip wizard)   |
-| `-o, --output`| Output file path (default: `./estampo.toml`)       |
+| Option         | Description                                         |
+|----------------|-----------------------------------------------------|
+| `--template`   | Dump a commented template to stdout (skip wizard)   |
+| `-o, --output` | Output file path (default: `./estampo.toml`)       |
+| `--engine`     | Slicer engine: `orca` or `cura` (non-interactive)  |
+| `--printer`    | Printer profile name (non-interactive)              |
+| `--process`    | Process/quality profile name (non-interactive, OrcaSlicer only) |
+| `--filament`   | Filament profile (repeatable, non-interactive)      |
+| `--part`       | Part file path (repeatable, non-interactive)        |
+| `--from-3mf`   | Extract settings from an OrcaSlicer project file    |
 
-Without `--template`, runs an interactive wizard that:
-1. Checks for configured printers (offers to run `estampo setup` if none found)
-2. Discovers installed OrcaSlicer profiles (printer, process, filament) with search/filter
+**Non-interactive mode:** pass `--engine`, `--filament`, and `--part` to generate
+a config without the wizard. Use `--printer` and `--process` for OrcaSlicer.
+
+**Interactive wizard** (default when non-interactive flags are omitted):
+1. Discovers installed slicer profiles (printer, process, filament) with search/filter
 3. Detects printer capabilities from the selected machine profile (plate size, multi-material support)
 4. Queries AMS tray contents in the background and auto-suggests matching filament profiles
 5. Auto-discovers CAD files (STL, 3MF, STEP) in the current directory
@@ -32,6 +42,9 @@ estampo init                              # interactive wizard
 estampo init --template                   # print commented template
 estampo init --template > estampo.toml   # save template to file
 estampo init -o myproject.toml            # wizard writes to custom path
+estampo init --engine orca --printer "Bambu Lab P1S 0.4 nozzle" \
+  --filament "Generic PLA @base" --part bracket.stl   # non-interactive
+estampo init --from-3mf project.3mf       # extract from OrcaSlicer project
 ```
 
 ## `estampo validate`
@@ -46,10 +59,15 @@ If `config` is omitted, looks for `estampo.toml` in the current directory.
 
 Checks for:
 - Missing `slicer.version` (reproducibility)
-- Profile names not matching installed slicer profiles (with suggestions)
-- Printer name not found in credentials file
+- Profile names not matching installed slicer profiles (with "did you mean?" suggestions)
+- Cross-engine detection — catches CuraEngine setting names used with OrcaSlicer and vice versa
 - Absolute part file paths (portability)
 - Unknown pipeline stages
+- Unknown override keys (with suggestions for typos)
+
+**Note:** The validation warning "slicer profile names could not be validated"
+is expected when profiles are not installed locally. This is not an error —
+profiles are resolved at runtime via Docker. The warning can be safely ignored.
 
 ### Examples
 
@@ -101,9 +119,19 @@ The default pipeline runs these stages in order:
 | `load`      | Load meshes, apply orientation and scaling         | Part summary              |
 | `arrange`   | Bin-pack parts onto the build plate                | Placements                |
 | `plate`     | Export arranged plate as 3MF (+ preview)           | `plate.3mf`, `plate_preview.3mf` |
-| `slice`     | Slice via OrcaSlicer (Docker or local)             | gcode in output dir       |
+| `slice`     | Slice via OrcaSlicer or CuraEngine (Docker or local) | gcode in output dir     |
 | `gcode-info`| Parse print time and filament usage from gcode     | Stats summary             |
-| `print`     | Send sliced gcode to printer                       | Print job                 |
+| `print`     | *(deprecated)* Send sliced gcode to printer        | Print job                 |
+
+In addition to built-in stages, you can define **command stages** — custom
+pipeline stages that run external CLI tools. See the
+[config reference](config.md#command-stages) for details.
+
+**Tip:** Add `gcode-info` after `slice` to see print time and filament usage:
+```toml
+[pipeline]
+stages = ["load", "arrange", "plate", "slice", "gcode-info"]
+```
 
 ### Examples
 
