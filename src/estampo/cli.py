@@ -154,6 +154,7 @@ def run(
         typer.Option(help="Override filament profile name (e.g. 'Generic PLA @base')"),
     ] = None,
     filament_slot: Annotated[int, typer.Option(help="Slot number for --filament-type")] = 1,
+    json_flag: Annotated[bool, typer.Option("--json", help="Output as JSON summary")] = False,
     verbose: Annotated[bool, typer.Option("-v", "--verbose", help="Enable debug logging")] = False,
 ) -> None:
     """Run the pipeline defined in estampo.toml."""
@@ -163,7 +164,7 @@ def run(
         raise ValueError("Cannot use both --until and --only")
 
     resolved_config = _resolve_config_path(config)
-    _run_pipeline(
+    result = _run_pipeline(
         config=resolved_config,
         output_dir=output_dir,
         until=until,
@@ -175,6 +176,8 @@ def run(
         filament_type=filament_type,
         filament_slot=filament_slot,
     )
+    if json_flag and result:
+        print(json.dumps(result, indent=2, default=str))
 
 
 @app.command()
@@ -250,8 +253,12 @@ def _run_pipeline(
     scale: float | None = None,
     filament_type: str | None = None,
     filament_slot: int = 1,
-) -> None:
-    """Execute the pipeline (shared by run and watch commands)."""
+) -> dict | None:
+    """Execute the pipeline (shared by run and watch commands).
+
+    Returns a JSON-serialisable summary dict, or *None* when no stats
+    are available (e.g. pipeline stopped before slicing).
+    """
     from estampo.pipeline import resolve_outputs, resolve_overrides
 
     cfg = load_config(config)
@@ -339,6 +346,19 @@ def _run_pipeline(
             # Feed output back into context for downstream command stages
             if output_path is not None:
                 context[stage_name] = str(output_path)
+
+    # Build JSON-serialisable summary
+    summary: dict = {
+        "stages": stages,
+        "output_dir": str(out_dir),
+    }
+    stats = hamilton_results.get("gcode_stats")
+    if isinstance(stats, dict):
+        summary["stats"] = stats
+    packaged = hamilton_results.get("packaged_output")
+    if packaged is not None:
+        summary["output_file"] = str(packaged)
+    return summary
 
 
 # ---------------------------------------------------------------------------
@@ -479,26 +499,42 @@ def _write_or_print(toml: str, output: Path | None) -> None:
 @app.command()
 def validate(
     config: Annotated[Path | None, typer.Argument(help="Path to config file")] = None,
+    json_flag: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
     verbose: Annotated[bool, typer.Option("-v", "--verbose", help="Enable debug logging")] = False,
 ) -> None:
     """Check an estampo.toml for issues."""
     _setup_logging(verbose)
-    from estampo import ui
     from estampo.init import validate_config
 
     resolved_config = _resolve_config_path(config)
-    ui.heading(f"Validating {resolved_config.name}")
+
     result = validate_config(resolved_config)
-    for p in result.passes:
-        ui.success(p)
-    for w in result.warnings:
-        ui.warn(w)
-    ui.console.print()
-    if result.warnings:
-        n = len(result.warnings)
-        ui.console.print(f"  [yellow]{n}[/yellow] warning{'s' if n != 1 else ''} found.")
+
+    if json_flag:
+        print(
+            json.dumps(
+                {
+                    "valid": len(result.warnings) == 0,
+                    "passes": result.passes,
+                    "warnings": result.warnings,
+                },
+                indent=2,
+            )
+        )
     else:
-        ui.success("All checks passed.")
+        from estampo import ui
+
+        ui.heading(f"Validating {resolved_config.name}")
+        for p in result.passes:
+            ui.success(p)
+        for w in result.warnings:
+            ui.warn(w)
+        ui.console.print()
+        if result.warnings:
+            n = len(result.warnings)
+            ui.console.print(f"  [yellow]{n}[/yellow] warning{'s' if n != 1 else ''} found.")
+        else:
+            ui.success("All checks passed.")
 
 
 # ---------------------------------------------------------------------------
