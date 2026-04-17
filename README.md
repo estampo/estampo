@@ -123,10 +123,11 @@ CuraEngine CLI (`CuraEngine slice -j definition.json -s KEY=VALUE -l model.stl -
 | Arrange multiple parts | Not supported — manual positioning | Automatic bin-packing |
 | Multi-extruder mapping | `-g -e0 -l a.stl -g -e1 -l b.stl` per mesh group | `filament = 1` per part |
 | Reproducible builds | Track all definition JSONs yourself | `version = "5.12.0"` + Docker |
+| Version control | Shell scripts + scattered JSON definitions | Single TOML file — git-diffable and reviewable |
 | Run in CI | Install CuraEngine + definitions manually | `uses: estampo/estampo/action@main` |
 | Pack for Bambu printers | Separate manual step | `[pack]` command stage |
 
-estampo handles definition resolution, search paths, extruder context, and setting inheritance — you just declare the printer name and overrides in TOML.
+With CuraEngine CLI, your build config ends up spread across shell scripts, `-s` flag lists, and JSON definition files — hard to diff, review, or commit as a coherent unit. estampo replaces all of that with a single declarative TOML file: git-friendly, diffable, and accessible to AI assistants and code review.
 
 ### Works with AI assistants
 
