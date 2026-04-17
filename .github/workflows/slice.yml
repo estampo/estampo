@@ -81,18 +81,12 @@ jobs:
             --build-arg CURA_VERSION=${{ inputs.version }} \
             -t estampo/estampo:cura-${{ inputs.version }} .
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-
-      - name: Install estampo
-        run: |
-          pip install uv
-          uv sync --frozen --no-dev
-
       - name: Generate plate and slice
-        run: uv run estampo run "${{ inputs.config }}" -v
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/project" \
+            estampo/estampo:cura-${{ inputs.version }} \
+            run "${{ inputs.config }}" --local -v
 
       - name: Upload gcode
         uses: actions/upload-artifact@v7

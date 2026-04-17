@@ -40,6 +40,7 @@ COMMAND_VARIABLES: dict[str, str] = {
     "sliced_3mf": "Packaged 3MF after slicing (available after slice stage)",
     "sliced_dir": "Slicer output directory (available after slice stage)",
     "cura_settings": "CuraEngine settings JSON path (after slice, cura only)",
+    "slicer_image": "Docker image tag for the active slicer engine",
 }
 
 
@@ -58,6 +59,18 @@ def build_command_context(
     """
     engine_cfg = config.slicer.orca if config.slicer.engine == "orca" else config.slicer.cura
     fils = engine_cfg.filaments
+
+    # Resolve slicer Docker image tag
+    slicer_image = ""
+    if config.slicer.engine == "orca":
+        from estampo.orca import docker_image as orca_docker_image
+
+        slicer_image = orca_docker_image(config.slicer.version)
+    elif config.slicer.engine == "cura":
+        from estampo.cura import cura_docker_image
+
+        slicer_image = cura_docker_image(config.slicer.version)
+
     ctx: dict[str, str] = {
         "name": config.name or "",
         "output_dir": str(output_dir),
@@ -69,6 +82,7 @@ def build_command_context(
         "sliced_3mf": str(stage_results.get("packaged_output", "")),
         "sliced_dir": str(stage_results.get("sliced_output_dir", "")),
         "cura_settings": "",
+        "slicer_image": slicer_image,
     }
     sliced_dir = stage_results.get("sliced_output_dir")
     if sliced_dir and config.slicer.engine == "cura":
@@ -90,6 +104,8 @@ class CommandStageConfig:
     name: str
     command: str
     output: str | None = None
+    docker: bool = False
+    image: str | None = None
 
 
 def parse_command_stage(name: str, raw: dict) -> CommandStageConfig:
@@ -107,12 +123,65 @@ def parse_command_stage(name: str, raw: dict) -> CommandStageConfig:
     if output is not None:
         if not isinstance(output, str) or not output.strip():
             raise EstampoError(f"[{name}].output must be a non-empty string")
-    return CommandStageConfig(name=name, command=command.strip(), output=output)
+    docker = raw.get("docker", False)
+    if not isinstance(docker, bool):
+        raise EstampoError(f"[{name}].docker must be true or false")
+    image = raw.get("image")
+    if image is not None:
+        if not isinstance(image, str) or not image.strip():
+            raise EstampoError(f"[{name}].image must be a non-empty string")
+    return CommandStageConfig(
+        name=name, command=command.strip(), output=output, docker=docker, image=image
+    )
 
 
 # ---------------------------------------------------------------------------
 # Execution
 # ---------------------------------------------------------------------------
+
+
+def _wrap_docker_command(
+    cmd: list[str],
+    image: str,
+    output_dir: str,
+) -> list[str]:
+    """Wrap a command in ``docker run`` with volume mounts.
+
+    Mounts the output directory at ``/work/output`` and rewrites any
+    arguments that reference the host output_dir to use the container path.
+    """
+    import os
+
+    abs_output = str(Path(output_dir).resolve())
+    container_output = "/work/output"
+
+    # Rewrite host paths to container paths in arguments
+    rewritten = []
+    for arg in cmd:
+        rewritten.append(arg.replace(abs_output, container_output))
+
+    docker_cmd = [
+        "docker",
+        "run",
+        "--rm",
+        "--platform",
+        "linux/amd64",
+        "-v",
+        f"{abs_output}:{container_output}",
+        "--workdir",
+        container_output,
+    ]
+    # Match host user so output files are owned correctly (skip on Windows)
+    if os.name != "nt":
+        docker_cmd.extend(["--user", f"{os.getuid()}:{os.getgid()}"])
+    docker_cmd.extend(["--entrypoint", rewritten[0], image])
+    docker_cmd.extend(rewritten[1:])
+    return docker_cmd
+
+
+def _is_inside_container() -> bool:
+    """Detect if we are already running inside a Docker container."""
+    return Path("/.dockerenv").exists()
 
 
 def run_command_stage(
@@ -148,7 +217,21 @@ def run_command_stage(
         output_path = Path(rendered_output)
 
     cmd = shlex.split(rendered_command)
-    log.info("Running command stage '%s': %s", stage.name, rendered_command)
+
+    # When docker=true and we're not already inside a container,
+    # wrap the command in docker run with volume mounts.
+    use_docker = stage.docker and not _is_inside_container()
+    if use_docker:
+        image = stage.image or context.get("slicer_image", "")
+        if not image:
+            raise EstampoError(
+                f"[{stage.name}]: docker=true but no image specified and "
+                f"no slicer image available. "
+                f"Set [{stage.name}].image or configure a slicer engine."
+            )
+        cmd = _wrap_docker_command(cmd, image, context.get("output_dir", ""))
+
+    log.info("Running command stage '%s': %s", stage.name, shlex.join(cmd))
 
     from estampo import ui
 

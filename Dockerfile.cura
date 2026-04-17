@@ -38,6 +38,20 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 RUN chmod a+rx /root /root/.local /root/.local/share /root/.local/share/uv \
     /root/.local/share/uv/python
 
+# Install bambox (CLI-only tool for Bambu Lab printers — not an estampo
+# dependency, but bundled so command stages like `bambox repack` work
+# inside the container without requiring host-side installation).
+# Install cura-p1s (Bambu Lab P1S printer definition + G-code template
+# resolver for CuraEngine) and copy definitions into the search path.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install bambox \
+        "cura-p1s @ git+https://github.com/estampo/cura-p1s.git" \
+        --python /opt/estampo/.venv/bin/python \
+    && cp /opt/estampo/.venv/lib/python3.12/site-packages/cura_p1s/data/bambox_p1s.def.json \
+          /opt/cura/definitions/ \
+    && cp /opt/estampo/.venv/lib/python3.12/site-packages/cura_p1s/data/bambox_p1s_extruder_0.def.json \
+          /opt/cura/extruders/
+
 ENV PATH="/opt/estampo/.venv/bin:$PATH"
 
 USER estampo

@@ -54,7 +54,7 @@ runs:
       env:
         ORCA_VERSION: ${{ inputs.orca-version }}
       run: |
-        IMAGE="ghcr.io/${{ github.repository }}:orca-${ORCA_VERSION}"
+        IMAGE="ghcr.io/estampo/estampo:orca-${ORCA_VERSION}"
         echo "::group::Pulling ${IMAGE}"
         docker pull "${IMAGE}"
         echo "::endgroup::"
@@ -71,7 +71,7 @@ runs:
         docker run --rm \
           -v "${WORKSPACE}:/project" \
           --workdir /project \
-          "ghcr.io/${{ github.repository }}:orca-${ORCA_VERSION}" \
+          "ghcr.io/estampo/estampo:orca-${ORCA_VERSION}" \
           run "${CONFIG}" \
           --until "${UNTIL}" \
           --output-dir "/project/${OUTPUT_DIR}" \

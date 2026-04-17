@@ -30,6 +30,12 @@ COPY src/ ./src/
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-editable --python 3.12
 
+# Install bambox (CLI-only tool for Bambu Lab printers — not an estampo
+# dependency, but bundled so command stages like `bambox repack` work
+# inside the container without requiring host-side installation).
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install bambox --python /opt/estampo/.venv/bin/python
+
 ENV PATH="/opt/estampo/.venv/bin:$PATH"
 
 USER estampo
