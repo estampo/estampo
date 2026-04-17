@@ -71,13 +71,14 @@ Controls which stages run and in what order. Optional — defaults to the full p
 |----------|------------|---------------------------------------------------|----------------------------|
 | `stages` | `[string]` | `["load", "arrange", "plate", "slice"]`  | Ordered list of stages     |
 
-Valid stage names: `load`, `arrange`, `plate`, `slice`, `gcode-info`, `print`.
+Built-in stage names: `load`, `arrange`, `plate`, `slice`, `gcode-info`.
 
-If your workflow doesn't need printing, omit `print`:
+You can also add custom [command stages](#command-stages) to the pipeline — any
+stage name that has a corresponding `[stage_name]` section with a `command` key.
 
 ```toml
 [pipeline]
-stages = ["load", "arrange", "plate", "slice"]
+stages = ["load", "arrange", "plate", "slice", "gcode-info", "pack"]
 ```
 
 ## `[printer]` *(deprecated — removed in v0.4.0)*
@@ -142,10 +143,11 @@ Parts can reference slots by number (`filament = 3`) or by name (`filament = "Ge
 
 CuraEngine-specific settings — printer definition and overrides.
 
-| Key         | Type      | Default | Description                      |
-|-------------|-----------|---------|----------------------------------|
-| `printer`   | `string`  | —       | CuraEngine printer definition ID |
-| `overrides` | `{k = v}` | —      | Flat key-value setting overrides |
+| Key         | Type       | Default | Description                      |
+|-------------|------------|---------|----------------------------------|
+| `printer`   | `string`   | —       | CuraEngine printer definition ID |
+| `filaments` | `[string]` | —       | Filament/material profile names  |
+| `overrides` | `{k = v}`  | —       | Flat key-value setting overrides |
 
 ### `[slicer.orca.overrides]` / `[slicer.cura.overrides]`
 
@@ -251,3 +253,122 @@ Both objects come from the same 3MF, so estampo guarantees identical bed positio
 ```bash
 estampo run estampo.toml --only print   # after slicing sequence 1
 ```
+
+## Command stages
+
+Command stages run external CLI tools as pipeline stages. Any stage name in
+`[pipeline].stages` that has a matching TOML section with a `command` key is
+treated as a command stage.
+
+```toml
+[pipeline]
+stages = ["load", "arrange", "plate", "slice", "pack"]
+
+[pack]
+command = "bambox repack {sliced_3mf}"
+output = "{sliced_3mf}"
+```
+
+| Key       | Type     | Default | Description                                           |
+|-----------|----------|---------|-------------------------------------------------------|
+| `command` | `string` | —       | Shell command with `{variable}` placeholders          |
+| `output`  | `string` | —       | Output path (makes it available to downstream stages) |
+| `docker`  | `bool`   | `false` | Run inside the slicer Docker container                |
+| `image`   | `string` | —       | Docker image override (default: slicer image)         |
+
+When `docker = true`, the command runs inside a Docker container with the
+output directory mounted at `/work/output`. This is useful for tools bundled
+in the slicer Docker image (like `bambox`).
+
+### Template variables
+
+Command strings use `{variable}` placeholders substituted at runtime.
+estampo will error on unknown variable names.
+
+| Variable | Available after | Description |
+|----------|----------------|-------------|
+| `{name}` | always | Project name from TOML config (empty if unset) |
+| `{output_dir}` | always | Output directory path |
+| `{engine}` | always | Slicer engine name (`orca` or `cura`) |
+| `{machine}` | always | Printer/machine profile name (empty if unset) |
+| `{filament}` | always | First filament profile name (empty if unset) |
+| `{filaments}` | always | All filament profiles, comma-separated |
+| `{slicer_image}` | always | Docker image tag for the active slicer |
+| `{input_3mf}` | `plate` | Plate 3MF file path |
+| `{sliced_3mf}` | `slice` | Sliced output file (`.gcode.3mf` or `.gcode`) |
+| `{sliced_dir}` | `slice` | Slicer output directory |
+| `{cura_settings}` | `slice` | CuraEngine settings JSON path (CuraEngine only) |
+
+### Example: Bambu Lab pack stage
+
+**OrcaSlicer** (patches existing `.gcode.3mf` for Bambu Connect compatibility):
+```toml
+[pack]
+command = "bambox repack {sliced_3mf}"
+output = "{sliced_3mf}"
+```
+
+**CuraEngine** (creates `.gcode.3mf` from plain G-code):
+```toml
+[pack]
+command = "bambox pack {sliced_dir}/plate.gcode -o {output_dir}/plate.gcode.3mf"
+output = "{output_dir}/plate.gcode.3mf"
+```
+
+## Common override recipes
+
+Choose overrides based on your print goals:
+
+**Strong functional part (PETG):**
+```toml
+[slicer.orca.overrides]
+wall_loops = "5"
+sparse_infill_density = "40%"
+sparse_infill_pattern = "gyroid"
+top_shell_layers = "6"
+bottom_shell_layers = "6"
+```
+
+**Fast draft:**
+```toml
+[slicer.orca.overrides]
+sparse_infill_density = "10%"
+wall_loops = "2"
+enable_support = "0"
+```
+
+**Smooth top surface:**
+```toml
+[slicer.orca.overrides]
+ironing_type = "top surface only"
+top_shell_layers = "6"
+```
+
+**Dimensional accuracy (engineering parts):**
+```toml
+[slicer.orca.overrides]
+xy_hole_compensation = "0.1"
+xy_contour_compensation = "-0.05"
+outer_wall_speed = "30"
+```
+
+**Tree supports for complex overhangs:**
+```toml
+[slicer.orca.overrides]
+enable_support = "1"
+support_type = "tree(auto)"
+support_threshold_angle = "45"
+```
+
+## Important rules
+
+- **Do not invent setting names.** Only use keys from the override tables above
+  or from the JSON setting files. estampo validates overrides and will reject
+  unknown keys with "did you mean?" suggestions.
+- **Do not force slicer settings** that conflict with the printer's machine
+  profile (e.g. `use_relative_e_distances`). Let the profile chain decide.
+- **Use string values** for OrcaSlicer overrides — they are passed as CLI
+  arguments: `layer_height = "0.2"`, not `layer_height = 0.2`.
+- **Pin the slicer version** in `[slicer].version` for reproducible builds.
+- **OrcaSlicer and CuraEngine use different setting names** for the same
+  concepts. See the [AI setup prompt](ai-setup-prompt.md) for a mapping table.
