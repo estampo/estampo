@@ -4,6 +4,53 @@ All notable changes to this project are documented here.
 
 <!-- towncrier release notes start -->
 
+## 0.4.0a1 — 2026-04-17
+
+### Features
+
+- Remove G-code template post-processing from CuraEngine backend; write ``cura_settings.json`` for external resolvers via command stages ([#485](https://github.com/estampo/estampo/pull/485))
+- Validate slicer override keys against full settings lists with cross-engine detection and "did you mean?" suggestions ([#503](https://github.com/estampo/estampo/pull/503))
+- Add AI setup prompt template (``docs/ai-setup-prompt.md``) for assisted estampo adoption in new projects ([#506](https://github.com/estampo/estampo/pull/506))
+- Support PEP 440 pre-release versions (``0.4.0a1``, ``0.4.0b1``, ``0.4.0rc1``) in the release pipeline ([#508](https://github.com/estampo/estampo/pull/508))
+- Add JSON Schema for ``estampo.toml`` and ``llm.md`` reference document for humans and AI assistants
+- Add ``--json`` flag to ``validate`` and ``run`` commands for structured output
+- Add ``SlicerEngine`` protocol in ``engine.py`` formalizing the contract every slicer module must implement
+- Add ``estampo info --json``, ``profiles list --json``, ``profiles pin --yes``, and non-interactive ``estampo init --engine --printer --filament --part``
+- Add ``{filament}`` and ``{filaments}`` template variables for command stages
+- Bundle bambox, bambox-bridge, and cura-p1s into Docker images; add ``docker`` flag for command stages; fix action image reference and stale workflow paths
+- ``estampo init`` offers pack/repack command stages for Bambu Lab printers
+
+### Bugfixes
+
+- Fix ``pin_cura_definitions()`` to also copy extruder definitions referenced by the machine definition ([#455](https://github.com/estampo/estampo/pull/455))
+- Fix ``profiles pin`` showing unnecessary overwrite prompt after ``profiles add`` on a fresh project ([#457](https://github.com/estampo/estampo/pull/457))
+- Extract CuraEngine extruder definitions from Docker image and copy them automatically on ``profiles add`` ([#459](https://github.com/estampo/estampo/pull/459))
+- Fix Docker command wrapping producing backslash paths on Windows ([#497](https://github.com/estampo/estampo/pull/497))
+- Auto-generated profile and definition update PRs now trigger CI and reuse a stable branch name, so they can actually merge.
+- Fix example pack commands and CuraEngine local definition search path
+- Include towncrier changelog fragments in auto-generated profile update PRs
+
+### Misc
+
+- Remove trivial wrapper functions in ``init.py`` — call ``ui.*`` and engine modules directly ([#447](https://github.com/estampo/estampo/pull/447))
+- Refresh examples: add quickstart config, validate all examples in CI ([#465](https://github.com/estampo/estampo/pull/465))
+- Add multi-part example demonstrating arrangement, orientation, scaling, and slicer overrides ([#466](https://github.com/estampo/estampo/pull/466))
+- Add multi-filament example demonstrating OrcaSlicer AMS slot assignment ([#467](https://github.com/estampo/estampo/pull/467))
+- Add CuraEngine example with Ultimaker 2; add bambox repack stage to OrcaSlicer examples ([#468](https://github.com/estampo/estampo/pull/468))
+- Add CuraEngine + Bambu P1S example with bambox printer definition and pack stage
+- Add printing instructions and print stage docs to P1S examples
+- Consolidate duplicated filament conversion logic in ``gcode.py`` and remove duplicate ``_load_bundled_manifest()`` from ``cura.py``
+- Decouple progress adapter from hardcoded Hamilton node names using ``@tag`` decorators
+- Delete C++ cloud bridge source and remove bridge jobs from all CI/CD workflows
+- Delete printer, auth, credentials, cloud, and thumbnails modules — estampo is now fully printer-agnostic. Default CuraEngine printer changed from Bambu Lab P1S to Ultimaker 2.
+- Extract shared Docker utilities into ``docker.py`` module, removing duplication from engine modules
+- Pin profiles in all examples and add richer slicer overrides
+- Release-readiness tests now run full pipeline inside Docker (including pack/repack) and verify ``.gcode.3mf`` output
+- Remove unused ``bambulabs-api`` and ``bambu-lab-cloud-api`` dependencies, and remove ``_find_in_bambox()`` from ``cura.py`` per ADR-005
+- Replace raw ``print()`` with ANSI escape codes with ``ui.*`` functions throughout CLI and engine modules
+- Update bundled CuraEngine 5.12.0 definitions
+
+
 ## 0.3.1 — 2026-04-11
 
 ### Features

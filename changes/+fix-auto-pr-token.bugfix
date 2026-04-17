@@ -1,1 +1,0 @@
-Auto-generated profile and definition update PRs now trigger CI and reuse a stable branch name, so they can actually merge.
