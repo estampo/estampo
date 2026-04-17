@@ -13,10 +13,9 @@ from estampo.cura import (
     _patch_gcode_header,
     _place_on_bed,
     _resolve_def_name,
-    _safe_eval_arithmetic,
-    _safe_eval_condition,
+    _settings_dict,
     _settings_flags,
-    _substitute_gcode_templates,
+    _write_cura_settings,
     cura_docker_image,
     cura_profile_from_config,
     slice_stl,
@@ -672,129 +671,55 @@ def test_place_on_bed_already_on_bed(tmp_path):
     assert placed.bounds[1][2] == pytest.approx(10.0)
 
 
-# --- _substitute_gcode_templates ---
+# --- _write_cura_settings / _settings_dict ---
 
 
-def test_substitute_simple_variables(tmp_path):
-    """Simple {variable} placeholders are replaced with profile values."""
-    gcode = tmp_path / "test.gcode"
-    gcode.write_text(
-        "M140 S{material_bed_temperature_layer_0}\n"
-        "M190 S{material_bed_temperature_layer_0}\n"
-        "M104 S{material_print_temperature_layer_0}\n"
-        "M109 S{material_print_temperature_layer_0}\n"
-        "G1 X0 Y0\n"
-    )
-    profile = CuraProfile(material_print_temperature=260, material_bed_temperature=70)
-    _substitute_gcode_templates(gcode, profile)
-    text = gcode.read_text()
-    assert "M140 S70" in text
-    assert "M190 S70" in text
-    assert "M104 S260" in text
-    assert "M109 S260" in text
-    assert "{material_" not in text
-
-
-def test_substitute_expression(tmp_path):
-    """Expressions like {temp - 20} are evaluated."""
-    gcode = tmp_path / "test.gcode"
-    gcode.write_text("M109 S{material_print_temperature_layer_0 - 20}\n")
-    profile = CuraProfile(material_print_temperature=260)
-    _substitute_gcode_templates(gcode, profile)
-    text = gcode.read_text()
-    assert "M109 S240" in text
-
-
-def test_substitute_conditional(tmp_path):
-    """Conditionals like {if condition}...{endif} are evaluated."""
-    gcode = tmp_path / "test.gcode"
-    gcode.write_text(
-        "G28\n"
-        "{if machine_buildplate_type=='textured_pei_plate'}"
-        "M1002 set_flag bed_type textured\n"
-        "{endif}"
-        "G29\n"
-    )
-    profile = CuraProfile(bed_type="Textured PEI Plate")
-    _substitute_gcode_templates(gcode, profile)
-    text = gcode.read_text()
-    assert "M1002 set_flag bed_type textured" in text
-    assert "{if" not in text
-    assert "{endif}" not in text
-
-
-def test_substitute_machine_and_material_type(tmp_path):
-    """Machine and material type placeholders are replaced."""
-    gcode = tmp_path / "test.gcode"
-    gcode.write_text(
-        "; BAMBOX_NOZZLE_DIAMETER={machine_nozzle_size}\n"
-        "; BAMBOX_BED_TYPE={machine_buildplate_type}\n"
-        "; BAMBOX_FILAMENT_TYPE={material_type}\n"
-    )
+def test_settings_dict_includes_machine_and_material(tmp_path):
+    """_settings_dict includes machine/material keys for template resolution."""
     profile = CuraProfile(
         nozzle_diameter=0.4,
         bed_type="Textured PEI Plate",
         filament_type="PLA",
+        material_print_temperature=260,
+        material_bed_temperature=70,
     )
-    _substitute_gcode_templates(gcode, profile)
-    text = gcode.read_text()
-    assert "; BAMBOX_NOZZLE_DIAMETER=0.4" in text
-    assert "; BAMBOX_BED_TYPE=textured_pei_plate" in text
-    assert "; BAMBOX_FILAMENT_TYPE=PLA" in text
-    assert "{machine_" not in text
-    assert "{material_type}" not in text
+    d = _settings_dict(profile)
+    assert d["machine_nozzle_size"] == 0.4
+    assert d["machine_buildplate_type"] == "textured_pei_plate"
+    assert d["material_type"] == "PLA"
+    assert d["material_print_temperature_layer_0"] == 260
+    assert d["material_bed_temperature_layer_0"] == 70
 
 
-def test_substitute_no_change(tmp_path):
-    """G-code without template variables is unchanged."""
-    gcode = tmp_path / "test.gcode"
-    original = "G28\nG1 X0 Y0 Z0.2\nG1 E5 F300\n"
-    gcode.write_text(original)
-    profile = CuraProfile()
-    _substitute_gcode_templates(gcode, profile)
-    assert gcode.read_text() == original
+def test_write_cura_settings(tmp_path):
+    """_write_cura_settings writes valid JSON with all profile settings."""
+    import json
+
+    profile = CuraProfile(
+        material_print_temperature=260,
+        material_bed_temperature=70,
+        filament_type="PETG",
+        bed_type="Textured PEI Plate",
+    )
+    path = _write_cura_settings(tmp_path, profile)
+    assert path == tmp_path / "cura_settings.json"
+    assert path.exists()
+    data = json.loads(path.read_text())
+    assert data["material_print_temperature_layer_0"] == 260
+    assert data["material_bed_temperature_layer_0"] == 70
+    assert data["material_type"] == "PETG"
+    assert data["machine_buildplate_type"] == "textured_pei_plate"
 
 
-# --- _safe_eval_arithmetic ---
+def test_write_cura_settings_includes_overrides(tmp_path):
+    """Profile overrides are included in the settings JSON."""
+    import json
 
-
-def test_safe_eval_arithmetic_basic():
-    assert _safe_eval_arithmetic("260 - 20") == 240.0
-    assert _safe_eval_arithmetic("100 + 50") == 150.0
-    assert _safe_eval_arithmetic("10 * 3") == 30.0
-    assert _safe_eval_arithmetic("100 / 4") == 25.0
-
-
-def test_safe_eval_arithmetic_negative():
-    assert _safe_eval_arithmetic("-5") == -5.0
-
-
-def test_safe_eval_arithmetic_rejects_function_calls():
-    with pytest.raises(ValueError, match="Unsupported"):
-        _safe_eval_arithmetic("__import__('os').system('rm -rf /')")
-
-
-def test_safe_eval_arithmetic_rejects_names():
-    with pytest.raises(ValueError, match="Unsupported"):
-        _safe_eval_arithmetic("x + 1")
-
-
-# --- _safe_eval_condition ---
-
-
-def test_safe_eval_condition_string_eq():
-    assert _safe_eval_condition("'foo' == 'foo'") is True
-    assert _safe_eval_condition("'foo' == 'bar'") is False
-
-
-def test_safe_eval_condition_string_neq():
-    assert _safe_eval_condition("'foo' != 'bar'") is True
-    assert _safe_eval_condition("'foo' != 'foo'") is False
-
-
-def test_safe_eval_condition_rejects_function_calls():
-    with pytest.raises(ValueError):
-        _safe_eval_condition("__import__('os').system('id') == ''")
+    profile = CuraProfile(overrides={"infill_pattern": "gyroid", "wall_line_count": "4"})
+    path = _write_cura_settings(tmp_path, profile)
+    data = json.loads(path.read_text())
+    assert data["infill_pattern"] == "gyroid"
+    assert data["wall_line_count"] == "4"
 
 
 # --- _fetch_printer_def (URL / file path) ---

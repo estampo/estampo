@@ -39,6 +39,7 @@ COMMAND_VARIABLES: dict[str, str] = {
     "input_3mf": "Plate 3MF path (available after plate stage)",
     "sliced_3mf": "Packaged 3MF after slicing (available after slice stage)",
     "sliced_dir": "Slicer output directory (available after slice stage)",
+    "cura_settings": "CuraEngine settings JSON path (after slice, cura only)",
 }
 
 
@@ -67,7 +68,13 @@ def build_command_context(
         "input_3mf": str(stage_results.get("plate_3mf_path", "")),
         "sliced_3mf": str(stage_results.get("packaged_output", "")),
         "sliced_dir": str(stage_results.get("sliced_output_dir", "")),
+        "cura_settings": "",
     }
+    sliced_dir = stage_results.get("sliced_output_dir")
+    if sliced_dir and config.slicer.engine == "cura":
+        settings_path = Path(str(sliced_dir)) / "cura_settings.json"
+        if settings_path.exists():
+            ctx["cura_settings"] = str(settings_path)
     return ctx
 
 

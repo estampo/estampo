@@ -140,6 +140,30 @@ class TestBuildCommandContext:
         ctx = build_command_context(cfg, tmp_path / "out", {})
         assert ctx["filament"] == "PLA"
 
+    def test_cura_settings_populated_when_file_exists(self, tmp_path):
+        sliced = tmp_path / "sliced"
+        sliced.mkdir()
+        settings = sliced / "cura_settings.json"
+        settings.write_text("{}")
+        cfg = _make_config(tmp_path, engine="cura")
+        results = {"sliced_output_dir": sliced}
+        ctx = build_command_context(cfg, tmp_path / "out", results)
+        assert ctx["cura_settings"] == str(settings)
+
+    def test_cura_settings_empty_for_orca_engine(self, tmp_path):
+        sliced = tmp_path / "sliced"
+        sliced.mkdir()
+        (sliced / "cura_settings.json").write_text("{}")
+        cfg = _make_config(tmp_path, engine="orca")
+        results = {"sliced_output_dir": sliced}
+        ctx = build_command_context(cfg, tmp_path / "out", results)
+        assert ctx["cura_settings"] == ""
+
+    def test_cura_settings_empty_when_no_file(self, tmp_path):
+        cfg = _make_config(tmp_path, engine="cura")
+        ctx = build_command_context(cfg, tmp_path / "out", {})
+        assert ctx["cura_settings"] == ""
+
 
 # ---------------------------------------------------------------------------
 # parse_command_stage
