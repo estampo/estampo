@@ -908,6 +908,39 @@ def test_profiles_pin_yes_updates_toml(mock_load, mock_pin, tmp_path, capsys):
 # --- validate ---
 
 
+def test_validate_json(tmp_path, capsys):
+    """validate --json should output structured JSON."""
+    import json as json_mod
+
+    config = tmp_path / "estampo.toml"
+    (tmp_path / "cube.stl").write_bytes(b"solid cube\nendsolid cube\n")
+    config.write_text(
+        '[slicer]\nengine = "orca"\nversion = "2.3.1"\n\n[[parts]]\nfile = "cube.stl"\n'
+    )
+    main(["validate", str(config), "--json"])
+    out = capsys.readouterr().out
+    data = json_mod.loads(out)
+    assert "valid" in data
+    assert "passes" in data
+    assert "warnings" in data
+    assert isinstance(data["valid"], bool)
+    assert isinstance(data["passes"], list)
+
+
+def test_validate_json_with_warnings(tmp_path, capsys):
+    """validate --json should report warnings."""
+    import json as json_mod
+
+    config = tmp_path / "estampo.toml"
+    (tmp_path / "cube.stl").write_bytes(b"solid cube\nendsolid cube\n")
+    # Missing slicer version — should produce a warning
+    config.write_text('[slicer]\nengine = "orca"\n\n[[parts]]\nfile = "cube.stl"\n')
+    main(["validate", str(config), "--json"])
+    out = capsys.readouterr().out
+    data = json_mod.loads(out)
+    assert isinstance(data["warnings"], list)
+
+
 def test_validate_missing_config(tmp_path):
     """validate should fail when config file doesn't exist."""
     with pytest.raises(SystemExit):
