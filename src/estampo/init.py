@@ -994,6 +994,37 @@ def run_wizard(output: Path | None = None) -> str:
     overrides = _prompt_overrides()
     ui.console.print()
 
+    # --- Step 11: Command stages (pack/resolve) ---
+    command_stages: dict[str, dict[str, str | bool]] = {}
+    is_bambu = _is_bambu_printer(printer_profile or "")
+    if is_bambu:
+        ui.heading("Packaging")
+        ui.info("This printer needs bambox to produce printable .gcode.3mf files.")
+        if ui.prompt_yn("Add a pack stage? (requires: pipx install bambox)", default=True):
+            if engine == "cura":
+                # CuraEngine needs resolve_templates before pack
+                stages.append("resolve_templates")
+                command_stages["resolve_templates"] = {
+                    "command": (
+                        "cura-p1s resolve {sliced_dir}/plate.gcode --settings {cura_settings}"
+                    ),
+                }
+                stages.append("pack")
+                command_stages["pack"] = {
+                    "command": (
+                        "bambox pack {sliced_dir}/plate.gcode -o {output_dir}/plate.gcode.3mf"
+                    ),
+                    "output": "{output_dir}/plate.gcode.3mf",
+                }
+            else:
+                # OrcaSlicer — repack the existing .3mf
+                stages.append("pack")
+                command_stages["pack"] = {
+                    "command": "bambox repack {output_dir}/plate_sliced.gcode.3mf",
+                    "output": "{output_dir}/plate_sliced.gcode.3mf",
+                }
+        ui.console.print()
+
     # --- Build TOML ---
     toml = _build_toml(
         project_name=project_name,
@@ -1008,6 +1039,7 @@ def run_wizard(output: Path | None = None) -> str:
         bed_type=bed_type,
         overrides=overrides,
         machine_overrides=machine_overrides or None,
+        command_stages=command_stages,
     )
 
     # --- Preview and confirm ---
@@ -1036,6 +1068,12 @@ def run_wizard(output: Path | None = None) -> str:
         return run_wizard(output=output)
 
 
+def _is_bambu_printer(printer: str) -> bool:
+    """Check if a printer profile name refers to a Bambu Lab printer."""
+    lower = printer.lower()
+    return any(kw in lower for kw in ("bambu", "bbl", "bambox"))
+
+
 def _build_toml(
     *,
     project_name: str | None = None,
@@ -1050,6 +1088,7 @@ def _build_toml(
     bed_type: str | None = None,
     overrides: dict[str, str] | None = None,
     machine_overrides: dict[str, str] | None = None,
+    command_stages: dict[str, dict[str, str | bool]] | None = None,
 ) -> str:
     """Build a TOML string from wizard answers."""
     lines: list[str] = []
@@ -1137,6 +1176,17 @@ def _build_toml(
         if p.get("filament", 1) != 1:
             lines.append(f"filament = {p['filament']}")
         lines.append("")
+
+    # Command stages
+    if command_stages:
+        for stage_name, stage_cfg in command_stages.items():
+            lines.append(f"[{stage_name}]")
+            for key, val in stage_cfg.items():
+                if isinstance(val, bool):
+                    lines.append(f"{key} = {str(val).lower()}")
+                else:
+                    lines.append(f'{key} = "{val}"')
+            lines.append("")
 
     return "\n".join(lines)
 
