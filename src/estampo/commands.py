@@ -236,12 +236,18 @@ def run_command_stage(
     from estampo import ui
 
     with ui.status(f"Running {stage.name}"):
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-        )
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+            )
+        except FileNotFoundError:
+            raise EstampoError(
+                f"Command stage '{stage.name}' failed: "
+                f"'{cmd[0]}' not found. Is it installed and on PATH?"
+            ) from None
 
     if result.returncode != 0:
         log.error("Command stage '%s' stderr:\n%s", stage.name, result.stderr)

@@ -44,5 +44,5 @@ orient = "upright"
 rotate = [0, 0, 45]
 
 [pack]
-command = "bambox repack {sliced_3mf} -o {output_dir}/plate.gcode.3mf"
-output = "{output_dir}/plate.gcode.3mf"
+command = "bambox repack {output_dir}/plate_sliced.gcode.3mf"
+output = "{output_dir}/plate_sliced.gcode.3mf"
