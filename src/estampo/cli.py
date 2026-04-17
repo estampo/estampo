@@ -180,7 +180,7 @@ def run(
         print(json.dumps(result, indent=2, default=str))
 
 
-@app.command()
+@app.command(hidden=True)
 def watch(
     config: Annotated[Path | None, typer.Argument(help="Path to config file")] = None,
     output_dir: Annotated[

@@ -251,14 +251,9 @@ estampo run                         # full pipeline
 estampo run --until plate           # stop after plating
 estampo run --only slice            # run just one stage
 estampo run --dry-run               # everything except sending to printer
-estampo watch                       # re-run pipeline when input files change
-estampo status                      # query printer status
-estampo status -w                   # live printer dashboard
 estampo profiles list               # list available slicer profiles
 estampo profiles pin                # pin profiles for reproducible builds
 ```
-
-![estampo status --watch](https://raw.githubusercontent.com/estampo/estampo/main/docs/images/watch.png)
 
 ## Credentials
 
