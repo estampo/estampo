@@ -103,8 +103,24 @@ OrcaSlicer CLI is great for slicing a prepared plate. estampo builds a reproduci
 - **Multi-part filament mapping** — per-part filament slot assignment and paint color preservation, injected into the 3MF metadata
 - **Reproducible builds** — pin slicer profiles into your repo + lock OrcaSlicer version in Docker = identical gcode on any machine
 - **Partial execution** — `--until plate` to inspect layout, `--only slice` to re-slice, `--dry-run` to test everything
-- **Send to printer** — Bambu LAN, Bambu Cloud, and Moonraker/Klipper (experimental), with live status monitoring
+- **Command stages** — run external tools (e.g. `bambox pack`) as pipeline stages with variable substitution
 - **Headless Docker slicing** — no GUI, no display server, works in CI, uses a specific OrcaSlicer version
+
+### Why not just use CuraEngine CLI?
+
+CuraEngine CLI (`CuraEngine slice -j definition.json -s KEY=VALUE -l model.stl -o output.gcode`) is powerful but requires assembling the full invocation yourself:
+
+| What you need to do | CuraEngine CLI | estampo |
+|---------------------|---------------|---------|
+| Load printer definition | `-j printer.def.json` + `-d` search paths for inheritance | `printer = "Ultimaker 2"` in TOML |
+| Set material/quality | Chain of `-j` files or `-s` overrides for every setting | `[slicer.cura.overrides]` in TOML |
+| Arrange multiple parts | Not supported — manual positioning | Automatic bin-packing |
+| Multi-extruder mapping | `-g -e0 -l a.stl -g -e1 -l b.stl` per mesh group | `filament = 1` per part |
+| Reproducible builds | Track all definition JSONs yourself | `version = "5.12.0"` + Docker |
+| Run in CI | Install CuraEngine + definitions manually | `uses: estampo/estampo/action@main` |
+| Pack for Bambu printers | Separate manual step | `[pack]` command stage |
+
+estampo handles definition resolution, search paths, extruder context, and setting inheritance — you just declare the printer name and overrides in TOML.
 
 ## Best fit
 
