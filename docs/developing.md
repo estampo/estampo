@@ -107,10 +107,11 @@ The `TimingAdapter` in `src/estampo/adapters.py` hooks into Hamilton's lifecycle
 |------|---------|
 | `src/estampo/pipeline.py` | Hamilton DAG nodes and stage registry |
 | `src/estampo/adapters.py` | TimingAdapter for observability |
-| `src/estampo/cli.py` | CLI entry point (`run`, `setup`, `status`, `profiles`) |
+| `src/estampo/cli.py` | CLI entry point (`run`, `init`, `validate`, `profiles`) |
 | `src/estampo/config.py` | TOML parsing and validation |
 | `src/estampo/arrange.py` | 2D bin-packing |
 | `src/estampo/plate.py` | 3MF export with extruder metadata |
-| `src/estampo/slicer.py` | OrcaSlicer CLI integration (local + Docker) |
-| `src/estampo/printer.py` | Print dispatch (LAN, cloud, Bambu Connect) |
-| `src/estampo/credentials.py` | Credential loading from `~/.config/estampo/credentials.toml` |
+| `src/estampo/slicer.py` | Slicer dispatch (routes to `orca.py` / `cura.py`) |
+| `src/estampo/orca.py` | OrcaSlicer engine (local + Docker) |
+| `src/estampo/cura.py` | CuraEngine engine (Docker) |
+| `src/estampo/commands.py` | Command stage execution (generic subprocess runner) |

@@ -114,12 +114,7 @@ docker run -d --name virtual-klipper \
 # Check readiness:
 curl -s http://localhost:7125/printer/info | python3 -m json.tool
 
-# Configure estampo
-estampo setup  # choose moonraker, url = http://localhost:7125
-
-# Test
-estampo status --printer <name>
-estampo status --printer <name> --watch
+# The moonraker module was verified against this virtual printer
 ```
 
 **Verified operations (2026-03-18):**
@@ -127,8 +122,6 @@ estampo status --printer <name> --watch
 - `get_moonraker_status()` — state, temperatures, progress, layer info
 - `_send_moonraker()` upload-only — file appears in Moonraker file list
 - `_send_moonraker()` upload + start — print runs to completion
-- `estampo status` — renders state, task name, temperatures
-- `estampo status --watch` — live dashboard with polling
 
 **Note:** The simulavr virtual printer executes gcode nearly instantly, so `RUNNING` state is brief. On real hardware, progress and layer tracking will update over time.
 
