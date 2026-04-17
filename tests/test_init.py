@@ -649,15 +649,15 @@ class TestBuildToml:
             stages=["load", "arrange", "plate", "slice", "pack"],
             command_stages={
                 "pack": {
-                    "command": "bambox repack {output_dir}/plate_sliced.gcode.3mf",
-                    "output": "{output_dir}/plate_sliced.gcode.3mf",
+                    "command": "bambox repack {sliced_3mf}",
+                    "output": "{sliced_3mf}",
                 },
             },
         )
         assert '"pack"' in toml
         assert "[pack]" in toml
         assert "bambox repack" in toml
-        assert 'output = "{output_dir}/plate_sliced.gcode.3mf"' in toml
+        assert 'output = "{sliced_3mf}"' in toml
 
     def test_cura_resolve_and_pack_stages(self):
         toml = _build_toml(

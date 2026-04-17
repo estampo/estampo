@@ -334,6 +334,29 @@ To set up the secret: run `bambox login` locally, then copy the contents of
 - **Pin the slicer version** for reproducibility.
 - estampo runs slicers inside Docker by default. GitHub Actions runners have
   Docker available, so `estampo run` works out of the box in CI.
+
+### Command stage variables
+
+Command stages use `{variable}` placeholders that are substituted at runtime.
+Only use these exact variable names — estampo will error on unknown variables.
+
+| Variable | Available after | Description |
+|----------|----------------|-------------|
+| `{name}` | always | Project name from TOML config (empty if unset) |
+| `{output_dir}` | always | Output directory path |
+| `{engine}` | always | Slicer engine name (`orca` or `cura`) |
+| `{machine}` | always | Printer/machine profile name (empty if unset) |
+| `{filament}` | always | First filament profile name (empty if unset) |
+| `{filaments}` | always | All filament profiles, comma-separated |
+| `{slicer_image}` | always | Docker image tag for the active slicer |
+| `{input_3mf}` | `plate` | Plate 3MF file path |
+| `{sliced_3mf}` | `slice` | Sliced output file (`.gcode.3mf` for OrcaSlicer, `.gcode` for CuraEngine) |
+| `{sliced_dir}` | `slice` | Slicer output directory |
+| `{cura_settings}` | `slice` | CuraEngine settings JSON path (CuraEngine only, empty for OrcaSlicer) |
+
+Command stage outputs are also available as variables to downstream stages.
+For example, if a `resolve_templates` stage has `output = "..."`, the next
+stage can reference `{resolve_templates}`.
 ````
 
 ---

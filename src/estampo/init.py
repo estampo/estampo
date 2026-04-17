@@ -779,8 +779,8 @@ def _wizard_pick_command_stages(
         else:
             stages.append("pack")
             command_stages["pack"] = {
-                "command": "bambox repack {output_dir}/plate_sliced.gcode.3mf",
-                "output": "{output_dir}/plate_sliced.gcode.3mf",
+                "command": "bambox repack {sliced_3mf}",
+                "output": "{sliced_3mf}",
             }
     ui.console.print()
     return command_stages
