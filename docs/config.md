@@ -8,10 +8,7 @@ estampo is configured with a single TOML file (typically `estampo.toml`). This p
 name = "benchy"
 
 [pipeline]
-stages = ["load", "arrange", "plate", "slice", "print"]
-
-[printer]
-name = "workshop"
+stages = ["load", "arrange", "plate", "slice", "pack"]
 
 [plate]
 size = [256, 256]
@@ -83,59 +80,17 @@ If your workflow doesn't need printing, omit `print`:
 stages = ["load", "arrange", "plate", "slice"]
 ```
 
-## `[printer]`
+## `[printer]` *(deprecated — removed in v0.4.0)*
 
-Defines which printer to send gcode to. Optional — omit if you only need to plate and slice.
-
-| Key    | Type     | Default | Description                                           |
-|--------|----------|---------|-------------------------------------------------------|
-| `name` | `string` | —       | Printer name in `~/.config/estampo/credentials.toml` |
-
-The `name` field references a printer configured via `estampo setup`. All connection details (type, IP, credentials) are stored in `credentials.toml`, not in the project config.
-
-### Credentials file
-
-Run `estampo setup` to create `~/.config/estampo/credentials.toml`. It stores printer connection details and optional cloud login:
-
-```toml
-# ~/.config/estampo/credentials.toml
-
-[cloud]
-token = "..."
-refresh_token = "..."
-email = "user@example.com"
-uid = "12345"
-
-[printers.workshop]
-type = "bambu-lan"
-ip = "192.168.1.100"
-access_code = "12345678"
-serial = "01P00A451601106"
-
-[printers.p1s-cloud]
-type = "bambu-cloud"
-serial = "01P00A451601106"
-
-[printers.voron]
-type = "moonraker"
-url = "http://voron.local:7125"
+> **Use [bambox](https://github.com/estampo/bambox) instead.** estampo is
+> printer-agnostic — printing and packaging are handled by external tools
+> configured as [command stages](#command-stages). See the
+> [AI setup prompt](ai-setup-prompt.md) for examples of `bambox pack`,
+> `bambox repack`, and `bambox print`.
+>
+> Credentials are managed by bambox: run `bambox login` to authenticate,
+> credentials are saved to `~/.config/bambox/credentials.toml`.
 ```
-
-### Printer types
-
-| Type          | Required fields              | Description                          |
-|---------------|------------------------------|--------------------------------------|
-| `bambu-lan`   | ip, access_code, serial      | Direct LAN connection (fastest)      |
-| `bambu-cloud` | serial                       | Cloud bridge (requires `[cloud]` login) |
-| `moonraker`   | url (+ optional api_key)     | Klipper/Moonraker REST API           |
-
-**Environment variable overrides** (take precedence over credentials.toml):
-
-| Env var              | Overrides      |
-|----------------------|----------------|
-| `BAMBU_PRINTER_IP`   | `ip`           |
-| `BAMBU_ACCESS_CODE`  | `access_code`  |
-| `BAMBU_SERIAL`       | `serial`       |
 
 ## `[plate]`
 

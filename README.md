@@ -152,7 +152,6 @@ pipx install estampo
 Generate a config with the interactive wizard, or dump a commented template:
 
 ```bash
-estampo setup                      # configures printer targets
 estampo init                       # interactive wizard — discovers profiles and CAD files, creates TOML
 estampo init --template            # dump a commented template
 ```
@@ -161,10 +160,7 @@ Or create `estampo.toml` by hand (see [full config reference](https://github.com
 
 ```toml
 [pipeline]
-stages = ["load", "arrange", "plate", "slice", "print"]
-
-[printer]
-name = "workshop"       # references ~/.config/estampo/credentials.toml
+stages = ["load", "arrange", "plate", "slice", "pack"]
 
 [plate]
 size = [256, 256]       # build plate dimensions in mm
@@ -246,7 +242,6 @@ The action slices your model, uploads G-code as an artifact, and posts print tim
 estampo init                        # interactive config wizard
 estampo init --template             # dump commented TOML template
 estampo validate                    # check config for issues
-estampo setup                       # set up a printer (credentials + connection type)
 estampo run                         # full pipeline
 estampo run --until plate           # stop after plating
 estampo run --only slice            # run just one stage
@@ -255,9 +250,9 @@ estampo profiles list               # list available slicer profiles
 estampo profiles pin                # pin profiles for reproducible builds
 ```
 
-## Credentials
+## Printing
 
-Printer credentials are stored in `~/.config/estampo/credentials.toml`, created by `estampo setup`. The file is set to `600` permissions (owner read/write only) and is never committed to your repo — only the printer *name* appears in `estampo.toml`. Credentials can also be supplied via environment variables (`BAMBU_PRINTER_IP`, `BAMBU_ACCESS_CODE`, `BAMBU_SERIAL`) for CI or shared environments.
+estampo is printer-agnostic — it produces sliced output but does not send files to printers. For Bambu Lab printers, use [bambox](https://github.com/estampo/bambox) as a command stage to pack and print. Run `bambox login` to set up credentials (`~/.config/bambox/credentials.toml`). See the [AI setup prompt](docs/ai-setup-prompt.md) for full examples.
 
 ## Documentation
 

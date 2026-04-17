@@ -58,52 +58,12 @@ estampo validate                  # check ./estampo.toml
 estampo validate myproject.toml   # check a specific file
 ```
 
-## `estampo setup`
+## `estampo setup` *(deprecated — removed in v0.4.0)*
 
-Interactively set up a printer in `~/.config/estampo/credentials.toml`.
-
-```
-estampo setup
-```
-
-Walks through:
-1. **Printer name** — used to reference this printer in `estampo.toml` (e.g. `name = "workshop"`)
-2. **Printer type** — `bambu-lan` (direct LAN), `bambu-cloud` (cloud bridge), or `moonraker` (Klipper)
-3. **Type-specific fields** — IP/access code/serial for Bambu LAN, serial for Bambu Cloud, URL for Moonraker
-4. **Cloud login** — for `bambu-cloud` type, optionally logs in to Bambu Cloud
-
-The credentials file is created with `600` permissions (owner read/write only). If the file already exists, new printers are added alongside existing ones.
-
-### Supported printer types
-
-| Type          | Required fields              | Description                          |
-|---------------|------------------------------|--------------------------------------|
-| `bambu-lan`   | ip, access_code, serial      | Direct LAN connection to Bambu Lab   |
-| `bambu-cloud` | serial                       | Cloud bridge (requires cloud login)  |
-| `moonraker`   | url (+ optional api_key)     | Klipper/Moonraker REST API           |
-
-### Example session
-
-```
-$ estampo setup
-Printer name (e.g. 'workshop'): workshop
-
-Printer types:
-  [1] bambu-lan — Bambu Lab printer via LAN (direct connection)
-  [2] bambu-cloud — Bambu Lab printer via cloud (requires cloud login)
-  [3] moonraker — Klipper/Moonraker printer via REST API
-Choose type [1]: 1
-
-Setting up 'workshop' (bambu-lan)
-  ip: 192.168.1.100
-  access_code: 12345678
-  serial: 01P00A451601106
-
-Wrote ~/.config/estampo/credentials.toml (mode 600)
-Reference this printer in estampo.toml with:
-  [printer]
-  name = "workshop"
-```
+> **Use [bambox](https://github.com/estampo/bambox) instead.** estampo is
+> printer-agnostic — printer setup and credentials are managed by bambox.
+> Run `bambox login` to authenticate with Bambu Cloud. Credentials are
+> saved to `~/.config/bambox/credentials.toml`.
 
 ## `estampo run`
 
@@ -176,35 +136,6 @@ estampo run myproject.toml --until plate
 - **`--only slice`** runs *just* the slice stage. It expects `output/plate.3mf` to already exist on disk (e.g. from a previous `--until plate` run). Fails with an error if the prerequisite is missing.
 
 You cannot combine `--until` and `--only`.
-
-## `estampo status`
-
-Query printer status or control a running/failed print.
-
-```
-estampo status [--printer NAME] [--watch] [--interval SECONDS] [--stop] [--resume] [--clear]
-```
-
-| Option              | Description                                      |
-|---------------------|--------------------------------------------------|
-| `--printer NAME`    | Query a specific printer (default: all)          |
-| `-w, --watch`       | Live dashboard mode with auto-refresh            |
-| `--interval SECONDS`| Refresh interval in watch mode (default: 10)     |
-| `--stop`            | Stop the current print job                       |
-| `--resume`          | Resume a paused print                            |
-| `--clear`           | Clear FAILED state and dismiss error dialog      |
-
-Without `--printer`, shows all configured printers. Add `-w` for a live dashboard.
-
-### Examples
-
-```bash
-estampo status                             # show all printers
-estampo status --printer workshop -w       # live dashboard for one printer
-estampo status --printer workshop --stop   # stop current print
-estampo status --printer workshop --resume # resume paused print
-estampo status --printer workshop --clear  # clear FAILED state
-```
 
 ## `estampo profiles`
 
