@@ -1,0 +1,310 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://estampo.dev/schema/estampo.schema.json",
+  "title": "estampo.toml",
+  "description": "Configuration schema for estampo — the build system for reproducible 3D prints. See https://github.com/estampo/estampo",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Project name. Used to prefix the output directory (e.g. estampo_output/my-project/)."
+    },
+    "output_dir": {
+      "type": "string",
+      "default": "estampo_output",
+      "description": "Output directory path, relative to the config file."
+    },
+    "pipeline": { "$ref": "#/$defs/pipeline" },
+    "plate": { "$ref": "#/$defs/plate" },
+    "slicer": { "$ref": "#/$defs/slicer" },
+    "filaments": { "$ref": "#/$defs/filament_aliases" },
+    "parts": {
+      "type": "array",
+      "description": "List of parts to print. At least one is required.",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/part" }
+    }
+  },
+  "required": ["parts"],
+  "additionalProperties": {
+    "$ref": "#/$defs/command_stage"
+  },
+
+  "$defs": {
+    "pipeline": {
+      "type": "object",
+      "description": "Pipeline stage configuration.",
+      "properties": {
+        "stages": {
+          "type": "array",
+          "description": "Ordered list of pipeline stages to execute.",
+          "default": ["load", "arrange", "plate", "slice"],
+          "items": {
+            "type": "string",
+            "description": "Stage name. Built-in stages: load, arrange, plate, slice, gcode-info. Custom stages must have a matching TOML section with a 'command' key."
+          },
+          "examples": [
+            ["load", "arrange", "plate", "slice"],
+            ["load", "arrange", "plate", "slice", "pack"],
+            ["load", "arrange", "plate", "slice", "resolve_templates", "pack"]
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "plate": {
+      "type": "object",
+      "description": "Build plate dimensions.",
+      "properties": {
+        "size": {
+          "type": "array",
+          "description": "Build plate dimensions in mm: [width, depth].",
+          "items": { "type": "number", "exclusiveMinimum": 0 },
+          "minItems": 2,
+          "maxItems": 2,
+          "default": [256, 256],
+          "examples": [[256, 256], [220, 220], [350, 350]]
+        },
+        "padding": {
+          "type": "number",
+          "description": "Gap between parts in mm.",
+          "default": 5.0,
+          "exclusiveMinimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "slicer": {
+      "type": "object",
+      "description": "Slicer engine configuration.",
+      "properties": {
+        "engine": {
+          "type": "string",
+          "enum": ["orca", "cura"],
+          "default": "orca",
+          "description": "Slicer engine. 'orca' = OrcaSlicer, 'cura' = CuraEngine."
+        },
+        "version": {
+          "type": "string",
+          "description": "Pinned slicer version for reproducible builds. OrcaSlicer: '2.3.1'. CuraEngine: '5.12.0'.",
+          "examples": ["2.3.1", "5.12.0"]
+        },
+        "bed_type": {
+          "type": "string",
+          "description": "Bed surface type. Affects filament adhesion profiles.",
+          "examples": ["Textured PEI Plate", "Cool Plate", "Engineering Plate", "High Temp Plate"]
+        },
+        "profiles_dir": {
+          "type": "string",
+          "default": "profiles",
+          "description": "Directory for pinned profiles, relative to config file."
+        },
+        "orca": { "$ref": "#/$defs/orca_config" },
+        "cura": { "$ref": "#/$defs/cura_config" }
+      },
+      "additionalProperties": false
+    },
+
+    "orca_config": {
+      "type": "object",
+      "description": "OrcaSlicer-specific configuration. Uses a profile chain: printer → process → filament(s).",
+      "properties": {
+        "printer": {
+          "type": "string",
+          "description": "Machine profile name. Run 'estampo profiles list --engine orca --category machine' to see available profiles.",
+          "examples": [
+            "Bambu Lab P1S 0.4 nozzle",
+            "Bambu Lab A1 mini 0.4 nozzle",
+            "Bambu Lab X1C 0.4 nozzle"
+          ]
+        },
+        "process": {
+          "type": "string",
+          "description": "Print quality/process profile name.",
+          "examples": [
+            "0.20mm Standard @BBL X1C",
+            "0.16mm Optimal @BBL X1C",
+            "0.28mm Draft @BBL X1C"
+          ]
+        },
+        "filaments": {
+          "type": "array",
+          "description": "Filament profiles, one per AMS slot. Order matters: slot 1 = first entry.",
+          "items": { "type": "string" },
+          "examples": [
+            ["Generic PLA @base"],
+            ["Generic PLA @base", "Generic PETG @base"]
+          ]
+        },
+        "slots": {
+          "type": "object",
+          "description": "Explicit AMS slot mapping. Keys are slot numbers (1-indexed as strings in TOML), values are filament profile names.",
+          "additionalProperties": { "type": "string" },
+          "examples": [{ "1": "Generic PLA @base", "3": "Generic PETG @base" }]
+        },
+        "overrides": {
+          "type": "object",
+          "description": "Process profile setting overrides. Keys are OrcaSlicer setting names, values are strings or numbers.",
+          "additionalProperties": { "type": ["string", "number", "boolean"] },
+          "examples": [{
+            "sparse_infill_density": "20%",
+            "wall_loops": 3,
+            "enable_support": 1,
+            "support_threshold_angle": 45,
+            "layer_height": 0.2,
+            "seam_position": "random"
+          }]
+        },
+        "machine_overrides": {
+          "type": "object",
+          "description": "Machine profile overrides.",
+          "additionalProperties": { "type": ["string", "number", "boolean"] },
+          "examples": [{ "nozzle_type": "hardened_steel" }]
+        },
+        "filament_overrides": {
+          "type": "object",
+          "description": "Filament profile overrides. Applied to all filament slots.",
+          "additionalProperties": { "type": ["string", "number", "boolean"] },
+          "examples": [{ "nozzle_temperature_initial_layer": "220" }]
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "cura_config": {
+      "type": "object",
+      "description": "CuraEngine-specific configuration. Uses printer definition files (.def.json).",
+      "properties": {
+        "printer": {
+          "type": "string",
+          "description": "CuraEngine printer definition name or ID. Can be a human name ('Ultimaker 2'), a definition ID ('ultimaker2'), or a path/URL to a .def.json file.",
+          "examples": ["Ultimaker 2", "bambox_p1s", "ultimaker_s5"]
+        },
+        "filaments": {
+          "type": "array",
+          "description": "Filament names for documentation and traceability.",
+          "items": { "type": "string" },
+          "examples": [["PLA"], ["PETG", "PLA"]]
+        },
+        "overrides": {
+          "type": "object",
+          "description": "CuraEngine setting overrides. Keys are CuraEngine setting names (different from OrcaSlicer names).",
+          "additionalProperties": { "type": ["string", "number", "boolean"] },
+          "examples": [{
+            "infill_sparse_density": 20,
+            "infill_pattern": "gyroid",
+            "wall_line_count": 3,
+            "speed_print": 60,
+            "layer_height": 0.2
+          }]
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "filament_aliases": {
+      "type": "object",
+      "description": "Material aliases. Map short names to full slicer profile names, then use the alias in [[parts]].filament.",
+      "additionalProperties": { "type": "string" },
+      "examples": [{
+        "structural": "Generic PETG-CF @base",
+        "decorative": "Generic PLA @base"
+      }]
+    },
+
+    "part": {
+      "type": "object",
+      "description": "A part (mesh file) to include on the build plate.",
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "Path to mesh file, relative to the config file. Supported formats: .stl, .3mf, .step, .stp, .obj"
+        },
+        "copies": {
+          "type": "integer",
+          "description": "Number of copies to arrange on the plate.",
+          "default": 1,
+          "minimum": 1
+        },
+        "orient": {
+          "type": "string",
+          "description": "Part orientation on the build plate. Ignored if 'rotate' is set.",
+          "enum": ["flat", "upright", "side", "upside-down"],
+          "default": "flat"
+        },
+        "rotate": {
+          "type": "array",
+          "description": "Custom rotation in degrees: [rx, ry, rz]. Overrides 'orient' if set.",
+          "items": { "type": "number" },
+          "minItems": 3,
+          "maxItems": 3,
+          "examples": [[0, 0, 45], [90, 0, 0]]
+        },
+        "filament": {
+          "description": "Filament slot (integer, 1-indexed) or profile name/alias (string).",
+          "oneOf": [
+            { "type": "integer", "minimum": 1 },
+            { "type": "string" }
+          ],
+          "default": 1
+        },
+        "scale": {
+          "type": "number",
+          "description": "Uniform scale factor.",
+          "default": 1.0,
+          "exclusiveMinimum": 0
+        },
+        "object": {
+          "type": "string",
+          "description": "Select a named object from a multi-object 3MF file."
+        },
+        "sequence": {
+          "type": "integer",
+          "description": "Print order for sequential printing. Lower numbers print first.",
+          "default": 1,
+          "minimum": 1
+        },
+        "filaments": {
+          "type": "object",
+          "description": "Per-object filament overrides for multi-object 3MF. Maps object name to filament slot or name.",
+          "additionalProperties": {
+            "oneOf": [
+              { "type": "integer", "minimum": 1 },
+              { "type": "string" }
+            ]
+          }
+        }
+      },
+      "required": ["file"],
+      "additionalProperties": false
+    },
+
+    "command_stage": {
+      "type": "object",
+      "description": "Custom command stage. Runs an external CLI tool as a pipeline stage. The section name must appear in [pipeline].stages.",
+      "properties": {
+        "command": {
+          "type": "string",
+          "description": "Shell command to execute. Use {variable} for substitution. Available variables: name, output_dir, machine, engine, filament, filaments, input_3mf, sliced_3mf, sliced_dir, cura_settings, slicer_image."
+        },
+        "output": {
+          "type": "string",
+          "description": "Output file path (supports variable substitution). If set, the stage returns this path for downstream use."
+        },
+        "docker": {
+          "type": "boolean",
+          "description": "Run command inside a Docker container. Mounts the output directory at /work/output.",
+          "default": false
+        },
+        "image": {
+          "type": "string",
+          "description": "Docker image to use when docker=true. Falls back to the slicer image if not set."
+        }
+      },
+      "required": ["command"],
+      "additionalProperties": false
+    }
+  }
+}
