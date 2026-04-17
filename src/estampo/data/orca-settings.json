@@ -1,0 +1,2953 @@
+{
+  "engine": "orca",
+  "version": "2.3.1",
+  "source": "OrcaSlicer BBL profiles extracted from Docker image",
+  "note": "Process settings go in [slicer.orca.overrides], machine settings in [slicer.orca.machine_overrides], filament settings in [slicer.orca.filament_overrides]. Use the 'key' field as the override key.",
+  "settings_count": 263,
+  "process_count": 113,
+  "machine_count": 84,
+  "filament_count": 66,
+  "settings": [
+    {
+      "key": "description",
+      "category": "process",
+      "example_values": [
+        "Compared with the default profile of a 0.4 mm nozzle, it has a bigger layer height, and results in more apparent layer lines and lower printing quality, but shorter printing time.",
+        "Compared with the default profile of a 0.2 mm nozzle, it has a bigger layer height, and results in slightly visible layer lines, but shorter printing time.",
+        "Compared with the default profile of a 0.4 mm nozzle, it has a smaller layer height, and results in less apparent layer lines and higher printing quality, but longer printing time."
+      ],
+      "profiles_count": 118
+    },
+    {
+      "key": "default_acceleration",
+      "category": "process",
+      "example_values": [
+        "6000",
+        "5000",
+        "4000"
+      ],
+      "profiles_count": 75
+    },
+    {
+      "key": "elefant_foot_compensation",
+      "category": "process",
+      "example_values": [
+        "0",
+        "0.15",
+        "0.075"
+      ],
+      "profiles_count": 91
+    },
+    {
+      "key": "travel_speed",
+      "category": "process",
+      "example_values": [
+        "700",
+        "400",
+        "500"
+      ],
+      "profiles_count": 60
+    },
+    {
+      "key": "compatible_printers",
+      "category": "process",
+      "example_values": [
+        [
+          "Bambu Lab A1 mini 0.4 nozzle"
+        ],
+        [
+          "Bambu Lab P1P 0.2 nozzle"
+        ],
+        [
+          "Bambu Lab X1 Carbon 0.6 nozzle",
+          "Bambu Lab X1 0.6 nozzle",
+          "Bambu Lab P1S 0.6 nozzle",
+          "Bambu Lab X1E 0.6 nozzle"
+        ]
+      ],
+      "profiles_count": 121
+    },
+    {
+      "key": "outer_wall_acceleration",
+      "category": "process",
+      "example_values": [
+        "2500",
+        "2000",
+        "5000"
+      ],
+      "profiles_count": 29
+    },
+    {
+      "key": "smooth_coefficient",
+      "category": "process",
+      "example_values": [
+        "150",
+        "80"
+      ],
+      "profiles_count": 30
+    },
+    {
+      "key": "overhang_totally_speed",
+      "category": "process",
+      "example_values": [
+        "50",
+        "19"
+      ],
+      "profiles_count": 30
+    },
+    {
+      "key": "sparse_infill_density",
+      "category": "process",
+      "example_values": [
+        "25%",
+        "15%"
+      ],
+      "profiles_count": 7
+    },
+    {
+      "key": "wall_loops",
+      "category": "process",
+      "example_values": [
+        "4",
+        "2",
+        "6"
+      ],
+      "profiles_count": 12
+    },
+    {
+      "key": "initial_layer_infill_speed",
+      "category": "process",
+      "example_values": [
+        "28",
+        "70",
+        "105"
+      ],
+      "profiles_count": 38
+    },
+    {
+      "key": "initial_layer_speed",
+      "category": "process",
+      "example_values": [
+        "16",
+        "40",
+        "20"
+      ],
+      "profiles_count": 39
+    },
+    {
+      "key": "gap_infill_speed",
+      "category": "process",
+      "example_values": [
+        "250",
+        "230",
+        "210"
+      ],
+      "profiles_count": 20
+    },
+    {
+      "key": "inner_wall_speed",
+      "category": "process",
+      "example_values": [
+        "150",
+        "120",
+        "40"
+      ],
+      "profiles_count": 20
+    },
+    {
+      "key": "internal_solid_infill_speed",
+      "category": "process",
+      "example_values": [
+        "200",
+        "180",
+        "150"
+      ],
+      "profiles_count": 20
+    },
+    {
+      "key": "outer_wall_speed",
+      "category": "process",
+      "example_values": [
+        "60",
+        "120",
+        "200"
+      ],
+      "profiles_count": 34
+    },
+    {
+      "key": "sparse_infill_pattern",
+      "category": "process",
+      "example_values": [
+        "gyroid",
+        "crosshatch"
+      ],
+      "profiles_count": 25
+    },
+    {
+      "key": "sparse_infill_speed",
+      "category": "process",
+      "example_values": [
+        "200",
+        "180",
+        "150"
+      ],
+      "profiles_count": 35
+    },
+    {
+      "key": "top_surface_speed",
+      "category": "process",
+      "example_values": [
+        "150",
+        "30",
+        "200"
+      ],
+      "profiles_count": 29
+    },
+    {
+      "key": "layer_height",
+      "category": "process",
+      "example_values": [
+        "0.08",
+        "0.2",
+        "0.28"
+      ],
+      "profiles_count": 21
+    },
+    {
+      "key": "initial_layer_print_height",
+      "category": "process",
+      "example_values": [
+        "0.1",
+        "0.2",
+        "0.4"
+      ],
+      "profiles_count": 16
+    },
+    {
+      "key": "bottom_shell_layers",
+      "category": "process",
+      "example_values": [
+        "5",
+        "3",
+        "4"
+      ],
+      "profiles_count": 9
+    },
+    {
+      "key": "top_shell_layers",
+      "category": "process",
+      "example_values": [
+        "7",
+        "3",
+        "4"
+      ],
+      "profiles_count": 12
+    },
+    {
+      "key": "bridge_flow",
+      "category": "process",
+      "example_values": [
+        "1",
+        "0.95"
+      ],
+      "profiles_count": 22
+    },
+    {
+      "key": "line_width",
+      "category": "process",
+      "example_values": [
+        "0.22",
+        "0.42",
+        "0.82"
+      ],
+      "profiles_count": 16
+    },
+    {
+      "key": "outer_wall_line_width",
+      "category": "process",
+      "example_values": [
+        "0.22",
+        "0.42",
+        "0.82"
+      ],
+      "profiles_count": 16
+    },
+    {
+      "key": "ironing_inset",
+      "category": "process",
+      "example_values": [
+        "0.11",
+        "0.21",
+        "0.41"
+      ],
+      "profiles_count": 16
+    },
+    {
+      "key": "initial_layer_line_width",
+      "category": "process",
+      "example_values": [
+        "0.25",
+        "0.5",
+        "0.82"
+      ],
+      "profiles_count": 16
+    },
+    {
+      "key": "sparse_infill_line_width",
+      "category": "process",
+      "example_values": [
+        "0.22",
+        "0.45",
+        "0.82"
+      ],
+      "profiles_count": 16
+    },
+    {
+      "key": "inner_wall_line_width",
+      "category": "process",
+      "example_values": [
+        "0.22",
+        "0.45",
+        "0.82"
+      ],
+      "profiles_count": 16
+    },
+    {
+      "key": "internal_solid_infill_line_width",
+      "category": "process",
+      "example_values": [
+        "0.22",
+        "0.42",
+        "0.82"
+      ],
+      "profiles_count": 16
+    },
+    {
+      "key": "support_line_width",
+      "category": "process",
+      "example_values": [
+        "0.22",
+        "0.42",
+        "0.82"
+      ],
+      "profiles_count": 16
+    },
+    {
+      "key": "top_surface_line_width",
+      "category": "process",
+      "example_values": [
+        "0.22",
+        "0.42",
+        "0.45"
+      ],
+      "profiles_count": 18
+    },
+    {
+      "key": "support_top_z_distance",
+      "category": "process",
+      "example_values": [
+        "0.08",
+        "0.2",
+        "0.06"
+      ],
+      "profiles_count": 11
+    },
+    {
+      "key": "support_bottom_z_distance",
+      "category": "process",
+      "example_values": [
+        "0.08",
+        "0.2",
+        "0.06"
+      ],
+      "profiles_count": 10
+    },
+    {
+      "key": "adaptive_layer_height",
+      "category": "process",
+      "example_values": [
+        "0"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "bottom_shell_thickness",
+      "category": "process",
+      "example_values": [
+        "0"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "bottom_surface_pattern",
+      "category": "process",
+      "example_values": [
+        "monotonic"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "bridge_no_support",
+      "category": "process",
+      "example_values": [
+        "0"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "bridge_speed",
+      "category": "process",
+      "example_values": [
+        "25",
+        "30",
+        "50"
+      ],
+      "profiles_count": 12
+    },
+    {
+      "key": "brim_object_gap",
+      "category": "process",
+      "example_values": [
+        "0.1"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "brim_width",
+      "category": "process",
+      "example_values": [
+        "5"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "compatible_printers_condition",
+      "category": "process",
+      "example_values": [
+        ""
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "detect_overhang_wall",
+      "category": "process",
+      "example_values": [
+        "1"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "detect_thin_wall",
+      "category": "process",
+      "example_values": [
+        "0"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "draft_shield",
+      "category": "process",
+      "example_values": [
+        "disabled"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "enable_arc_fitting",
+      "category": "process",
+      "example_values": [
+        "1"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "enable_prime_tower",
+      "category": "process",
+      "example_values": [
+        "1"
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "enable_support",
+      "category": "process",
+      "example_values": [
+        "0",
+        "1"
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "filename_format",
+      "category": "process",
+      "example_values": [
+        "{input_filename_base}_{filament_type[0]}_{print_time}.gcode"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "infill_combination",
+      "category": "process",
+      "example_values": [
+        "0"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "infill_direction",
+      "category": "process",
+      "example_values": [
+        "45"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "infill_wall_overlap",
+      "category": "process",
+      "example_values": [
+        "15%"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "interface_shells",
+      "category": "process",
+      "example_values": [
+        "0"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "internal_bridge_support_thickness",
+      "category": "process",
+      "example_values": [
+        "0.8"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "ironing_flow",
+      "category": "process",
+      "example_values": [
+        "10%",
+        "8%"
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "ironing_spacing",
+      "category": "process",
+      "example_values": [
+        "0.15"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "ironing_speed",
+      "category": "process",
+      "example_values": [
+        "30"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "ironing_type",
+      "category": "process",
+      "example_values": [
+        "no ironing"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "max_bridge_length",
+      "category": "process",
+      "example_values": [
+        "0"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "max_travel_detour_distance",
+      "category": "process",
+      "example_values": [
+        "0"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "minimum_sparse_infill_area",
+      "category": "process",
+      "example_values": [
+        "15"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "only_one_wall_top",
+      "category": "process",
+      "example_values": [
+        "1"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "prime_tower_width",
+      "category": "process",
+      "example_values": [
+        "35"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "print_sequence",
+      "category": "process",
+      "example_values": [
+        "by layer"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "print_settings_id",
+      "category": "process",
+      "example_values": [
+        ""
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "raft_layers",
+      "category": "process",
+      "example_values": [
+        "0"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "reduce_crossing_wall",
+      "category": "process",
+      "example_values": [
+        "0"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "reduce_infill_retraction",
+      "category": "process",
+      "example_values": [
+        "1"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "resolution",
+      "category": "process",
+      "example_values": [
+        "0.012"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "scarf_angle_threshold",
+      "category": "process",
+      "example_values": [
+        "155"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "seam_position",
+      "category": "process",
+      "example_values": [
+        "aligned"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "skirt_distance",
+      "category": "process",
+      "example_values": [
+        "2"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "skirt_height",
+      "category": "process",
+      "example_values": [
+        "1"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "skirt_loops",
+      "category": "process",
+      "example_values": [
+        "0"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "spiral_mode",
+      "category": "process",
+      "example_values": [
+        "0"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "standby_temperature_delta",
+      "category": "process",
+      "example_values": [
+        "-5"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "support_base_pattern",
+      "category": "process",
+      "example_values": [
+        "default"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "support_base_pattern_spacing",
+      "category": "process",
+      "example_values": [
+        "2.5"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "support_expansion",
+      "category": "process",
+      "example_values": [
+        "0"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "support_filament",
+      "category": "process",
+      "example_values": [
+        "0"
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "support_interface_bottom_layers",
+      "category": "process",
+      "example_values": [
+        "2"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "support_interface_filament",
+      "category": "process",
+      "example_values": [
+        "0"
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "support_interface_loop_pattern",
+      "category": "process",
+      "example_values": [
+        "0",
+        "1"
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "support_interface_pattern",
+      "category": "process",
+      "example_values": [
+        "auto"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "support_interface_spacing",
+      "category": "process",
+      "example_values": [
+        "0.5",
+        "0"
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "support_interface_speed",
+      "category": "process",
+      "example_values": [
+        "80"
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "support_interface_top_layers",
+      "category": "process",
+      "example_values": [
+        "2",
+        "3"
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "support_object_xy_distance",
+      "category": "process",
+      "example_values": [
+        "0.35"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "support_on_build_plate_only",
+      "category": "process",
+      "example_values": [
+        "0"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "support_speed",
+      "category": "process",
+      "example_values": [
+        "40",
+        "150"
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "support_style",
+      "category": "process",
+      "example_values": [
+        "default"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "support_threshold_angle",
+      "category": "process",
+      "example_values": [
+        "30",
+        "40",
+        "35"
+      ],
+      "profiles_count": 6
+    },
+    {
+      "key": "support_type",
+      "category": "process",
+      "example_values": [
+        "normal(auto)"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "top_shell_thickness",
+      "category": "process",
+      "example_values": [
+        "0.8",
+        "1.0",
+        "0.6"
+      ],
+      "profiles_count": 6
+    },
+    {
+      "key": "top_surface_pattern",
+      "category": "process",
+      "example_values": [
+        "monotonicline",
+        "monotonic"
+      ],
+      "profiles_count": 6
+    },
+    {
+      "key": "tree_support_branch_angle",
+      "category": "process",
+      "example_values": [
+        "45"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "tree_support_branch_diameter",
+      "category": "process",
+      "example_values": [
+        "2"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "tree_support_wall_count",
+      "category": "process",
+      "example_values": [
+        "0"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "wall_generator",
+      "category": "process",
+      "example_values": [
+        "classic"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "wall_infill_order",
+      "category": "process",
+      "example_values": [
+        "inner wall/outer wall/infill"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "wipe_tower_no_sparse_layers",
+      "category": "process",
+      "example_values": [
+        "0"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "xy_contour_compensation",
+      "category": "process",
+      "example_values": [
+        "0"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "xy_hole_compensation",
+      "category": "process",
+      "example_values": [
+        "0"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "infill_shift_step",
+      "category": "process",
+      "example_values": [
+        "0.4"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "infill_rotate_step",
+      "category": "process",
+      "example_values": [
+        "0"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "symmetric_infill_y_axis",
+      "category": "process",
+      "example_values": [
+        "0"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "overhang_3_4_speed",
+      "category": "process",
+      "example_values": [
+        "25",
+        "15",
+        "10"
+      ],
+      "profiles_count": 14
+    },
+    {
+      "key": "overhang_4_4_speed",
+      "category": "process",
+      "example_values": [
+        "5",
+        "10"
+      ],
+      "profiles_count": 6
+    },
+    {
+      "key": "overhang_1_4_speed",
+      "category": "process",
+      "example_values": [
+        "60",
+        "0"
+      ],
+      "profiles_count": 4
+    },
+    {
+      "key": "overhang_2_4_speed",
+      "category": "process",
+      "example_values": [
+        "30",
+        "50"
+      ],
+      "profiles_count": 4
+    },
+    {
+      "key": "initial_layer_acceleration",
+      "category": "process",
+      "example_values": [
+        "500"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "top_surface_acceleration",
+      "category": "process",
+      "example_values": [
+        "2000"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "nozzle_diameter",
+      "category": "machine",
+      "example_values": [
+        [
+          "0.6"
+        ],
+        [
+          "0.2"
+        ],
+        "0.4;0.2;0.6;0.8"
+      ],
+      "profiles_count": 37
+    },
+    {
+      "key": "printer_model",
+      "category": "machine",
+      "example_values": [
+        "Bambu Lab P1S",
+        "Bambu Lab A1 mini",
+        "Bambu Lab X1E"
+      ],
+      "profiles_count": 28
+    },
+    {
+      "key": "printer_variant",
+      "category": "machine",
+      "example_values": [
+        "0.6",
+        "0.2",
+        "0.8"
+      ],
+      "profiles_count": 30
+    },
+    {
+      "key": "default_filament_profile",
+      "category": "machine",
+      "example_values": [
+        [
+          "Bambu PLA Basic @BBL X1C"
+        ],
+        [
+          "Bambu PLA Basic @BBL A1M 0.2 nozzle"
+        ],
+        [
+          "Bambu PLA Basic @BBL X1C 0.2 nozzle"
+        ]
+      ],
+      "profiles_count": 30
+    },
+    {
+      "key": "default_print_profile",
+      "category": "machine",
+      "example_values": [
+        "0.30mm Standard @BBL X1C 0.6 nozzle",
+        "0.10mm Standard @BBL A1M 0.2 nozzle",
+        "0.10mm Standard @BBL P1P 0.2 nozzle"
+      ],
+      "profiles_count": 30
+    },
+    {
+      "key": "max_layer_height",
+      "category": "machine",
+      "example_values": [
+        [
+          "0.42"
+        ],
+        [
+          "0.14"
+        ],
+        [
+          "0.14"
+        ]
+      ],
+      "profiles_count": 22
+    },
+    {
+      "key": "min_layer_height",
+      "category": "machine",
+      "example_values": [
+        [
+          "0.12"
+        ],
+        [
+          "0.04"
+        ],
+        [
+          "0.04"
+        ]
+      ],
+      "profiles_count": 22
+    },
+    {
+      "key": "nozzle_type",
+      "category": "machine",
+      "example_values": [
+        "hardened_steel",
+        "stainless_steel"
+      ],
+      "profiles_count": 16
+    },
+    {
+      "key": "retraction_length",
+      "category": "machine",
+      "example_values": [
+        [
+          "1.4"
+        ],
+        [
+          "0.4"
+        ],
+        [
+          "0.4"
+        ]
+      ],
+      "profiles_count": 20
+    },
+    {
+      "key": "retraction_minimum_travel",
+      "category": "machine",
+      "example_values": [
+        [
+          "3"
+        ],
+        [
+          "3"
+        ],
+        [
+          "3"
+        ]
+      ],
+      "profiles_count": 8
+    },
+    {
+      "key": "upward_compatible_machine",
+      "category": "machine",
+      "example_values": [
+        [
+          "Bambu Lab P1P 0.6 nozzle",
+          "Bambu Lab X1 0.6 nozzle",
+          "Bambu Lab X1 Carbon 0.6 nozzle",
+          "Bambu Lab X1E 0.6 nozzle",
+          "Bambu Lab A1 0.6 nozzle"
+        ],
+        [
+          "Bambu Lab P1S 0.2 nozzle",
+          "Bambu Lab P1P 0.2 nozzle",
+          "Bambu Lab X1 0.2 nozzle",
+          "Bambu Lab X1 Carbon 0.2 nozzle",
+          "Bambu Lab X1E 0.2 nozzle",
+          "Bambu Lab A1 0.2 nozzle"
+        ],
+        [
+          "Bambu Lab P1P 0.2 nozzle",
+          "Bambu Lab X1 0.2 nozzle",
+          "Bambu Lab X1 Carbon 0.2 nozzle",
+          "Bambu Lab X1E 0.2 nozzle",
+          "Bambu Lab A1 0.2 nozzle"
+        ]
+      ],
+      "profiles_count": 28
+    },
+    {
+      "key": "machine_start_gcode",
+      "category": "machine",
+      "example_values": [],
+      "profiles_count": 23
+    },
+    {
+      "key": "url",
+      "category": "machine",
+      "example_values": [
+        "http://www.bambulab.com/Parameters/printer_model/Bambu Lab X1.json",
+        "http://www.bambulab.com/Parameters/printer_model/Bambu Lab X1 Carbon.json"
+      ],
+      "profiles_count": 7
+    },
+    {
+      "key": "bed_model",
+      "category": "machine",
+      "example_values": [
+        "bbl-3dp-X1.stl",
+        "bbl-3dp-A1M.stl"
+      ],
+      "profiles_count": 7
+    },
+    {
+      "key": "bed_texture",
+      "category": "machine",
+      "example_values": [
+        "bbl-3dp-logo.svg"
+      ],
+      "profiles_count": 7
+    },
+    {
+      "key": "default_bed_type",
+      "category": "machine",
+      "example_values": [
+        "Textured PEI Plate"
+      ],
+      "profiles_count": 7
+    },
+    {
+      "key": "family",
+      "category": "machine",
+      "example_values": [
+        "BBL-3DP"
+      ],
+      "profiles_count": 7
+    },
+    {
+      "key": "machine_tech",
+      "category": "machine",
+      "example_values": [
+        "FFF"
+      ],
+      "profiles_count": 7
+    },
+    {
+      "key": "model_id",
+      "category": "machine",
+      "example_values": [
+        "C11",
+        "C12",
+        "C13"
+      ],
+      "profiles_count": 7
+    },
+    {
+      "key": "default_materials",
+      "category": "machine",
+      "example_values": [],
+      "profiles_count": 7
+    },
+    {
+      "key": "auxiliary_fan",
+      "category": "machine",
+      "example_values": [
+        "0",
+        "1"
+      ],
+      "profiles_count": 5
+    },
+    {
+      "key": "bed_exclude_area",
+      "category": "machine",
+      "example_values": [
+        [
+          "0x0",
+          "18x0",
+          "18x28",
+          "0x28"
+        ],
+        [],
+        [
+          "0x0",
+          "28x0",
+          "28x28",
+          "0x28",
+          "0x28",
+          "8x28",
+          "8x256",
+          "0x256"
+        ]
+      ],
+      "profiles_count": 8
+    },
+    {
+      "key": "enable_long_retraction_when_cut",
+      "category": "machine",
+      "example_values": [
+        "2",
+        "0",
+        "1"
+      ],
+      "profiles_count": 8
+    },
+    {
+      "key": "extruder_offset",
+      "category": "machine",
+      "example_values": [
+        [
+          "0x2"
+        ],
+        [
+          "0x0"
+        ],
+        [
+          "0x2"
+        ]
+      ],
+      "profiles_count": 6
+    },
+    {
+      "key": "machine_load_filament_time",
+      "category": "machine",
+      "example_values": [
+        "29",
+        "28",
+        "25"
+      ],
+      "profiles_count": 7
+    },
+    {
+      "key": "machine_unload_filament_time",
+      "category": "machine",
+      "example_values": [
+        "28",
+        "34",
+        "29"
+      ],
+      "profiles_count": 7
+    },
+    {
+      "key": "nozzle_height",
+      "category": "machine",
+      "example_values": [
+        "4.2",
+        "4.76"
+      ],
+      "profiles_count": 7
+    },
+    {
+      "key": "scan_first_layer",
+      "category": "machine",
+      "example_values": [
+        "1",
+        "0"
+      ],
+      "profiles_count": 7
+    },
+    {
+      "key": "machine_end_gcode",
+      "category": "machine",
+      "example_values": [],
+      "profiles_count": 9
+    },
+    {
+      "key": "change_filament_gcode",
+      "category": "machine",
+      "example_values": [
+        ""
+      ],
+      "profiles_count": 9
+    },
+    {
+      "key": "retract_length_toolchange",
+      "category": "machine",
+      "example_values": [
+        [
+          "3"
+        ],
+        [
+          "3"
+        ],
+        [
+          "1"
+        ]
+      ],
+      "profiles_count": 8
+    },
+    {
+      "key": "support_chamber_temp_control",
+      "category": "machine",
+      "example_values": [
+        "0",
+        "1"
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "printer_technology",
+      "category": "machine",
+      "example_values": [
+        "FFF"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "deretraction_speed",
+      "category": "machine",
+      "example_values": [
+        [
+          "40"
+        ],
+        [
+          "30"
+        ]
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "extruder_colour",
+      "category": "machine",
+      "example_values": [
+        [
+          "#FCE94F"
+        ],
+        [
+          "#018001"
+        ]
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "gcode_flavor",
+      "category": "machine",
+      "example_values": [
+        "marlin"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "silent_mode",
+      "category": "machine",
+      "example_values": [
+        "0"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "long_retractions_when_cut",
+      "category": "machine",
+      "example_values": [
+        [
+          "0"
+        ]
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "machine_max_acceleration_e",
+      "category": "machine",
+      "example_values": [
+        [
+          "5000"
+        ],
+        [
+          "5000",
+          "5000"
+        ]
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "machine_max_acceleration_extruding",
+      "category": "machine",
+      "example_values": [
+        [
+          "10000"
+        ],
+        [
+          "12000",
+          "12000"
+        ],
+        [
+          "20000",
+          "20000"
+        ]
+      ],
+      "profiles_count": 3
+    },
+    {
+      "key": "machine_max_acceleration_retracting",
+      "category": "machine",
+      "example_values": [
+        [
+          "1000"
+        ],
+        [
+          "5000",
+          "5000"
+        ]
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "machine_max_acceleration_x",
+      "category": "machine",
+      "example_values": [
+        [
+          "10000"
+        ],
+        [
+          "12000",
+          "12000"
+        ],
+        [
+          "20000",
+          "20000"
+        ]
+      ],
+      "profiles_count": 3
+    },
+    {
+      "key": "machine_max_acceleration_y",
+      "category": "machine",
+      "example_values": [
+        [
+          "10000"
+        ],
+        [
+          "12000",
+          "12000"
+        ],
+        [
+          "20000",
+          "20000"
+        ]
+      ],
+      "profiles_count": 3
+    },
+    {
+      "key": "machine_max_acceleration_z",
+      "category": "machine",
+      "example_values": [
+        [
+          "100"
+        ],
+        [
+          "1500",
+          "1500"
+        ],
+        [
+          "1500",
+          "1500"
+        ]
+      ],
+      "profiles_count": 4
+    },
+    {
+      "key": "machine_max_speed_e",
+      "category": "machine",
+      "example_values": [
+        [
+          "60"
+        ],
+        [
+          "30",
+          "30"
+        ]
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "machine_max_speed_x",
+      "category": "machine",
+      "example_values": [
+        [
+          "500"
+        ],
+        [
+          "500",
+          "200"
+        ]
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "machine_max_speed_y",
+      "category": "machine",
+      "example_values": [
+        [
+          "500"
+        ],
+        [
+          "500",
+          "200"
+        ]
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "machine_max_speed_z",
+      "category": "machine",
+      "example_values": [
+        [
+          "10"
+        ],
+        [
+          "30",
+          "30"
+        ],
+        [
+          "30",
+          "30"
+        ]
+      ],
+      "profiles_count": 4
+    },
+    {
+      "key": "machine_max_jerk_e",
+      "category": "machine",
+      "example_values": [
+        [
+          "5"
+        ],
+        [
+          "3",
+          "3"
+        ],
+        [
+          "3",
+          "3"
+        ]
+      ],
+      "profiles_count": 4
+    },
+    {
+      "key": "machine_max_jerk_x",
+      "category": "machine",
+      "example_values": [
+        [
+          "8"
+        ],
+        [
+          "9",
+          "9"
+        ]
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "machine_max_jerk_y",
+      "category": "machine",
+      "example_values": [
+        [
+          "8"
+        ],
+        [
+          "9",
+          "9"
+        ]
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "machine_max_jerk_z",
+      "category": "machine",
+      "example_values": [
+        [
+          "3"
+        ],
+        [
+          "5",
+          "5"
+        ],
+        [
+          "3",
+          "3"
+        ]
+      ],
+      "profiles_count": 3
+    },
+    {
+      "key": "machine_min_extruding_rate",
+      "category": "machine",
+      "example_values": [
+        [
+          "0"
+        ],
+        [
+          "0",
+          "0"
+        ]
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "machine_min_travel_rate",
+      "category": "machine",
+      "example_values": [
+        [
+          "0"
+        ],
+        [
+          "0",
+          "0"
+        ]
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "printable_height",
+      "category": "machine",
+      "example_values": [
+        "250",
+        "180",
+        "256"
+      ],
+      "profiles_count": 3
+    },
+    {
+      "key": "extruder_clearance_radius",
+      "category": "machine",
+      "example_values": [
+        "65",
+        "57"
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "extruder_clearance_height_to_rod",
+      "category": "machine",
+      "example_values": [
+        "34",
+        "25"
+      ],
+      "profiles_count": 3
+    },
+    {
+      "key": "extruder_clearance_height_to_lid",
+      "category": "machine",
+      "example_values": [
+        "140",
+        "180",
+        "256"
+      ],
+      "profiles_count": 4
+    },
+    {
+      "key": "printer_settings_id",
+      "category": "machine",
+      "example_values": [
+        ""
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "retract_before_wipe",
+      "category": "machine",
+      "example_values": [
+        [
+          "70%"
+        ],
+        [
+          "0%"
+        ]
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "retract_when_changing_layer",
+      "category": "machine",
+      "example_values": [
+        [
+          "1"
+        ]
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "retraction_distances_when_cut",
+      "category": "machine",
+      "example_values": [
+        [
+          "18"
+        ]
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "z_hop",
+      "category": "machine",
+      "example_values": [
+        [
+          "0"
+        ],
+        [
+          "0.4"
+        ]
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "retract_restart_extra",
+      "category": "machine",
+      "example_values": [
+        [
+          "0"
+        ]
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "retract_restart_extra_toolchange",
+      "category": "machine",
+      "example_values": [
+        [
+          "0"
+        ]
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "retraction_speed",
+      "category": "machine",
+      "example_values": [
+        [
+          "60"
+        ],
+        [
+          "30"
+        ]
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "single_extruder_multi_material",
+      "category": "machine",
+      "example_values": [
+        "0",
+        "1"
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "support_air_filtration",
+      "category": "machine",
+      "example_values": [
+        "0",
+        "1"
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "wipe",
+      "category": "machine",
+      "example_values": [
+        [
+          "1"
+        ]
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "purge_in_prime_tower",
+      "category": "machine",
+      "example_values": [
+        "0"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "enable_filament_ramming",
+      "category": "machine",
+      "example_values": [
+        "0"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "best_object_pos",
+      "category": "machine",
+      "example_values": [
+        "0.7x0.5",
+        "0.5x0.5"
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "extruder_clearance_max_radius",
+      "category": "machine",
+      "example_values": [
+        "73",
+        "68"
+      ],
+      "profiles_count": 3
+    },
+    {
+      "key": "extruder_clearance_dist_to_rod",
+      "category": "machine",
+      "example_values": [
+        "56.5"
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "head_wrap_detect_zone",
+      "category": "machine",
+      "example_values": [
+        [
+          "156x152",
+          "180x152",
+          "180x180",
+          "156x180"
+        ],
+        [
+          "226x224",
+          "256x224",
+          "256x256",
+          "226x256"
+        ]
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "nozzle_volume",
+      "category": "machine",
+      "example_values": [
+        "92",
+        "107"
+      ],
+      "profiles_count": 3
+    },
+    {
+      "key": "printable_area",
+      "category": "machine",
+      "example_values": [
+        [
+          "0x0",
+          "180x0",
+          "180x180",
+          "0x180"
+        ],
+        [
+          "0x0",
+          "256x0",
+          "256x256",
+          "0x256"
+        ]
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "retract_lift_below",
+      "category": "machine",
+      "example_values": [
+        [
+          "179"
+        ],
+        [
+          "255"
+        ],
+        [
+          "249"
+        ]
+      ],
+      "profiles_count": 3
+    },
+    {
+      "key": "printer_structure",
+      "category": "machine",
+      "example_values": [
+        "i3",
+        "corexy"
+      ],
+      "profiles_count": 3
+    },
+    {
+      "key": "layer_change_gcode",
+      "category": "machine",
+      "example_values": [
+        "; layer num/total_layer_count: {layer_num+1}/[total_layer_count]\n; update layer progress\nM73 L{layer_num+1}\nM991 S0 P{layer_num} ;notify layer change\n",
+        "; layer num/total_layer_count: {layer_num+1}/[total_layer_count]\n; update layer progress\nM73 L{layer_num+1}\nM991 S0 P{layer_num} ;notify layer change"
+      ],
+      "profiles_count": 5
+    },
+    {
+      "key": "time_lapse_gcode",
+      "category": "machine",
+      "example_values": [],
+      "profiles_count": 2
+    },
+    {
+      "key": "machine_max_acceleration_travel",
+      "category": "machine",
+      "example_values": [
+        [
+          "9000",
+          "9000"
+        ]
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "z_hop_types",
+      "category": "machine",
+      "example_values": [
+        [
+          "Auto Lift"
+        ]
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "machine_pause_gcode",
+      "category": "machine",
+      "example_values": [
+        "M400 U1"
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "filament_max_volumetric_speed",
+      "category": "filament",
+      "example_values": [
+        [
+          "3.6"
+        ],
+        [
+          "1"
+        ],
+        [
+          "2"
+        ]
+      ],
+      "profiles_count": 217
+    },
+    {
+      "key": "compatible_printers",
+      "category": "filament",
+      "example_values": [
+        [
+          "Bambu Lab X1 Carbon 0.4 nozzle",
+          "Bambu Lab X1 Carbon 0.6 nozzle",
+          "Bambu Lab X1 Carbon 0.8 nozzle",
+          "Bambu Lab P1S 0.4 nozzle",
+          "Bambu Lab P1S 0.6 nozzle",
+          "Bambu Lab P1S 0.8 nozzle",
+          "Bambu Lab X1E 0.4 nozzle",
+          "Bambu Lab X1E 0.6 nozzle",
+          "Bambu Lab X1E 0.8 nozzle"
+        ],
+        [
+          "Bambu Lab P1P 0.8 nozzle",
+          "Bambu Lab P1P 0.6 nozzle",
+          "Bambu Lab P1P 0.4 nozzle"
+        ],
+        [
+          "Bambu Lab P1S 0.8 nozzle"
+        ]
+      ],
+      "profiles_count": 375
+    },
+    {
+      "key": "filament_long_retractions_when_cut",
+      "category": "filament",
+      "example_values": [
+        [
+          "1"
+        ],
+        [
+          "1"
+        ],
+        [
+          "1"
+        ]
+      ],
+      "profiles_count": 98
+    },
+    {
+      "key": "filament_retraction_distances_when_cut",
+      "category": "filament",
+      "example_values": [
+        [
+          "18"
+        ],
+        [
+          "18"
+        ],
+        [
+          "18"
+        ]
+      ],
+      "profiles_count": 98
+    },
+    {
+      "key": "eng_plate_temp",
+      "category": "filament",
+      "example_values": [
+        [
+          "100"
+        ],
+        [
+          "100"
+        ],
+        [
+          "30"
+        ]
+      ],
+      "profiles_count": 63
+    },
+    {
+      "key": "eng_plate_temp_initial_layer",
+      "category": "filament",
+      "example_values": [
+        [
+          "100"
+        ],
+        [
+          "100"
+        ],
+        [
+          "30"
+        ]
+      ],
+      "profiles_count": 63
+    },
+    {
+      "key": "fan_max_speed",
+      "category": "filament",
+      "example_values": [
+        [
+          "40"
+        ],
+        [
+          "40"
+        ],
+        [
+          "20"
+        ]
+      ],
+      "profiles_count": 162
+    },
+    {
+      "key": "hot_plate_temp",
+      "category": "filament",
+      "example_values": [
+        [
+          "100"
+        ],
+        [
+          "65"
+        ],
+        [
+          "100"
+        ]
+      ],
+      "profiles_count": 160
+    },
+    {
+      "key": "hot_plate_temp_initial_layer",
+      "category": "filament",
+      "example_values": [
+        [
+          "100"
+        ],
+        [
+          "65"
+        ],
+        [
+          "100"
+        ]
+      ],
+      "profiles_count": 160
+    },
+    {
+      "key": "nozzle_temperature",
+      "category": "filament",
+      "example_values": [
+        [
+          "260"
+        ],
+        [
+          "280"
+        ],
+        [
+          "260"
+        ]
+      ],
+      "profiles_count": 87
+    },
+    {
+      "key": "slow_down_layer_time",
+      "category": "filament",
+      "example_values": [
+        [
+          "12"
+        ],
+        [
+          "12"
+        ],
+        [
+          "12"
+        ]
+      ],
+      "profiles_count": 170
+    },
+    {
+      "key": "textured_plate_temp",
+      "category": "filament",
+      "example_values": [
+        [
+          "100"
+        ],
+        [
+          "65"
+        ],
+        [
+          "100"
+        ]
+      ],
+      "profiles_count": 160
+    },
+    {
+      "key": "textured_plate_temp_initial_layer",
+      "category": "filament",
+      "example_values": [
+        [
+          "100"
+        ],
+        [
+          "65"
+        ],
+        [
+          "100"
+        ]
+      ],
+      "profiles_count": 161
+    },
+    {
+      "key": "chamber_temperatures",
+      "category": "filament",
+      "example_values": [
+        [
+          "60"
+        ],
+        [
+          "60"
+        ],
+        [
+          "60"
+        ]
+      ],
+      "profiles_count": 28
+    },
+    {
+      "key": "filament_id",
+      "category": "filament",
+      "example_values": [
+        "GFN03",
+        "GFA11",
+        "GFU99"
+      ],
+      "profiles_count": 74
+    },
+    {
+      "key": "description",
+      "category": "filament",
+      "example_values": [
+        "This filament is too soft and not compatible with the AMS. Printing it is of many requirements, and to get better printing quality, please refer to this wiki: TPU printing guide.",
+        "To make the prints get higher gloss, please dry the filament before use, and set the outer wall speed to be 40 to 60 mm/s when slicing.",
+        "When printing this filament, there's a risk of warping and low layer adhesion strength. To get better results, please refer to this wiki: Printing Tips for High Temp / Engineering materials."
+      ],
+      "profiles_count": 57
+    },
+    {
+      "key": "filament_cost",
+      "category": "filament",
+      "example_values": [
+        [
+          "84.99"
+        ],
+        [
+          "20"
+        ],
+        [
+          "44.99"
+        ]
+      ],
+      "profiles_count": 69
+    },
+    {
+      "key": "filament_density",
+      "category": "filament",
+      "example_values": [
+        [
+          "1.09"
+        ],
+        [
+          "1.24"
+        ],
+        [
+          "1.21"
+        ]
+      ],
+      "profiles_count": 66
+    },
+    {
+      "key": "filament_flow_ratio",
+      "category": "filament",
+      "example_values": [
+        [
+          "0.96"
+        ],
+        [
+          "0.6"
+        ],
+        [
+          "0.98"
+        ]
+      ],
+      "profiles_count": 68
+    },
+    {
+      "key": "filament_type",
+      "category": "filament",
+      "example_values": [
+        [
+          "PA-CF"
+        ],
+        [
+          "TPU"
+        ],
+        [
+          "PLA-AERO"
+        ]
+      ],
+      "profiles_count": 40
+    },
+    {
+      "key": "filament_vendor",
+      "category": "filament",
+      "example_values": [
+        [
+          "Bambu Lab"
+        ],
+        [
+          "Bambu Lab"
+        ],
+        [
+          "Bambu Lab"
+        ]
+      ],
+      "profiles_count": 55
+    },
+    {
+      "key": "nozzle_temperature_initial_layer",
+      "category": "filament",
+      "example_values": [
+        [
+          "280"
+        ],
+        [
+          "240"
+        ],
+        [
+          "240"
+        ]
+      ],
+      "profiles_count": 65
+    },
+    {
+      "key": "overhang_fan_speed",
+      "category": "filament",
+      "example_values": [
+        [
+          "40"
+        ],
+        [
+          "40"
+        ],
+        [
+          "100"
+        ]
+      ],
+      "profiles_count": 40
+    },
+    {
+      "key": "overhang_fan_threshold",
+      "category": "filament",
+      "example_values": [
+        [
+          "0%"
+        ],
+        [
+          "50%"
+        ],
+        [
+          "0%"
+        ]
+      ],
+      "profiles_count": 39
+    },
+    {
+      "key": "temperature_vitrification",
+      "category": "filament",
+      "example_values": [
+        [
+          "170"
+        ],
+        [
+          "30"
+        ],
+        [
+          "45"
+        ]
+      ],
+      "profiles_count": 32
+    },
+    {
+      "key": "fan_cooling_layer_time",
+      "category": "filament",
+      "example_values": [
+        [
+          "80"
+        ],
+        [
+          "80"
+        ],
+        [
+          "100"
+        ]
+      ],
+      "profiles_count": 140
+    },
+    {
+      "key": "fan_min_speed",
+      "category": "filament",
+      "example_values": [
+        [
+          "50"
+        ],
+        [
+          "60"
+        ],
+        [
+          "100"
+        ]
+      ],
+      "profiles_count": 147
+    },
+    {
+      "key": "reduce_fan_stop_start_freq",
+      "category": "filament",
+      "example_values": [
+        [
+          "0"
+        ],
+        [
+          "1"
+        ],
+        [
+          "1"
+        ]
+      ],
+      "profiles_count": 30
+    },
+    {
+      "key": "additional_cooling_fan_speed",
+      "category": "filament",
+      "example_values": [
+        [
+          "70"
+        ],
+        [
+          "70"
+        ],
+        [
+          "0"
+        ]
+      ],
+      "profiles_count": 16
+    },
+    {
+      "key": "close_fan_the_first_x_layers",
+      "category": "filament",
+      "example_values": [
+        [
+          "1"
+        ],
+        [
+          "1"
+        ],
+        [
+          "3"
+        ]
+      ],
+      "profiles_count": 10
+    },
+    {
+      "key": "supertack_plate_temp",
+      "category": "filament",
+      "example_values": [
+        [
+          "0"
+        ],
+        [
+          "0"
+        ],
+        [
+          "80"
+        ]
+      ],
+      "profiles_count": 32
+    },
+    {
+      "key": "supertack_plate_temp_initial_layer",
+      "category": "filament",
+      "example_values": [
+        [
+          "0"
+        ],
+        [
+          "0"
+        ],
+        [
+          "80"
+        ]
+      ],
+      "profiles_count": 33
+    },
+    {
+      "key": "cool_plate_temp",
+      "category": "filament",
+      "example_values": [
+        [
+          "30"
+        ],
+        [
+          "35"
+        ],
+        [
+          "0"
+        ]
+      ],
+      "profiles_count": 30
+    },
+    {
+      "key": "cool_plate_temp_initial_layer",
+      "category": "filament",
+      "example_values": [
+        [
+          "30"
+        ],
+        [
+          "35"
+        ],
+        [
+          "0"
+        ]
+      ],
+      "profiles_count": 30
+    },
+    {
+      "key": "filament_retraction_length",
+      "category": "filament",
+      "example_values": [
+        [
+          "0.4"
+        ],
+        [
+          "0.3"
+        ],
+        [
+          "0.2"
+        ]
+      ],
+      "profiles_count": 17
+    },
+    {
+      "key": "nozzle_temperature_range_high",
+      "category": "filament",
+      "example_values": [
+        [
+          "250"
+        ],
+        [
+          "260"
+        ],
+        [
+          "240"
+        ]
+      ],
+      "profiles_count": 35
+    },
+    {
+      "key": "nozzle_temperature_range_low",
+      "category": "filament",
+      "example_values": [
+        [
+          "200"
+        ],
+        [
+          "210"
+        ],
+        [
+          "190"
+        ]
+      ],
+      "profiles_count": 35
+    },
+    {
+      "key": "filament_start_gcode",
+      "category": "filament",
+      "example_values": [
+        [
+          "; filament start gcode\n{if  (bed_temperature[current_extruder] >35)||(bed_temperature_initial_layer[current_extruder] >35)}M106 P3 S255\n{elsif(bed_temperature[current_extruder] >30)||(bed_temperature_initial_layer[current_extruder] >30)}M106 P3 S180\n{endif}\n\n{if activate_air_filtration[current_extruder] && support_air_filtration}\nM106 P3 S{during_print_exhaust_fan_speed_num[current_extruder]} \n{endif}"
+        ],
+        [
+          "; filament start gcode\n{if  (bed_temperature[current_extruder] >35)||(bed_temperature_initial_layer[current_extruder] >35)}M106 P3 S255\n{elsif(bed_temperature[current_extruder] >30)||(bed_temperature_initial_layer[current_extruder] >30)}M106 P3 S180\n{endif}\n\n{if activate_air_filtration[current_extruder] && support_air_filtration}\nM106 P3 S{during_print_exhaust_fan_speed_num[current_extruder]} \n{endif}"
+        ],
+        [
+          "; filament start gcode\n{if  (bed_temperature[current_extruder] >55)||(bed_temperature_initial_layer[current_extruder] >55)}M106 P3 S200\n{elsif(bed_temperature[current_extruder] >50)||(bed_temperature_initial_layer[current_extruder] >50)}M106 P3 S150\n{elsif(bed_temperature[current_extruder] >45)||(bed_temperature_initial_layer[current_extruder] >45)}M106 P3 S50\n{endif}\n\n{if activate_air_filtration[current_extruder] && support_air_filtration}\nM106 P3 S{during_print_exhaust_fan_speed_num[current_extruder]} \n{endif}"
+        ]
+      ],
+      "profiles_count": 86
+    },
+    {
+      "key": "filament_scarf_seam_type",
+      "category": "filament",
+      "example_values": [
+        [
+          "none"
+        ],
+        [
+          "none"
+        ],
+        [
+          "none"
+        ]
+      ],
+      "profiles_count": 15
+    },
+    {
+      "key": "filament_scarf_gap",
+      "category": "filament",
+      "example_values": [
+        [
+          "15%"
+        ],
+        [
+          "0%"
+        ],
+        [
+          "0%"
+        ]
+      ],
+      "profiles_count": 5
+    },
+    {
+      "key": "slow_down_min_speed",
+      "category": "filament",
+      "example_values": [
+        [
+          "20"
+        ],
+        [
+          "10"
+        ],
+        [
+          "20"
+        ]
+      ],
+      "profiles_count": 25
+    },
+    {
+      "key": "required_nozzle_HRC",
+      "category": "filament",
+      "example_values": [
+        [
+          "40"
+        ],
+        [
+          "40"
+        ],
+        [
+          "3"
+        ]
+      ],
+      "profiles_count": 13
+    },
+    {
+      "key": "activate_air_filtration",
+      "category": "filament",
+      "example_values": [
+        [
+          "0"
+        ],
+        [
+          "1"
+        ],
+        [
+          "1"
+        ]
+      ],
+      "profiles_count": 5
+    },
+    {
+      "key": "complete_print_exhaust_fan_speed",
+      "category": "filament",
+      "example_values": [
+        [
+          "70"
+        ]
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "during_print_exhaust_fan_speed",
+      "category": "filament",
+      "example_values": [
+        [
+          "70"
+        ]
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "filament_deretraction_speed",
+      "category": "filament",
+      "example_values": [
+        [
+          "nil"
+        ]
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "filament_diameter",
+      "category": "filament",
+      "example_values": [
+        [
+          "1.75"
+        ]
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "filament_is_support",
+      "category": "filament",
+      "example_values": [
+        [
+          "0"
+        ],
+        [
+          "1"
+        ],
+        [
+          "1"
+        ]
+      ],
+      "profiles_count": 10
+    },
+    {
+      "key": "filament_minimal_purge_on_wipe_tower",
+      "category": "filament",
+      "example_values": [
+        [
+          "15"
+        ]
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "filament_retract_before_wipe",
+      "category": "filament",
+      "example_values": [
+        [
+          "nil"
+        ]
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "filament_retract_restart_extra",
+      "category": "filament",
+      "example_values": [
+        [
+          "nil"
+        ]
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "filament_retract_when_changing_layer",
+      "category": "filament",
+      "example_values": [
+        [
+          "nil"
+        ]
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "filament_retraction_minimum_travel",
+      "category": "filament",
+      "example_values": [
+        [
+          "nil"
+        ]
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "filament_retraction_speed",
+      "category": "filament",
+      "example_values": [
+        [
+          "nil"
+        ],
+        [
+          "0.4"
+        ]
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "filament_settings_id",
+      "category": "filament",
+      "example_values": [
+        [
+          ""
+        ]
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "filament_soluble",
+      "category": "filament",
+      "example_values": [
+        [
+          "0"
+        ],
+        [
+          "1"
+        ]
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "filament_wipe",
+      "category": "filament",
+      "example_values": [
+        [
+          "nil"
+        ]
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "filament_wipe_distance",
+      "category": "filament",
+      "example_values": [
+        [
+          "nil"
+        ],
+        [
+          "5"
+        ]
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "filament_z_hop",
+      "category": "filament",
+      "example_values": [
+        [
+          "nil"
+        ]
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "filament_z_hop_types",
+      "category": "filament",
+      "example_values": [
+        [
+          "nil"
+        ],
+        [
+          "Normal Lift"
+        ]
+      ],
+      "profiles_count": 2
+    },
+    {
+      "key": "full_fan_speed_layer",
+      "category": "filament",
+      "example_values": [
+        [
+          "0"
+        ],
+        [
+          "2"
+        ],
+        [
+          "2"
+        ]
+      ],
+      "profiles_count": 6
+    },
+    {
+      "key": "filament_scarf_height",
+      "category": "filament",
+      "example_values": [
+        [
+          "10%"
+        ],
+        [
+          "5%"
+        ],
+        [
+          "5%"
+        ]
+      ],
+      "profiles_count": 5
+    },
+    {
+      "key": "filament_scarf_length",
+      "category": "filament",
+      "example_values": [
+        [
+          "10"
+        ],
+        [
+          "10"
+        ],
+        [
+          "10"
+        ]
+      ],
+      "profiles_count": 3
+    },
+    {
+      "key": "filament_shrink",
+      "category": "filament",
+      "example_values": [
+        [
+          "100%"
+        ]
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "slow_down_for_layer_cooling",
+      "category": "filament",
+      "example_values": [
+        [
+          "1"
+        ]
+      ],
+      "profiles_count": 1
+    },
+    {
+      "key": "filament_end_gcode",
+      "category": "filament",
+      "example_values": [
+        [
+          "; filament end gcode \nM106 P3 S0\n"
+        ]
+      ],
+      "profiles_count": 1
+    }
+  ]
+}

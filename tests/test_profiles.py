@@ -981,9 +981,16 @@ def test_validate_override_keys_unknown(tmp_path):
     assert "bogus_key" in warnings[0]
 
 
-def test_validate_override_keys_no_process():
-    """No process profile means no warnings (nothing to check against)."""
-    assert validate_override_keys({"k": "v"}, engine="orca", process=None) == []
+def test_validate_override_keys_no_process_valid_key():
+    """No process profile but valid engine key produces no warnings."""
+    assert validate_override_keys({"layer_height": "0.2"}, engine="orca", process=None) == []
+
+
+def test_validate_override_keys_no_process_unknown_key():
+    """No process profile with unknown key still warns (checked against engine settings)."""
+    warnings = validate_override_keys({"bogus_xyz": "v"}, engine="orca", process=None)
+    assert len(warnings) == 1
+    assert "bogus_xyz" in warnings[0]
 
 
 def test_validate_override_keys_no_overrides():
@@ -992,7 +999,7 @@ def test_validate_override_keys_no_overrides():
 
 
 def test_validate_override_keys_unresolvable_profile():
-    """Unresolvable profile is silently skipped (no crash)."""
+    """Unresolvable profile with valid engine key still passes."""
     warnings = validate_override_keys(
         {"layer_height": "0.2"},
         engine="orca",
@@ -1000,6 +1007,41 @@ def test_validate_override_keys_unresolvable_profile():
         project_dir=None,
     )
     assert warnings == []
+
+
+def test_validate_override_keys_cross_engine_orca_in_cura():
+    """Using OrcaSlicer key in CuraEngine config should suggest the CuraEngine equivalent."""
+    warnings = validate_override_keys(
+        {"wall_loops": "3"},
+        engine="cura",
+        process=None,
+    )
+    assert len(warnings) == 1
+    assert "orca" in warnings[0].lower()
+    assert "wall_line_count" in warnings[0]
+
+
+def test_validate_override_keys_cross_engine_cura_in_orca():
+    """Using CuraEngine key in OrcaSlicer config should suggest the OrcaSlicer equivalent."""
+    warnings = validate_override_keys(
+        {"infill_sparse_density": 20},
+        engine="orca",
+        process=None,
+    )
+    assert len(warnings) == 1
+    assert "cura" in warnings[0].lower()
+    assert "sparse_infill_density" in warnings[0]
+
+
+def test_validate_override_keys_did_you_mean():
+    """Typo in override key should suggest closest match."""
+    warnings = validate_override_keys(
+        {"wall_loop": "3"},  # missing 's'
+        engine="orca",
+        process=None,
+    )
+    assert len(warnings) == 1
+    assert "wall_loops" in warnings[0]
 
 
 # --- pinned_profiles_version ---
