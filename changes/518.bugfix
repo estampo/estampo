@@ -1,0 +1,1 @@
+Fix credential path in AI setup prompt from ``~/.config/estampo/`` to ``~/.config/bambox/``

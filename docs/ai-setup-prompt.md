@@ -278,7 +278,7 @@ If only one printer is configured, bambox uses it automatically — no
 
 **Setup requirements:**
 1. Run `bambox login` once to authenticate with Bambu Cloud — credentials are
-   saved to `~/.config/estampo/credentials.toml`
+   saved to `~/.config/bambox/credentials.toml`
 2. The bridge is required: native binary on Linux x86_64, Docker on all other
    platforms (macOS, Windows, Linux ARM64)
 
@@ -299,8 +299,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Write credentials
         run: |
-          mkdir -p ~/.config/estampo
-          echo "$BAMBOX_CREDENTIALS" > ~/.config/estampo/credentials.toml
+          mkdir -p ~/.config/bambox
+          echo "$BAMBOX_CREDENTIALS" > ~/.config/bambox/credentials.toml
         env:
           BAMBOX_CREDENTIALS: ${{ secrets.BAMBOX_CREDENTIALS }}
       - uses: estampo/estampo/action@main
@@ -311,7 +311,7 @@ jobs:
         run: |
           docker run --rm \
             -v "${{ github.workspace }}:/project" \
-            -v "$HOME/.config/estampo:/home/estampo/.config/estampo:ro" \
+            -v "$HOME/.config/bambox:/home/estampo/.config/bambox:ro" \
             --workdir /project \
             --entrypoint bambox \
             ghcr.io/estampo/estampo:cura-5.12.0 \
@@ -319,7 +319,7 @@ jobs:
 ```
 
 To set up the secret: run `bambox login` locally, then copy the contents of
-`~/.config/estampo/credentials.toml` into a GitHub repository secret named
+`~/.config/bambox/credentials.toml` into a GitHub repository secret named
 `BAMBOX_CREDENTIALS`.
 
 ### Important rules
