@@ -7,9 +7,11 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from estampo.config import DEFAULT_STAGES
+from estampo.config import DEFAULT_STAGES, SUPPORTED_EXTENSIONS
 
 log = logging.getLogger(__name__)
+
+BED_TYPES = ["Cool Plate", "Engineering Plate", "High Temp Plate", "Textured PEI Plate"]
 
 # ---------------------------------------------------------------------------
 # Template
@@ -309,7 +311,6 @@ def validate_config(path: Path) -> ValidationResult:
 
     # Check part files: readability, extension, duplicates
     # (existence and orient are already hard errors in load_config)
-    _SUPPORTED_EXTENSIONS = {".stl", ".3mf", ".step", ".stp", ".obj"}
     seen_files: set[str] = set()
     parts_ok = True
     for i, part in enumerate(cfg.parts):
@@ -322,10 +323,10 @@ def validate_config(path: Path) -> ValidationResult:
 
         # Check file extension
         ext = part_path.suffix.lower()
-        if ext and ext not in _SUPPORTED_EXTENSIONS:
+        if ext and ext not in SUPPORTED_EXTENSIONS:
             warnings.append(
                 f"parts[{i}].file has unsupported extension '{ext}' "
-                f"— expected one of {sorted(_SUPPORTED_EXTENSIONS)}"
+                f"— expected one of {sorted(SUPPORTED_EXTENSIONS)}"
             )
             parts_ok = False
 
@@ -948,7 +949,6 @@ def run_wizard(output: Path | None = None) -> str:
 
     # --- Step 8: Bed type ---
     ui.heading("Bed Type")
-    BED_TYPES = ["Cool Plate", "Engineering Plate", "High Temp Plate", "Textured PEI Plate"]
     ui.info("Select bed/plate type (affects filament compatibility):")
     existing_bed = existing.bed_type if existing else None
     bed_default = ""
@@ -1189,6 +1189,35 @@ def _build_toml(
             lines.append("")
 
     return "\n".join(lines)
+
+
+def build_config_toml(
+    *,
+    engine: str,
+    printer: str | None,
+    process: str | None = None,
+    filaments: list[str],
+    parts: list[str],
+    plate_size: tuple[int, int] = (256, 256),
+    slicer_version: str | None = None,
+    stages: list[str] | None = None,
+    bed_type: str | None = None,
+    name: str | None = None,
+) -> str:
+    """Build estampo.toml content from explicit parameters (non-interactive)."""
+    part_dicts = [{"file": p, "copies": 1, "orient": "flat", "filament": 1} for p in parts]
+    return _build_toml(
+        project_name=name,
+        engine=engine,
+        printer_profile=printer,
+        process_profile=process,
+        filament_names=filaments,
+        parts=part_dicts,
+        plate_size=plate_size,
+        slicer_version=slicer_version,
+        stages=stages or list(DEFAULT_STAGES),
+        bed_type=bed_type,
+    )
 
 
 # ---------------------------------------------------------------------------
