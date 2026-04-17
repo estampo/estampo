@@ -354,6 +354,28 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
         warnings = validate_config(toml)
         assert any("seems very large" in w for w in warnings)
 
+    def test_command_stage_not_flagged_unknown(self, tmp_path):
+        """Command stages like 'pack' should not trigger 'unknown stage' warnings."""
+        toml = tmp_path / "estampo.toml"
+        toml.write_text(f"""
+[pipeline]
+stages = ["load", "arrange", "plate", "slice", "pack"]
+
+[slicer]
+engine = "orca"
+version = "2.3.1"
+
+[pack]
+command = "bambox repack {{sliced_3mf}}"
+output = "{{sliced_3mf}}"
+
+[[parts]]
+file = "{_posix(FIXTURES / "cube_10mm.stl")}"
+""")
+        result = validate_config(toml)
+        assert not any("unknown" in w for w in result.warnings)
+        assert any("pack" in p for p in result.passes)
+
     def test_override_keys_valid_passes(self, tmp_path):
         """Valid override keys produce a pass message."""
         profiles = tmp_path / "profiles" / "orca" / "process"
