@@ -124,6 +124,11 @@ recognized (with "did you mean?" suggestions for typos and cross-engine
 detection if you accidentally use CuraEngine setting names with OrcaSlicer or
 vice versa).
 
+**Note:** The validation warning "slicer profile names could not be validated"
+is expected when profiles are not installed locally. This is not an error —
+profiles are resolved at runtime via Docker or the bambox package. The warning
+can be safely ignored.
+
 ### Common override recipes
 
 Choose overrides based on the print goals:
@@ -196,7 +201,10 @@ For the complete list of all settings:
 
 ### GitHub Actions (optional)
 
-Add this workflow to `.github/workflows/slice.yml` to slice on every push:
+estampo provides a GitHub Action that works with both OrcaSlicer and CuraEngine.
+It reads the engine and version from your `estampo.toml` and pulls the correct
+Docker image automatically. The image includes the slicer, bambox, and printer
+definitions — no extra installation needed.
 
 ```yaml
 name: Slice
@@ -205,17 +213,19 @@ on: [push]
 jobs:
   slice:
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-      - run: uv tool install estampo
-      - run: estampo validate
-      - run: estampo run -v
-      - uses: actions/upload-artifact@v4
+      - uses: estampo/estampo/action@main
         with:
-          name: sliced
-          path: estampo_output/
+          config: estampo.toml
 ```
+
+The action runs the full pipeline, uploads artifacts, and posts build metrics
+(print time, filament usage) as a PR comment. **Do not install estampo as a bare
+pip/pipx tool on the runner** — use the action instead, which has all
+dependencies pre-installed in Docker.
 
 ### Post-processing for Bambu Lab printers
 
@@ -247,10 +257,9 @@ command = "bambox repack {sliced_3mf}"
 output = "{sliced_3mf}"
 ```
 
-When adding a GitHub Actions workflow for a Bambu printer, also install bambox:
-```yaml
-- run: uv tool install bambox
-```
+Both `bambox pack` and `bambox repack` are pre-installed in the Docker images,
+so no extra installation is needed when using the GitHub Action or `docker run`
+approach above.
 
 ### Cloud printing for Bambu Lab printers (optional)
 
@@ -288,16 +297,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-      - run: uv tool install estampo
-      - run: uv tool install bambox
-      - run: |
+      - name: Write credentials
+        run: |
           mkdir -p ~/.config/estampo
           echo "$BAMBOX_CREDENTIALS" > ~/.config/estampo/credentials.toml
         env:
           BAMBOX_CREDENTIALS: ${{ secrets.BAMBOX_CREDENTIALS }}
-      - run: estampo run -v
-      - run: bambox print estampo_output/plate.gcode.3mf -y
+      - uses: estampo/estampo/action@main
+        with:
+          config: estampo.toml
+          comment: "false"
+      - name: Print
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/project" \
+            -v "$HOME/.config/estampo:/home/estampo/.config/estampo:ro" \
+            --workdir /project \
+            --entrypoint bambox \
+            ghcr.io/estampo/estampo:cura-5.12.0 \
+            print estampo_output/plate.gcode.3mf -y
 ```
 
 To set up the secret: run `bambox login` locally, then copy the contents of

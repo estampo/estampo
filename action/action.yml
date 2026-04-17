@@ -1,5 +1,5 @@
 name: "Estampo Slice"
-description: "Slice 3D models with OrcaSlicer and post build metrics to your PR"
+description: "Slice 3D models with estampo and post build metrics to your PR"
 branding:
   icon: "box"
   color: "blue"
@@ -9,14 +9,18 @@ inputs:
     description: "Path to estampo.toml (relative to repo root)"
     required: false
     default: "estampo.toml"
+  slicer-version:
+    description: "Override slicer version (default: read from estampo.toml)"
+    required: false
+    default: ""
   orca-version:
-    description: "OrcaSlicer version to use"
+    description: "DEPRECATED: use slicer-version instead"
     required: false
-    default: "2.3.1"
+    default: ""
   until:
-    description: "Run pipeline up to this stage (default: slice)"
+    description: "Run pipeline up to this stage (default: run all stages)"
     required: false
-    default: "slice"
+    default: ""
   output-dir:
     description: "Output directory for sliced files (relative to repo root)"
     required: false
@@ -49,12 +53,57 @@ outputs:
 runs:
   using: "composite"
   steps:
+    - name: Detect slicer engine and version
+      id: detect
+      shell: bash
+      env:
+        CONFIG: ${{ inputs.config }}
+        SLICER_VERSION_OVERRIDE: ${{ inputs.slicer-version }}
+        ORCA_VERSION_OVERRIDE: ${{ inputs.orca-version }}
+        WORKSPACE: ${{ github.workspace }}
+      run: |
+        CONFIG_PATH="${WORKSPACE}/${CONFIG}"
+        if [ ! -f "$CONFIG_PATH" ]; then
+          echo "::error::Config file not found: ${CONFIG_PATH}"
+          exit 1
+        fi
+
+        # Parse engine from TOML (matches: engine = "orca" or engine = "cura")
+        ENGINE=$(sed -n 's/^engine[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' "$CONFIG_PATH" | head -1)
+        if [ -z "$ENGINE" ]; then
+          echo "::error::Could not detect slicer.engine from ${CONFIG} — ensure it contains engine = \"orca\" or engine = \"cura\""
+          exit 1
+        fi
+
+        # Parse version from TOML (matches: version = "X.Y.Z")
+        CONFIG_VERSION=$(sed -n 's/^version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' "$CONFIG_PATH" | head -1)
+
+        # Version priority: slicer-version input > orca-version input (deprecated) > TOML
+        VERSION="${SLICER_VERSION_OVERRIDE}"
+        if [ -z "$VERSION" ] && [ -n "$ORCA_VERSION_OVERRIDE" ]; then
+          echo "::warning::The 'orca-version' input is deprecated — use 'slicer-version' instead"
+          VERSION="${ORCA_VERSION_OVERRIDE}"
+        fi
+        if [ -z "$VERSION" ]; then
+          VERSION="${CONFIG_VERSION}"
+        fi
+
+        if [ -z "$VERSION" ]; then
+          echo "::error::No slicer version found — set slicer.version in ${CONFIG} or pass the slicer-version input"
+          exit 1
+        fi
+
+        IMAGE="ghcr.io/estampo/estampo:${ENGINE}-${VERSION}"
+        echo "engine=${ENGINE}" >> "$GITHUB_OUTPUT"
+        echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+        echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
+        echo "Detected engine=${ENGINE} version=${VERSION} → ${IMAGE}"
+
     - name: Pull estampo image
       shell: bash
       env:
-        ORCA_VERSION: ${{ inputs.orca-version }}
+        IMAGE: ${{ steps.detect.outputs.image }}
       run: |
-        IMAGE="ghcr.io/estampo/estampo:orca-${ORCA_VERSION}"
         echo "::group::Pulling ${IMAGE}"
         docker pull "${IMAGE}"
         echo "::endgroup::"
@@ -62,18 +111,23 @@ runs:
     - name: Run estampo pipeline
       shell: bash
       env:
-        ORCA_VERSION: ${{ inputs.orca-version }}
+        IMAGE: ${{ steps.detect.outputs.image }}
         CONFIG: ${{ inputs.config }}
         UNTIL: ${{ inputs.until }}
         OUTPUT_DIR: ${{ inputs.output-dir }}
         WORKSPACE: ${{ github.workspace }}
       run: |
+        UNTIL_FLAG=""
+        if [ -n "$UNTIL" ]; then
+          UNTIL_FLAG="--until ${UNTIL}"
+        fi
+
         docker run --rm \
           -v "${WORKSPACE}:/project" \
           --workdir /project \
-          "ghcr.io/estampo/estampo:orca-${ORCA_VERSION}" \
+          "${IMAGE}" \
           run "${CONFIG}" \
-          --until "${UNTIL}" \
+          ${UNTIL_FLAG} \
           --output-dir "/project/${OUTPUT_DIR}" \
           --local \
           -v \
@@ -122,10 +176,15 @@ runs:
         FILAMENT_TYPES: ${{ steps.metrics.outputs.filament-types }}
         FILAMENT_CHANGES: ${{ steps.metrics.outputs.filament-changes }}
         PROJECT_NAME: ${{ steps.metrics.outputs.project-name }}
-        ORCA_VERSION: ${{ inputs.orca-version }}
+        ENGINE: ${{ steps.detect.outputs.engine }}
+        VERSION: ${{ steps.detect.outputs.version }}
       run: |
         TITLE="${PROJECT_NAME:+Estampo: $PROJECT_NAME}"
         TITLE="${TITLE:-Estampo Slice Results}"
+        ENGINE_LABEL="OrcaSlicer"
+        if [ "$ENGINE" = "cura" ]; then
+          ENGINE_LABEL="CuraEngine"
+        fi
         {
           echo "### ${TITLE}"
           echo ""
@@ -137,7 +196,7 @@ runs:
           [ -n "$FILAMENT_TYPES" ] && echo "| Filament type | ${FILAMENT_TYPES} |"
           [ -n "$FILAMENT_CHANGES" ] && [ "$FILAMENT_CHANGES" != "0" ] && echo "| Tool changes | ${FILAMENT_CHANGES} |"
           echo ""
-          echo "Sliced with OrcaSlicer ${ORCA_VERSION}"
+          echo "Sliced with ${ENGINE_LABEL} ${VERSION}"
         } >> "$GITHUB_STEP_SUMMARY"
 
     - name: Upload artifacts
@@ -156,7 +215,8 @@ runs:
         LAYER_COUNT: ${{ steps.metrics.outputs.layer-count }}
         FILAMENT_TYPES: ${{ steps.metrics.outputs.filament-types }}
         FILAMENT_CHANGES: ${{ steps.metrics.outputs.filament-changes }}
-        ORCA_VERSION: ${{ inputs.orca-version }}
+        ENGINE: ${{ steps.detect.outputs.engine }}
+        VERSION: ${{ steps.detect.outputs.version }}
         PROJECT_NAME: ${{ steps.metrics.outputs.project-name }}
         RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         EVENT_NAME: ${{ github.event_name }}
@@ -182,12 +242,14 @@ runs:
             prNumber = openPr.number;
           }
 
+          const engine = process.env.ENGINE || 'orca';
+          const version = process.env.VERSION || 'unknown';
+          const engineLabel = engine === 'cura' ? 'CuraEngine' : 'OrcaSlicer';
           const printTime = process.env.PRINT_TIME || 'unknown';
           const filament = process.env.FILAMENT_GRAMS || 'unknown';
           const layers = process.env.LAYER_COUNT || '';
           const filamentTypes = process.env.FILAMENT_TYPES || '';
           const filamentChanges = process.env.FILAMENT_CHANGES || '';
-          const orcaVersion = process.env.ORCA_VERSION || 'unknown';
           const projectName = process.env.PROJECT_NAME || '';
           const runUrl = process.env.RUN_URL;
           const artifactName = `estampo-${projectName || 'output'}`;
@@ -210,7 +272,7 @@ runs:
             '|--------|-------|',
             ...rows,
             '',
-            `Sliced with OrcaSlicer ${orcaVersion}`,
+            `Sliced with ${engineLabel} ${version}`,
             '',
             `> 📦 [Download **${artifactName}**](${runUrl}#artifacts)`,
           ].join('\n');

@@ -358,7 +358,7 @@ def validate_config(path: Path) -> ValidationResult:
     # Check pipeline stages
     stages_ok = True
     for stage in cfg.pipeline.stages:
-        if stage not in STAGE_OUTPUTS:
+        if stage not in STAGE_OUTPUTS and stage not in cfg.pipeline.command_stages:
             warnings.append(f"pipeline stage '{stage}' is unknown")
             stages_ok = False
 
