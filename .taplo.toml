@@ -1,0 +1,8 @@
+# taplo configuration — enables JSON Schema validation for estampo.toml
+# in VS Code (Even Better TOML extension) and other taplo-aware editors.
+
+[[rule]]
+keys = ["estampo.toml", "estampo.*.toml", "*/estampo.toml"]
+
+[rule.options]
+schema_url = "https://raw.githubusercontent.com/estampo/estampo/main/docs/estampo.schema.json"
