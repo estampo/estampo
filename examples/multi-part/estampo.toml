@@ -6,7 +6,7 @@
 # Requires: bambox (pipx install bambox)
 
 [pipeline]
-stages = ["load", "arrange", "plate", "slice", "pack"]
+stages = ["load", "arrange", "plate", "slice", "gcode-info", "pack"]
 
 [plate]
 size = [256, 256]
@@ -44,5 +44,5 @@ orient = "upright"
 rotate = [0, 0, 45]
 
 [pack]
-command = "bambox repack {output_dir}/plate_sliced.gcode.3mf"
-output = "{output_dir}/plate_sliced.gcode.3mf"
+command = "bambox repack {sliced_3mf}"
+output = "{sliced_3mf}"

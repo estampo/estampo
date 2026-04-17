@@ -10,7 +10,7 @@
 #   - bambox (pipx install bambox) — packs G-code into .gcode.3mf
 
 [pipeline]
-stages = ["load", "arrange", "plate", "slice", "resolve_templates", "pack"]
+stages = ["load", "arrange", "plate", "slice", "gcode-info", "resolve_templates", "pack"]
 
 [plate]
 size = [256, 256]
