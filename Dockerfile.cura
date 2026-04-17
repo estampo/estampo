@@ -95,10 +95,11 @@ RUN chmod a+rx /root /root/.local /root/.local/share /root/.local/share/uv \
 # dependency, but bundled so command stages like `bambox repack` work
 # inside the container without requiring host-side installation).
 # Install cura-p1s (Bambu Lab P1S printer definition + G-code template
-# resolver for CuraEngine) and copy definitions into the search path.
+# resolver for CuraEngine) from GitHub archive and copy definitions into
+# CuraEngine's search path.
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv pip install bambox \
-        "cura-p1s @ git+https://github.com/estampo/cura-p1s.git" \
+        "cura-p1s @ https://github.com/estampo/cura-p1s/archive/refs/heads/main.zip" \
         --python /opt/estampo/.venv/bin/python \
     && cp /opt/estampo/.venv/lib/python3.12/site-packages/cura_p1s/data/bambox_p1s.def.json \
           /opt/cura/definitions/ \
