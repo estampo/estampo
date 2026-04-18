@@ -15,7 +15,7 @@ ARG ORCA_VERSION=2.3.1
 # ---------------------------------------------------------------------------
 FROM --platform=linux/amd64 debian:bookworm-slim AS bridge-fetcher
 
-ARG BAMBOX_VERSION=0.4.2
+ARG BAMBOX_VERSION=0.4.4
 ARG BAMBU_SLICER_VERSION=02.05.00.00
 ARG BNL_TOKEN=""
 
@@ -58,6 +58,8 @@ RUN curl -fSL -o /out/cert/slicer_base64.cer \
 # ---------------------------------------------------------------------------
 FROM estampo/orca-base:${ORCA_VERSION}
 
+ARG BAMBOX_VERSION=0.4.4
+
 LABEL org.opencontainers.image.description="estampo with OrcaSlicer ${ORCA_VERSION}"
 
 # bambox-bridge + libbambu_networking.so + TLS cert
@@ -87,7 +89,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # dependency, but bundled so command stages like `bambox repack` work
 # inside the container without requiring host-side installation).
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install bambox --python /opt/estampo/.venv/bin/python
+    uv pip install "bambox==${BAMBOX_VERSION}" --python /opt/estampo/.venv/bin/python
 
 ENV PATH="/opt/estampo/.venv/bin:$PATH"
 
