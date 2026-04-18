@@ -301,15 +301,28 @@ use.
 
 The command differs by slicer engine:
 
-**CuraEngine** (creates `.gcode.3mf` from plain G-code):
+**CuraEngine** (resolve template gcode variables, then pack):
+
+CuraEngine printer definitions (e.g. `bambox_p1s`) use template variables like
+`{material_bed_temperature_layer_0}` in their start/end G-code. These **must** be
+resolved before packing — otherwise the printer receives literal template strings
+instead of actual values, which causes temperature errors or dangerous behavior.
+
 ```toml
 [pipeline]
-stages = ["load", "arrange", "plate", "slice", "pack"]
+stages = ["load", "arrange", "plate", "slice", "resolve_templates", "pack"]
+
+[resolve_templates]
+command = "cura-p1s resolve {sliced_dir}/plate.gcode --settings {cura_settings}"
 
 [pack]
 command = "bambox pack {sliced_dir}/plate.gcode -o {output_dir}/plate.gcode.3mf"
 output = "{output_dir}/plate.gcode.3mf"
 ```
+
+**The `resolve_templates` stage is required for CuraEngine + Bambu printers.**
+Without it, `estampo validate` will report an error. The `cura-p1s` package is
+pre-installed in the Docker images.
 
 **OrcaSlicer** (patches the existing `.gcode.3mf` for Bambu Connect compatibility):
 ```toml
