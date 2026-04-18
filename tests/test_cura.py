@@ -21,6 +21,7 @@ from estampo.cura import (
     _write_cura_settings,
     cura_docker_image,
     cura_profile_from_config,
+    resolve_cura_machine_dims,
     slice_stl,
     slice_stl_multi,
 )
@@ -834,6 +835,47 @@ def test_write_cura_settings_includes_overrides(tmp_path):
     data = json.loads(path.read_text())
     assert data["infill_pattern"] == "gyroid"
     assert data["wall_line_count"] == "4"
+
+
+def test_write_cura_settings_includes_machine_dims(tmp_path):
+    """Machine dimensions are included in the settings JSON for template resolution."""
+    import json
+
+    profile = CuraProfile()
+    dims = {"machine_width": 256.0, "machine_depth": 256.0, "machine_height": 250.0}
+    path = _write_cura_settings(tmp_path, profile, machine_dims=dims)
+    data = json.loads(path.read_text())
+    assert data["machine_width"] == 256.0
+    assert data["machine_depth"] == 256.0
+    assert data["machine_height"] == 250.0
+
+
+# --- resolve_cura_machine_dims ---
+
+
+def test_resolve_machine_dims_from_definition(tmp_path):
+    """Machine dimensions are extracted from the printer definition chain."""
+    import json
+
+    defs_dir = tmp_path / "profiles" / "cura" / "definitions"
+    defs_dir.mkdir(parents=True)
+    (defs_dir / "test_printer.def.json").write_text(
+        json.dumps(
+            {
+                "name": "Test Printer",
+                "inherits": "fdmprinter",
+                "overrides": {
+                    "machine_width": {"value": 300},
+                    "machine_depth": {"value": 300},
+                    "machine_height": {"value": 400},
+                },
+            }
+        )
+    )
+    dims = resolve_cura_machine_dims("test_printer", project_dir=tmp_path)
+    assert dims["machine_width"] == 300.0
+    assert dims["machine_depth"] == 300.0
+    assert dims["machine_height"] == 400.0
 
 
 # --- _fetch_printer_def (URL / file path) ---

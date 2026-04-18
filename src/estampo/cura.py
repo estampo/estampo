@@ -288,6 +288,29 @@ def _copy_extruder_defs(
             shutil.copy2(bundled, staging / filename)
 
 
+def _resolve_def_chain_for_printer(
+    printer_name: str,
+    project_dir: Path | None,
+    profiles_dir: str,
+) -> list[Path]:
+    """Resolve the definition chain for a printer name, path, or URL."""
+    _is_url = printer_name and _printer_is_url(printer_name)
+    _is_file = printer_name and _printer_is_file(printer_name, project_dir)
+    if _is_url or _is_file:
+        import tempfile
+        import urllib.request
+
+        if _printer_is_url(printer_name):
+            with tempfile.NamedTemporaryFile(suffix=".def.json", delete=False) as tmp:
+                urllib.request.urlretrieve(printer_name, tmp.name)  # noqa: S310
+                tmp_path = Path(tmp.name)
+            return [tmp_path]
+        return [_printer_is_file(printer_name, project_dir)]  # type: ignore[list-item]
+
+    def_id = _resolve_def_name(printer_name)
+    return _resolve_def_chain(def_id, project_dir, profiles_dir)
+
+
 def resolve_cura_bed_size(
     printer_name: str,
     project_dir: Path | None = None,
@@ -300,46 +323,48 @@ def resolve_cura_bed_size(
 
     *printer_name* may be a definition name/ID, a local file path, or a URL.
     """
-    # URL or local file: read just that file for bed dimensions.
-    _is_url = printer_name and _printer_is_url(printer_name)
-    _is_file = printer_name and _printer_is_file(printer_name, project_dir)
-    if _is_url or _is_file:
-        import tempfile
-        import urllib.request
+    dims = resolve_cura_machine_dims(printer_name, project_dir, profiles_dir)
+    return (dims["machine_width"], dims["machine_depth"])
 
-        if _printer_is_url(printer_name):
-            with tempfile.NamedTemporaryFile(suffix=".def.json", delete=False) as tmp:
-                urllib.request.urlretrieve(printer_name, tmp.name)  # noqa: S310
-                tmp_path = Path(tmp.name)
-            chain = [tmp_path]
-        else:
-            chain = [_printer_is_file(printer_name, project_dir)]  # type: ignore[list-item]
-    else:
-        def_id = _resolve_def_name(printer_name)
-        chain = _resolve_def_chain(def_id, project_dir, profiles_dir)
 
-    # Search from leaf to root for machine_width/depth
-    width: float | None = None
-    depth: float | None = None
+def resolve_cura_machine_dims(
+    printer_name: str,
+    project_dir: Path | None = None,
+    profiles_dir: str = "profiles",
+) -> dict[str, float]:
+    """Return machine dimensions for a CuraEngine printer definition.
+
+    Walks the definition chain to find machine_width, machine_depth, and
+    machine_height.  Falls back to defaults if not found.
+
+    *printer_name* may be a definition name/ID, a local file path, or a URL.
+    """
+    chain = _resolve_def_chain_for_printer(printer_name, project_dir, profiles_dir)
+
+    found: dict[str, float] = {}
+    dim_keys = ("machine_width", "machine_depth", "machine_height")
     for path in chain:
         try:
             with open(path) as f:
                 data = json.load(f)
             overrides = data.get("overrides", {})
-            if width is None:
-                w = overrides.get("machine_width", {})
-                if isinstance(w, dict) and "value" in w:
-                    width = float(w["value"])
-            if depth is None:
-                d = overrides.get("machine_depth", {})
-                if isinstance(d, dict) and "value" in d:
-                    depth = float(d["value"])
-            if width is not None and depth is not None:
+            for key in dim_keys:
+                if key not in found:
+                    entry = overrides.get(key, {})
+                    if isinstance(entry, dict):
+                        val = entry.get("value") or entry.get("default_value")
+                        if val is not None:
+                            found[key] = float(val)
+            if len(found) == len(dim_keys):
                 break
         except (json.JSONDecodeError, OSError):
             continue
 
-    return (width or DEFAULT_PLATE_SIZE[0], depth or DEFAULT_PLATE_SIZE[1])
+    return {
+        "machine_width": found.get("machine_width", DEFAULT_PLATE_SIZE[0]),
+        "machine_depth": found.get("machine_depth", DEFAULT_PLATE_SIZE[1]),
+        "machine_height": found.get("machine_height", 250.0),
+    }
 
 
 def cura_docker_image(version: str | None = None) -> str:
@@ -840,14 +865,24 @@ def _place_on_bed(
     return out
 
 
-def _write_cura_settings(output_dir: Path, profile: CuraProfile) -> Path:
+def _write_cura_settings(
+    output_dir: Path,
+    profile: CuraProfile,
+    machine_dims: dict[str, float] | None = None,
+) -> Path:
     """Write CuraEngine settings to JSON for downstream command stages.
 
     External tools (e.g. ``cura-p1s resolve``) use this file to resolve
     template variables in G-code produced by CuraEngine.
+
+    *machine_dims* adds machine geometry (width, depth, height) so that
+    template variables like ``{machine_height}`` can be resolved.
     """
+    settings = _settings_dict(profile)
+    if machine_dims:
+        settings.update(machine_dims)
     settings_path = output_dir / "cura_settings.json"
-    settings_path.write_text(json.dumps(_settings_dict(profile), indent=2) + "\n")
+    settings_path.write_text(json.dumps(settings, indent=2) + "\n")
     log.info("Wrote CuraEngine settings: %s", settings_path)
     return settings_path
 
@@ -938,6 +973,7 @@ def _run_docker_slice(
     staging: Path,
     output_stem: str,
     profile: CuraProfile,
+    machine_dims: dict[str, float] | None = None,
 ) -> Path:
     """Run CuraEngine via Docker, validate output, and post-process G-code.
 
@@ -990,7 +1026,7 @@ def _run_docker_slice(
         raise EstampoError(f"CuraEngine produced no output:\n{_strip_cura_banner(combined)[:500]}")
 
     _patch_gcode_header(output_gcode, result.stderr)
-    _write_cura_settings(output_dir, profile)
+    _write_cura_settings(output_dir, profile, machine_dims)
 
     log.info("CuraEngine output: %s (%d bytes)", output_gcode, output_gcode.stat().st_size)
     return output_dir
@@ -1002,6 +1038,7 @@ def _run_local_slice(
     staging: Path,
     output_stem: str,
     profile: CuraProfile,
+    machine_dims: dict[str, float] | None = None,
 ) -> Path:
     """Run CuraEngine locally (without Docker), validate output, and post-process G-code.
 
@@ -1036,7 +1073,7 @@ def _run_local_slice(
         raise EstampoError(f"CuraEngine produced no output:\n{_strip_cura_banner(combined)[:500]}")
 
     _patch_gcode_header(output_gcode, result.stderr)
-    _write_cura_settings(output_dir, profile)
+    _write_cura_settings(output_dir, profile, machine_dims)
 
     log.info("CuraEngine output: %s (%d bytes)", output_gcode, output_gcode.stat().st_size)
     return output_dir
@@ -1081,8 +1118,9 @@ def slice_stl(
 
     staging, machine_def = _prepare_cura_staging(printer, project_dir, profiles_dir, output_dir)
 
-    # Get bed dimensions for mesh centering
-    bed_w, bed_d = resolve_cura_bed_size(printer or "", project_dir, profiles_dir)
+    # Get machine dimensions for mesh centering and settings JSON
+    machine_dims = resolve_cura_machine_dims(printer or "", project_dir, profiles_dir)
+    bed_w, bed_d = machine_dims["machine_width"], machine_dims["machine_depth"]
 
     # Place mesh on the build plate (Z>=0, centered) before slicing.
     staged_stl = _place_on_bed(stl_path, staging, bed_width=bed_w, bed_depth=bed_d)
@@ -1106,7 +1144,9 @@ def slice_stl(
             "-l",
             str(staged_stl),
         ]
-        return _run_local_slice(cura_args, output_dir, staging, stl_path.stem, profile)
+        return _run_local_slice(
+            cura_args, output_dir, staging, stl_path.stem, profile, machine_dims
+        )
 
     # Container paths (output_dir mounted at /work/output)
     c_staging = "/work/output/.cura-staging"
@@ -1129,7 +1169,9 @@ def slice_stl(
         f"-l {c_stl}"
     )
 
-    return _run_docker_slice(inner_cmd, image, output_dir, staging, stl_path.stem, profile)
+    return _run_docker_slice(
+        inner_cmd, image, output_dir, staging, stl_path.stem, profile, machine_dims
+    )
 
 
 def slice_stl_multi(
@@ -1167,6 +1209,9 @@ def slice_stl_multi(
 
     staging, machine_def = _prepare_cura_staging(printer, project_dir, profiles_dir, output_dir)
 
+    # Get machine dimensions for settings JSON
+    machine_dims = resolve_cura_machine_dims(printer or "", project_dir, profiles_dir)
+
     # Copy each STL into staging so it's accessible from one location.
     for _ext_idx, stl_path in stl_meshes:
         dest = staging / stl_path.name
@@ -1188,7 +1233,7 @@ def slice_stl_multi(
             cura_args.extend(["-g", f"-e{ext_idx}"])
             cura_args.extend(_extruder_settings_list(profile, ext_idx))
             cura_args.extend(["-l", str(staging / stl_path.name)])
-        return _run_local_slice(cura_args, output_dir, staging, "plate", profile)
+        return _run_local_slice(cura_args, output_dir, staging, "plate", profile, machine_dims)
 
     c_staging = "/work/output/.cura-staging"
     c_output = "/work/output/plate.gcode"
@@ -1210,7 +1255,7 @@ def slice_stl_multi(
         f"{mesh_groups}"
     )
 
-    return _run_docker_slice(inner_cmd, image, output_dir, staging, "plate", profile)
+    return _run_docker_slice(inner_cmd, image, output_dir, staging, "plate", profile, machine_dims)
 
 
 def _coerce(value: object, target_type: type) -> object:
