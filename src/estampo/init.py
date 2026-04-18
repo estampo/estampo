@@ -286,9 +286,14 @@ def validate_config(path: Path) -> ValidationResult:
                         f"variant, e.g. '{active.printer} 0.4 nozzle'"
                     )
                 else:
+                    pin_hint = ""
+                    if source != "pinned":
+                        pin_hint = (
+                            " Run 'estampo profiles pin' to extract profiles from the Docker image."
+                        )
                     warnings.append(
                         f"slicer.printer '{active.printer}' not found in "
-                        f"{cfg.slicer.engine} profiles ({source}).{hint}"
+                        f"{cfg.slicer.engine} profiles ({source}).{hint}{pin_hint}"
                     )
                 profile_ok = False
 
