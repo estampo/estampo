@@ -914,6 +914,23 @@ def _check_local_def(staging: Path, machine_def: str, printer: str | None) -> No
     )
 
 
+def _strip_cura_banner(text: str) -> str:
+    """Strip the CuraEngine GPL license banner from output text.
+
+    CuraEngine prints a multi-line license notice to stderr on every run.
+    It wastes space in error messages and pushes the actual diagnostic off
+    screen.  Strip everything up to and including the blank line after the
+    ``<http...>`` URL.
+    """
+    marker = "<http://www.gnu.org/licenses/>."
+    idx = text.find(marker)
+    if idx == -1:
+        return text
+    # Skip past the marker line and any trailing blank lines
+    rest = text[idx + len(marker) :].lstrip("\n")
+    return rest
+
+
 def _run_docker_slice(
     inner_cmd: str,
     image: str,
@@ -963,12 +980,14 @@ def _run_docker_slice(
     if result.returncode != 0:
         combined = (result.stdout + "\n" + result.stderr).strip()
         log.error("CuraEngine output:\n%s", combined)
-        raise EstampoError(f"CuraEngine failed (exit {result.returncode}):\n{combined[:500]}")
+        raise EstampoError(
+            f"CuraEngine failed (exit {result.returncode}):\n{_strip_cura_banner(combined)[:500]}"
+        )
 
     output_gcode = output_dir / f"{output_stem}.gcode"
     if not output_gcode.exists() or output_gcode.stat().st_size < 100:
         combined = (result.stdout + "\n" + result.stderr).strip()
-        raise EstampoError(f"CuraEngine produced no output:\n{combined[:500]}")
+        raise EstampoError(f"CuraEngine produced no output:\n{_strip_cura_banner(combined)[:500]}")
 
     _patch_gcode_header(output_gcode, result.stderr)
     _write_cura_settings(output_dir, profile)
@@ -1007,12 +1026,14 @@ def _run_local_slice(
     if result.returncode != 0:
         combined = (result.stdout + "\n" + result.stderr).strip()
         log.error("CuraEngine output:\n%s", combined)
-        raise EstampoError(f"CuraEngine failed (exit {result.returncode}):\n{combined[:500]}")
+        raise EstampoError(
+            f"CuraEngine failed (exit {result.returncode}):\n{_strip_cura_banner(combined)[:500]}"
+        )
 
     output_gcode = output_dir / f"{output_stem}.gcode"
     if not output_gcode.exists() or output_gcode.stat().st_size < 100:
         combined = (result.stdout + "\n" + result.stderr).strip()
-        raise EstampoError(f"CuraEngine produced no output:\n{combined[:500]}")
+        raise EstampoError(f"CuraEngine produced no output:\n{_strip_cura_banner(combined)[:500]}")
 
     _patch_gcode_header(output_gcode, result.stderr)
     _write_cura_settings(output_dir, profile)
