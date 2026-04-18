@@ -379,24 +379,26 @@ def validate_override_keys(
             continue
 
         # Cross-engine detection: key belongs to the other engine
+        engine_label = "OrcaSlicer" if engine == "orca" else "CuraEngine"
+        other_label = "CuraEngine" if engine == "orca" else "OrcaSlicer"
         if key in other_keys:
             suggestion = cross_map.get(key)
             if suggestion and suggestion in all_valid:
                 warnings.append(
-                    f"slicer.overrides key '{key}' is an {other_engine} setting "
-                    f"— did you mean '{suggestion}'?"
+                    f"invalid override '{key}' — this is a {other_label} setting, "
+                    f"use '{suggestion}' for {engine_label}"
                 )
             else:
                 warnings.append(
-                    f"slicer.overrides key '{key}' is an {other_engine} setting, "
-                    f"not a valid {engine} key"
+                    f"invalid override '{key}' — this is a {other_label} setting, "
+                    f"not valid for {engine_label}"
                 )
         else:
             # Unknown key — try fuzzy match against engine keys
             hint = _closest_setting(key, all_valid)
-            msg = f"slicer.overrides key '{key}' not found in {engine} settings"
+            msg = f"invalid override '{key}' — not a known {engine_label} setting"
             if hint:
-                msg += f" — did you mean '{hint}'?"
+                msg += f", did you mean '{hint}'?"
             warnings.append(msg)
 
     return warnings

@@ -228,14 +228,34 @@ correct names for your engine. Key mappings:
 | Layer height | `layer_height` | `layer_height` |
 | Wall count | `wall_loops` | `wall_line_count` |
 | Top layers | `top_shell_layers` | `top_layers` |
+| Bottom layers | `bottom_shell_layers` | `bottom_layers` |
 | Infill density | `sparse_infill_density` | `infill_sparse_density` |
 | Infill pattern | `sparse_infill_pattern` | `infill_pattern` |
 | Supports | `enable_support` | `support_enable` |
+| Support type | `support_type` | — |
 | Support angle | `support_threshold_angle` | `support_angle` |
+| Brim type | `brim_type` | `adhesion_type` |
+| Brim width | `brim_width` | `brim_width` |
+| First layer speed | `initial_layer_speed` | `speed_layer_0` |
+| First layer infill speed | `initial_layer_infill_speed` | — |
+| Outer wall speed | `outer_wall_speed` | `speed_wall_0` |
+| Inner wall speed | `inner_wall_speed` | `speed_wall_x` |
 | Travel speed | `travel_speed` | `speed_travel` |
+| Fan min speed | `fan_min_speed` | `cool_fan_speed_min` |
+| Fan max speed | `fan_max_speed` | `cool_fan_speed_max` |
+| Disable fan for first N layers | `close_fan_the_first_x_layers` | `cool_fan_full_layer` |
 | Retraction dist | `retraction_length` | `retraction_amount` |
 | Nozzle temp | `nozzle_temperature` | `material_print_temperature` |
+| First layer nozzle temp | `nozzle_temperature_initial_layer` | `material_print_temperature_layer_0` |
 | Bed temp | `bed_temperature` | `material_bed_temperature` |
+| Ironing | `ironing_type` | `ironing_enabled` |
+| Seam position | `seam_position` | `z_seam_type` |
+| XY hole compensation | `xy_hole_compensation` | `hole_xy_offset` |
+
+**CRITICAL: Setting names differ between slicers.** OrcaSlicer uses `initial_layer_speed`,
+not `first_layer_speed`. OrcaSlicer uses `wall_loops`, not `wall_line_count`. Using the
+wrong engine's setting name will be **silently ignored** — the slicer never sees it.
+Always look up the correct name from this table or the JSON files below.
 
 For the complete list of all settings:
 - OrcaSlicer: 263 settings in [`orca-settings.json`](https://github.com/estampo/estampo/blob/main/docs/orca-settings.json)
@@ -368,9 +388,11 @@ To set up the secret: run `bambox login` locally, then copy the contents of
 
 ### Important rules
 
-- **Do not invent setting names.** Only use keys from the setting lists above
-  or from the JSON files. estampo validates overrides and will reject unknown
-  keys.
+- **Do not invent setting names.** Only use keys from the setting name
+  reference table above or from the JSON files. OrcaSlicer and CuraEngine
+  use completely different names — guessing from PrusaSlicer or general
+  slicer knowledge will produce wrong keys that are **silently ignored**.
+  When in doubt, search the JSON file for the setting you need.
 - **Do not force slicer settings** that conflict with the printer's machine
   profile (e.g. `use_relative_e_distances`). Let the profile chain decide.
 - **Use string values** for OrcaSlicer overrides (they are passed as CLI
@@ -378,6 +400,22 @@ To set up the secret: run `bambox login` locally, then copy the contents of
 - **Pin the slicer version** for reproducibility.
 - estampo runs slicers inside Docker by default. GitHub Actions runners have
   Docker available, so `estampo run` works out of the box in CI.
+
+### Verifying the config
+
+After creating or modifying the config, always verify:
+
+```bash
+# 1. Validate — must exit 0 with no errors
+estampo validate
+
+# 2. Test slice — catches profile and override issues
+estampo run --until slice
+```
+
+`estampo validate` exits non-zero if any override keys are invalid. Fix all
+errors before proceeding — invalid keys are silently dropped by the slicer,
+so the print won't match what the user asked for.
 
 ### Command stage variables
 

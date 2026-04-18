@@ -49,12 +49,16 @@ class TestCommandVariablesContract:
     def test_context_keys_with_full_results(self, tmp_path):
         """Keys remain the same regardless of what stage_results contain."""
         cfg = _make_config(tmp_path)
+        output = tmp_path / "output"
+        output.mkdir()
+        # Create a deliverable so find_deliverable resolves
+        (output / "plate_sliced.gcode.3mf").write_bytes(b"fake")
         results = {
             "plate_3mf_path": tmp_path / "plate.3mf",
-            "packaged_output": tmp_path / "output",
+            "packaged_output": output,
             "sliced_output_dir": tmp_path / "sliced",
         }
-        ctx = build_command_context(cfg, tmp_path / "output", results)
+        ctx = build_command_context(cfg, output, results)
         assert set(ctx.keys()) == set(COMMAND_VARIABLES.keys())
 
     def test_all_values_are_strings(self, tmp_path):
@@ -63,6 +67,19 @@ class TestCommandVariablesContract:
         ctx = build_command_context(cfg, tmp_path / "output", {})
         for key, value in ctx.items():
             assert isinstance(value, str), f"{key} is {type(value)}, expected str"
+
+    def test_errors_when_no_deliverable_found(self, tmp_path):
+        """build_command_context raises when packaged_output has no deliverable."""
+        import pytest
+
+        from estampo import EstampoError
+
+        cfg = _make_config(tmp_path)
+        empty_dir = tmp_path / "empty_output"
+        empty_dir.mkdir()
+        results = {"packaged_output": empty_dir}
+        with pytest.raises(EstampoError, match="No sliced output found"):
+            build_command_context(cfg, empty_dir, results)
 
 
 # ---------------------------------------------------------------------------

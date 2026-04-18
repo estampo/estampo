@@ -521,13 +521,16 @@ def validate(
 
     result = validate_config(resolved_config)
 
+    errors = result.errors or []
+
     if json_flag:
         print(
             json.dumps(
                 {
-                    "valid": len(result.warnings) == 0,
+                    "valid": len(result.warnings) == 0 and len(errors) == 0,
                     "passes": result.passes,
                     "warnings": result.warnings,
+                    "errors": errors,
                 },
                 indent=2,
             )
@@ -540,12 +543,23 @@ def validate(
             ui.success(p)
         for w in result.warnings:
             ui.warn(w)
+        for e in errors:
+            ui.error(e)
         ui.console.print()
+        if errors:
+            n = len(errors)
+            ui.console.print(
+                f"  [red]{n}[/red] error{'s' if n != 1 else ''} found — "
+                "invalid override keys will be silently ignored by the slicer."
+            )
         if result.warnings:
             n = len(result.warnings)
             ui.console.print(f"  [yellow]{n}[/yellow] warning{'s' if n != 1 else ''} found.")
-        else:
+        if not errors and not result.warnings:
             ui.success("All checks passed.")
+
+    if errors:
+        raise typer.Exit(code=1)
 
 
 # ---------------------------------------------------------------------------

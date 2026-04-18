@@ -204,10 +204,11 @@ def _load_existing(path: Path) -> _ExistingConfig | None:
 
 @dataclass
 class ValidationResult:
-    """Result of config validation with passes and warnings."""
+    """Result of config validation with passes, warnings, and errors."""
 
     passes: list[str]
     warnings: list[str]
+    errors: list[str] | None = None
 
     def __iter__(self):  # type: ignore[override]
         """Iterate over warnings for backward compatibility."""
@@ -326,6 +327,7 @@ def validate_config(path: Path) -> ValidationResult:
         )
 
     # Check slicer override keys against process profile
+    errors: list[str] = []
     if active.overrides:
         override_warnings = validate_override_keys(
             active.overrides,
@@ -334,7 +336,7 @@ def validate_config(path: Path) -> ValidationResult:
             project_dir=cfg.base_dir,
         )
         if override_warnings:
-            warnings.extend(override_warnings)
+            errors.extend(override_warnings)
         else:
             passes.append(f"Slicer override keys valid ({len(active.overrides)} override(s))")
 
@@ -420,7 +422,7 @@ def validate_config(path: Path) -> ValidationResult:
     if stages_ok:
         passes.append(f"Pipeline: {' → '.join(cfg.pipeline.stages)}")
 
-    return ValidationResult(passes=passes, warnings=warnings)
+    return ValidationResult(passes=passes, warnings=warnings, errors=errors or None)
 
 
 def _closest_match(name: str, candidates: list[str]) -> str | None:
