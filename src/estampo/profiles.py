@@ -128,14 +128,18 @@ def _extract_names(items: list) -> list[str]:
     """Extract name strings from a manifest list.
 
     OrcaSlicer manifests have plain strings.  CuraEngine manifests have
-    ``{"name": "...", "id": "..."}`` objects.
+    ``{"name": "...", "id": "..."}`` objects — both the display name and
+    the definition ID are included so users can configure with either.
     """
     names: list[str] = []
     for item in items:
         if isinstance(item, str):
             names.append(item)
-        elif isinstance(item, dict) and "name" in item:
-            names.append(item["name"])
+        elif isinstance(item, dict):
+            if "name" in item:
+                names.append(item["name"])
+            if "id" in item and item["id"] != item.get("name"):
+                names.append(item["id"])
     return names
 
 
