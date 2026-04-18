@@ -152,6 +152,24 @@ class TestWorkflow:
         main(["init", "--template", "--workflow"])
         assert (tmp_path / ".github" / "workflows" / "slice.yml").exists()
 
+    def test_cli_workflow_only_creates_workflow(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "estampo.toml").write_text("[slicer]\nengine = 'orca'\n")
+        main(["init", "--workflow-only"])
+        assert (tmp_path / ".github" / "workflows" / "slice.yml").exists()
+
+    def test_cli_workflow_only_errors_without_config(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        main(["init", "--workflow-only"])
+        assert not (tmp_path / ".github" / "workflows" / "slice.yml").exists()
+
+    def test_cli_workflow_only_custom_config(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "custom.toml").write_text("[slicer]\nengine = 'orca'\n")
+        main(["init", "--workflow-only", "--output", "custom.toml"])
+        content = (tmp_path / ".github" / "workflows" / "slice.yml").read_text()
+        assert "config: custom.toml" in content
+
 
 class TestExtractFrom3MF:
     def test_extracts_profiles(self, tmp_path):

@@ -291,6 +291,28 @@ The action runs the full pipeline, uploads artifacts, and posts build metrics
 pip/pipx tool on the runner** — use the action instead, which has all
 dependencies pre-installed in Docker.
 
+To generate just the workflow file for an existing project:
+```bash
+estampo init --workflow-only
+```
+This requires an existing `estampo.toml` — it will error if the config file is missing.
+
+#### Projects with build scripts (STEP/code-CAD)
+
+If the project generates STL/3MF files from STEP files, OpenSCAD, build123d, or
+CadQuery via a build script, and the generated files are `.gitignore`d, the CI
+runner won't have them. Add a build step before the estampo action:
+
+```yaml
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build models
+        run: python build.py  # or make, ./generate.sh, etc.
+      - uses: estampo/estampo/action@v1
+        with:
+          config: estampo.toml
+```
+
 ### Post-processing for Bambu Lab printers
 
 If the printer is a Bambu Lab printer (P1S, X1C, A1, etc.), you **must** add a
