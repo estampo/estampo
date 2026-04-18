@@ -14,8 +14,9 @@ import time
 import uuid
 from pathlib import Path
 
-from estampo import require_file
 from estampo.cloud.ams import _build_ams_mapping, _strip_gcode_from_3mf
+
+from estampo import require_file
 
 log = logging.getLogger(__name__)
 
