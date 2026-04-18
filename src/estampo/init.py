@@ -287,7 +287,9 @@ def validate_config(path: Path) -> ValidationResult:
                     warnings.append(
                         f"slicer.printer '{active.printer}' is a printer model "
                         f"definition, not a slicer profile. Use the nozzle-specific "
-                        f"variant, e.g. '{active.printer} 0.4 nozzle'"
+                        f"variant, e.g. '{active.printer} 0.4 nozzle'.\n"
+                        f"  Fix: run 'estampo profiles list --engine {cfg.slicer.engine}' "
+                        f"to see available machine profiles."
                     )
                 else:
                     pin_hint = ""
@@ -306,9 +308,15 @@ def validate_config(path: Path) -> ValidationResult:
             if processes and orca.process not in processes:
                 close = _closest_match(orca.process, processes)
                 hint = f" Did you mean '{close}'?" if close else ""
+                pin_hint = ""
+                if source != "pinned":
+                    pin_hint = (
+                        "\n  Fix: run 'estampo profiles pin' to extract profiles "
+                        "from the Docker image."
+                    )
                 warnings.append(
                     f"slicer.process '{orca.process}' not found in "
-                    f"{cfg.slicer.engine} profiles ({source}).{hint}"
+                    f"{cfg.slicer.engine} profiles ({source}).{hint}{pin_hint}"
                 )
                 profile_ok = False
 
@@ -319,9 +327,15 @@ def validate_config(path: Path) -> ValidationResult:
                 if fil not in known_filaments:
                     close = _closest_match(fil, known_filaments)
                     hint = f" Did you mean '{close}'?" if close else ""
+                    pin_hint = ""
+                    if source != "pinned":
+                        pin_hint = (
+                            "\n  Fix: run 'estampo profiles pin' to extract profiles "
+                            "from the Docker image."
+                        )
                     warnings.append(
                         f"slicer filament '{fil}' not found in "
-                        f"{cfg.slicer.engine} profiles ({source}).{hint}"
+                        f"{cfg.slicer.engine} profiles ({source}).{hint}{pin_hint}"
                     )
                     profile_ok = False
 
@@ -329,10 +343,9 @@ def validate_config(path: Path) -> ValidationResult:
             passes.append(f"Slicer profiles valid ({source})")
     else:
         warnings.append(
-            f"slicer profile names could not be validated — {cfg.slicer.engine} is not "
-            "installed locally, no pinned profiles found, and no bundled profile list available. "
-            "Run 'estampo profiles pin' or "
-            f"'python scripts/extract_profiles.py {cfg.slicer.version or '<version>'}' to add one."
+            f"slicer profile names could not be validated — no {cfg.slicer.engine} "
+            f"profiles available (not installed locally, no pinned or bundled profiles).\n"
+            f"  Fix: run 'estampo profiles pin' to extract profiles from the Docker image."
         )
 
     # Check slicer override keys against process profile
@@ -411,7 +424,12 @@ def validate_config(path: Path) -> ValidationResult:
     stages_ok = True
     for stage in cfg.pipeline.stages:
         if stage not in STAGE_OUTPUTS and stage not in cfg.pipeline.command_stages:
-            warnings.append(f"pipeline stage '{stage}' is unknown")
+            valid = sorted(STAGE_OUTPUTS.keys())
+            warnings.append(
+                f"pipeline stage '{stage}' is unknown.\n"
+                f"  Built-in stages: {', '.join(valid)}.\n"
+                f"  For custom stages, add a [{stage}] section with a 'command' key."
+            )
             stages_ok = False
 
     # Check pipeline stage ordering
