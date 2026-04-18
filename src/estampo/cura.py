@@ -436,11 +436,19 @@ def _squash_cura_def(def_id: str, defs_dir: Path) -> dict:
     """Walk the inheritance chain for a CuraEngine definition and squash it.
 
     Reads ``*.def.json`` files from *defs_dir*, follows ``inherits`` links,
-    and deep-merges overrides from root to leaf.  If the chain ends at an
-    unresolved parent (e.g. ``fdmprinter`` which ships inside the CuraEngine
-    Docker image), ``inherits`` is preserved so CuraEngine can resolve it
-    at runtime via its ``-d`` search path.
+    and deep-merges overrides from root to leaf.
+
+    Root definitions like ``fdmprinter`` provide the full settings schema in
+    a ``settings`` tree (not ``overrides``).  Since we only merge
+    ``overrides``, we must stop before including root definitions and
+    preserve ``inherits`` so CuraEngine resolves the base at runtime via
+    its ``-d`` search path.
     """
+    # Root definitions that provide the full settings schema.  These must
+    # NOT be squashed — their ``settings`` tree is too large and not
+    # representable as ``overrides``.  CuraEngine resolves them at runtime.
+    _ROOT_DEFS = {"fdmprinter", "fdmextruder"}
+
     chain: list[dict] = []
     current_id: str | None = def_id
     seen: set[str] = set()
@@ -448,6 +456,12 @@ def _squash_cura_def(def_id: str, defs_dir: Path) -> dict:
 
     while current_id and current_id not in seen:
         seen.add(current_id)
+
+        # Stop before root definitions — they provide the base schema
+        if current_id in _ROOT_DEFS and current_id != def_id:
+            unresolved_parent = current_id
+            break
+
         path = defs_dir / f"{current_id}.def.json"
         if not path.exists():
             # Parent not available locally — CuraEngine resolves it at runtime
@@ -900,6 +914,23 @@ def _check_local_def(staging: Path, machine_def: str, printer: str | None) -> No
     )
 
 
+def _strip_cura_banner(text: str) -> str:
+    """Strip the CuraEngine GPL license banner from output text.
+
+    CuraEngine prints a multi-line license notice to stderr on every run.
+    It wastes space in error messages and pushes the actual diagnostic off
+    screen.  Strip everything up to and including the blank line after the
+    ``<http...>`` URL.
+    """
+    marker = "<http://www.gnu.org/licenses/>."
+    idx = text.find(marker)
+    if idx == -1:
+        return text
+    # Skip past the marker line and any trailing blank lines
+    rest = text[idx + len(marker) :].lstrip("\n")
+    return rest
+
+
 def _run_docker_slice(
     inner_cmd: str,
     image: str,
@@ -949,12 +980,14 @@ def _run_docker_slice(
     if result.returncode != 0:
         combined = (result.stdout + "\n" + result.stderr).strip()
         log.error("CuraEngine output:\n%s", combined)
-        raise EstampoError(f"CuraEngine failed (exit {result.returncode}):\n{combined[:500]}")
+        raise EstampoError(
+            f"CuraEngine failed (exit {result.returncode}):\n{_strip_cura_banner(combined)[:500]}"
+        )
 
     output_gcode = output_dir / f"{output_stem}.gcode"
     if not output_gcode.exists() or output_gcode.stat().st_size < 100:
         combined = (result.stdout + "\n" + result.stderr).strip()
-        raise EstampoError(f"CuraEngine produced no output:\n{combined[:500]}")
+        raise EstampoError(f"CuraEngine produced no output:\n{_strip_cura_banner(combined)[:500]}")
 
     _patch_gcode_header(output_gcode, result.stderr)
     _write_cura_settings(output_dir, profile)
@@ -993,12 +1026,14 @@ def _run_local_slice(
     if result.returncode != 0:
         combined = (result.stdout + "\n" + result.stderr).strip()
         log.error("CuraEngine output:\n%s", combined)
-        raise EstampoError(f"CuraEngine failed (exit {result.returncode}):\n{combined[:500]}")
+        raise EstampoError(
+            f"CuraEngine failed (exit {result.returncode}):\n{_strip_cura_banner(combined)[:500]}"
+        )
 
     output_gcode = output_dir / f"{output_stem}.gcode"
     if not output_gcode.exists() or output_gcode.stat().st_size < 100:
         combined = (result.stdout + "\n" + result.stderr).strip()
-        raise EstampoError(f"CuraEngine produced no output:\n{combined[:500]}")
+        raise EstampoError(f"CuraEngine produced no output:\n{_strip_cura_banner(combined)[:500]}")
 
     _patch_gcode_header(output_gcode, result.stderr)
     _write_cura_settings(output_dir, profile)
