@@ -12,7 +12,9 @@ from estampo.init import (
     _is_bambu_printer,
     _validate_override,
     dump_template,
+    generate_workflow,
     validate_config,
+    write_workflow,
 )
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -113,6 +115,40 @@ class TestTemplate:
         out = capsys.readouterr().out
         assert "[slicer]" in out
         assert "[[parts]]" in out
+
+
+class TestWorkflow:
+    def test_generate_workflow_default_config(self):
+        yml = generate_workflow()
+        assert "config: estampo.toml" in yml
+        assert "estampo/estampo/action@main" in yml
+        assert "pull-requests: write" in yml
+
+    def test_generate_workflow_custom_config(self):
+        yml = generate_workflow("custom/path.toml")
+        assert "config: custom/path.toml" in yml
+
+    def test_write_workflow_creates_file(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        dest = write_workflow()
+        assert dest == Path(".github/workflows/slice.yml")
+        assert dest.exists()
+        content = dest.read_text()
+        assert "estampo/estampo/action@main" in content
+
+    def test_write_workflow_skips_existing(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        workflow_dir = tmp_path / ".github" / "workflows"
+        workflow_dir.mkdir(parents=True)
+        existing = workflow_dir / "slice.yml"
+        existing.write_text("existing content")
+        dest = write_workflow()
+        assert dest.read_text() == "existing content"
+
+    def test_cli_init_template_with_workflow(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        main(["init", "--template", "--workflow"])
+        assert (tmp_path / ".github" / "workflows" / "slice.yml").exists()
 
 
 class TestExtractFrom3MF:

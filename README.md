@@ -275,6 +275,7 @@ The action slices your model, uploads G-code as an artifact, and posts print tim
 ```bash
 estampo init                        # interactive config wizard
 estampo init --template             # dump commented TOML template
+estampo init --workflow             # wizard + GitHub Actions workflow
 estampo validate                    # check config for issues
 estampo run                         # full pipeline
 estampo run --until plate           # stop after plating

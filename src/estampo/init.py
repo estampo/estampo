@@ -82,6 +82,47 @@ def dump_template() -> str:
 
 
 # ---------------------------------------------------------------------------
+# GitHub Actions workflow generation
+# ---------------------------------------------------------------------------
+
+_WORKFLOW_TEMPLATE = """\
+name: Slice
+on: [push, pull_request]
+
+jobs:
+  slice:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: estampo/estampo/action@main
+        with:
+          config: {config}
+"""
+
+
+def generate_workflow(config_path: str = "estampo.toml") -> str:
+    """Return a GitHub Actions workflow YAML for slicing."""
+    return _WORKFLOW_TEMPLATE.format(config=config_path)
+
+
+def write_workflow(config_path: str = "estampo.toml") -> Path:
+    """Write a GitHub Actions slice workflow and return the path."""
+    from estampo import ui
+
+    workflow_dir = Path(".github/workflows")
+    workflow_dir.mkdir(parents=True, exist_ok=True)
+    dest = workflow_dir / "slice.yml"
+    if dest.exists():
+        ui.warn(f"{dest} already exists — skipping workflow generation")
+        return dest
+    dest.write_text(generate_workflow(config_path))
+    ui.success(f"Wrote {dest}")
+    return dest
+
+
+# ---------------------------------------------------------------------------
 # Load existing config for pre-population
 # ---------------------------------------------------------------------------
 
