@@ -4,6 +4,28 @@ All notable changes to this project are documented here.
 
 <!-- towncrier release notes start -->
 
+## 0.4.0b2 — 2026-04-18
+
+### Features
+
+- ``estampo validate`` now detects CuraEngine template variables in start gcode and errors when no ``resolve_templates`` stage is configured. ([#557](https://github.com/estampo/estampo/pull/557))
+- ``build_config_toml`` now auto-adds ``resolve_templates`` and ``pack`` command stages for CuraEngine + Bambu printer configurations. ([#560](https://github.com/estampo/estampo/pull/560))
+- Add ``--workflow-only`` flag to ``estampo init`` for generating just the GitHub Actions workflow. ([#568](https://github.com/estampo/estampo/pull/568))
+
+### Bugfixes
+
+- Set ``docker = true`` on generated command stages (resolve_templates, pack) so container-only tools like ``cura-p1s`` run inside the Docker image. Validation now warns when a command stage executable is not on PATH and ``docker`` is not enabled. ([#570](https://github.com/estampo/estampo/pull/570))
+- Include machine dimensions (``machine_width``, ``machine_depth``, ``machine_height``) in ``cura_settings.json`` so template variables like ``{machine_height}`` in CuraEngine end gcode are resolved correctly. ([#572](https://github.com/estampo/estampo/pull/572))
+- Add actionable fix instructions to validation warnings (profile not found, unknown pipeline stage, unresolvable profiles).
+
+### Misc
+
+- Update AI setup prompt to document required ``resolve_templates`` stage for CuraEngine + Bambu printers. ([#559](https://github.com/estampo/estampo/pull/559))
+- Update ``ai-setup-prompt.md`` validation note to reflect actionable warning messages. ([#566](https://github.com/estampo/estampo/pull/566))
+- Bundle bambox 0.4.4 in Docker images (bambox-bridge binary and Python package).
+- Fix import ordering lint error in ``http-cloud-print.py``.
+
+
 ## 0.4.0b1 — 2026-04-18
 
 ### Features
