@@ -105,6 +105,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
         --python /opt/estampo/.venv/bin/python \
     && cp /opt/estampo/.venv/lib/python3.12/site-packages/cura_p1s/data/bambox_p1s.def.json \
           /opt/cura/definitions/ \
+    && cp /opt/estampo/.venv/lib/python3.12/site-packages/cura_p1s/data/bambox_p1s_ams.def.json \
+          /opt/cura/definitions/ \
     && cp /opt/estampo/.venv/lib/python3.12/site-packages/cura_p1s/data/bambox_p1s_extruder_0.def.json \
           /opt/cura/extruders/
 
