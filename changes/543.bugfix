@@ -1,1 +1,0 @@
-Error when ``{sliced_3mf}`` cannot resolve to an actual file instead of silently falling back to directory path.

@@ -1,1 +1,0 @@
-Fix ``validate`` falsely flagging command stages (e.g. ``pack``) as unknown, and update AI setup prompt to use Docker-based CI workflows
