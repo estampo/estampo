@@ -8,9 +8,11 @@ from estampo.cli import main
 from estampo.init import (
     ValidationResult,
     _build_toml,
+    _check_cura_template_gcode,
     _closest_match,
     _is_bambu_printer,
     _validate_override,
+    build_config_toml,
     dump_template,
     generate_workflow,
     validate_config,
@@ -847,3 +849,185 @@ class TestWizard:
 
         run_wizard()
         assert not (tmp_path / "estampo.toml").exists()
+
+
+# ---------------------------------------------------------------------------
+# _check_cura_template_gcode tests
+# ---------------------------------------------------------------------------
+
+
+class TestCheckCuraTemplateGcode:
+    """Tests for _check_cura_template_gcode (#557)."""
+
+    def _make_cfg(self, tmp_path, *, has_resolve_stage=False):
+        """Create a minimal CuraEngine config with pinned definition containing templates."""
+        import json
+
+        # Create a pinned definition with template variables in start gcode
+        defs_dir = tmp_path / "profiles" / "cura" / "definitions"
+        defs_dir.mkdir(parents=True)
+        (defs_dir / "bambox_p1s.def.json").write_text(
+            json.dumps(
+                {
+                    "name": "Bambu P1S",
+                    "inherits": "fdmprinter",
+                    "overrides": {
+                        "machine_start_gcode": {
+                            "default_value": (
+                                "M104 S{material_print_temperature_layer_0}\n"
+                                "M140 S{material_bed_temperature_layer_0}\n"
+                            ),
+                        },
+                    },
+                }
+            )
+        )
+
+        # Create a dummy part file so config parses
+        dummy_stl = tmp_path / "part.stl"
+        dummy_stl.write_bytes(b"solid\nendsolid\n")
+
+        stages = ["load", "arrange", "plate", "slice"]
+        toml_lines = [
+            "[pipeline]",
+            "stages = {}".format(
+                json.dumps(stages + (["resolve_templates", "pack"] if has_resolve_stage else []))
+            ),
+            "",
+            "[slicer]",
+            'engine = "cura"',
+            "",
+            "[slicer.cura]",
+            'printer = "bambox_p1s"',
+            "",
+            "[[parts]]",
+            'file = "part.stl"',
+        ]
+        if has_resolve_stage:
+            toml_lines += [
+                "",
+                "[resolve_templates]",
+                'command = "cura-p1s resolve {sliced_dir}/plate.gcode --settings {cura_settings}"',
+                "",
+                "[pack]",
+                'command = "bambox pack {sliced_dir}/plate.gcode -o {output_dir}/plate.gcode.3mf"',
+                'output = "{output_dir}/plate.gcode.3mf"',
+            ]
+
+        toml_path = tmp_path / "estampo.toml"
+        toml_path.write_text("\n".join(toml_lines))
+
+        from estampo.config import load_config
+
+        return load_config(toml_path)
+
+    def test_error_when_no_resolve_stage(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        cfg = self._make_cfg(tmp_path, has_resolve_stage=False)
+        warnings: list[str] = []
+        errors: list[str] = []
+        _check_cura_template_gcode(cfg, warnings, errors)
+        assert len(errors) == 1
+        assert "template variables" in errors[0]
+        assert "resolve_templates" in errors[0]
+
+    def test_no_error_when_resolve_stage_present(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        cfg = self._make_cfg(tmp_path, has_resolve_stage=True)
+        warnings: list[str] = []
+        errors: list[str] = []
+        _check_cura_template_gcode(cfg, warnings, errors)
+        assert errors == []
+
+    def test_no_error_when_no_templates(self, tmp_path, monkeypatch):
+        """No error when start gcode has no template variables."""
+        import json
+
+        monkeypatch.chdir(tmp_path)
+        dummy_stl = tmp_path / "part.stl"
+        dummy_stl.write_bytes(b"solid\nendsolid\n")
+        defs_dir = tmp_path / "profiles" / "cura" / "definitions"
+        defs_dir.mkdir(parents=True)
+        (defs_dir / "bambox_p1s.def.json").write_text(
+            json.dumps(
+                {
+                    "name": "Bambu P1S",
+                    "inherits": "fdmprinter",
+                    "overrides": {
+                        "machine_start_gcode": {
+                            "default_value": "G28\nG1 Z5 F3000\n",
+                        },
+                    },
+                }
+            )
+        )
+        toml_path = tmp_path / "estampo.toml"
+        toml_path.write_text(
+            '[pipeline]\nstages = ["load", "arrange", "plate", "slice"]\n'
+            "[slicer]\n"
+            'engine = "cura"\n'
+            "[slicer.cura]\n"
+            'printer = "bambox_p1s"\n'
+            "[[parts]]\n"
+            'file = "part.stl"\n'
+        )
+        from estampo.config import load_config
+
+        cfg = load_config(toml_path)
+        warnings: list[str] = []
+        errors: list[str] = []
+        _check_cura_template_gcode(cfg, warnings, errors)
+        assert errors == []
+
+
+# ---------------------------------------------------------------------------
+# build_config_toml tests (#560)
+# ---------------------------------------------------------------------------
+
+
+class TestBuildConfigTomlCommandStages:
+    """Tests for auto-generated command stages in build_config_toml."""
+
+    def test_cura_bambu_adds_resolve_and_pack(self):
+        toml = build_config_toml(
+            engine="cura",
+            printer="bambox_p1s",
+            filaments=["PLA"],
+            parts=["part.stl"],
+        )
+        assert "resolve_templates" in toml
+        assert "cura-p1s resolve" in toml
+        assert "bambox pack" in toml
+        assert '"resolve_templates", "pack"' in toml
+
+    def test_orca_bambu_adds_pack_only(self):
+        toml = build_config_toml(
+            engine="orca",
+            printer="Bambu Lab P1S 0.4 nozzle",
+            filaments=["PLA"],
+            parts=["part.stl"],
+        )
+        assert "resolve_templates" not in toml
+        assert "bambox repack" in toml
+        assert '"pack"' in toml
+
+    def test_non_bambu_no_command_stages(self):
+        toml = build_config_toml(
+            engine="cura",
+            printer="creality_ender3",
+            filaments=["PLA"],
+            parts=["part.stl"],
+        )
+        assert "resolve_templates" not in toml
+        assert "bambox" not in toml
+
+    def test_explicit_stages_with_pack_not_duplicated(self):
+        toml = build_config_toml(
+            engine="cura",
+            printer="bambox_p1s",
+            filaments=["PLA"],
+            parts=["part.stl"],
+            stages=["load", "arrange", "plate", "slice", "pack"],
+        )
+        # Should not add a second pack
+        assert toml.count('"pack"') == 1

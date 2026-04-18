@@ -6,8 +6,12 @@ import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from estampo.config import DEFAULT_STAGES, SUPPORTED_EXTENSIONS
+
+if TYPE_CHECKING:
+    from estampo.config import EstampoConfig
 
 log = logging.getLogger(__name__)
 
@@ -427,7 +431,75 @@ def validate_config(path: Path) -> ValidationResult:
     if stages_ok:
         passes.append(f"Pipeline: {' → '.join(cfg.pipeline.stages)}")
 
+    # Check CuraEngine definitions for unresolved template variables
+    if cfg.slicer.engine == "cura" and active.printer and "slice" in cfg.pipeline.stages:
+        _check_cura_template_gcode(cfg, warnings, errors)
+
     return ValidationResult(passes=passes, warnings=warnings, errors=errors or None)
+
+
+def _check_cura_template_gcode(
+    cfg: "EstampoConfig",
+    warnings: list[str],
+    errors: list[str],
+) -> None:
+    """Warn if CuraEngine start gcode has template variables but no resolve stage."""
+    import json
+    import re
+
+    from estampo.cura import _resolve_def_chain, _resolve_def_name
+
+    try:
+        def_id = _resolve_def_name(cfg.slicer.active.printer)
+    except Exception:
+        return  # can't resolve — other warnings will cover this
+
+    chain = _resolve_def_chain(def_id, cfg.base_dir, cfg.slicer.profiles_dir)
+    if not chain:
+        return
+
+    # Read start gcode from the leaf definition
+    try:
+        with open(chain[0]) as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return
+
+    start_gcode = data.get("overrides", {}).get("machine_start_gcode", {})
+    gcode_text = start_gcode.get("default_value", "")
+    if not gcode_text:
+        return
+
+    # Check for CuraEngine template variables like {material_bed_temperature_layer_0}
+    templates = re.findall(r"\{(\w+)\}", gcode_text)
+    # Filter to likely CuraEngine setting names (not command stage variables)
+    cura_templates = [t for t in templates if "_" in t and not t.startswith("if ")]
+    if not cura_templates:
+        return
+
+    # Check if any pipeline stage resolves templates
+    has_resolver = False
+    for stage_name in cfg.pipeline.stages:
+        if stage_name in cfg.pipeline.command_stages:
+            cmd = cfg.pipeline.command_stages[stage_name].command
+            if "resolve" in cmd.lower():
+                has_resolver = True
+                break
+
+    if not has_resolver:
+        examples = ", ".join(cura_templates[:3])
+        errors.append(
+            f"CuraEngine printer definition '{def_id}' uses template variables "
+            f"in start gcode (e.g. {examples}) but the pipeline has no stage to "
+            f"resolve them. Unresolved templates cause dangerous printer behavior.\n"
+            f"  Fix: add a resolve_templates stage to your pipeline:\n"
+            f"    [pipeline]\n"
+            f'    stages = [..., "slice", "resolve_templates", "pack"]\n'
+            f"\n"
+            f"    [resolve_templates]\n"
+            f'    command = "cura-p1s resolve {{sliced_dir}}/plate.gcode '
+            f'--settings {{cura_settings}}"'
+        )
 
 
 def _closest_match(name: str, candidates: list[str]) -> str | None:
@@ -1277,6 +1349,25 @@ def build_config_toml(
 ) -> str:
     """Build estampo.toml content from explicit parameters (non-interactive)."""
     part_dicts = [{"file": p, "copies": 1, "orient": "flat", "filament": 1} for p in parts]
+    effective_stages = list(stages) if stages else list(DEFAULT_STAGES)
+    command_stages: dict[str, dict[str, str | bool]] | None = None
+
+    # Auto-add resolve_templates + pack for CuraEngine with Bambu printers
+    if printer and _is_bambu_printer(printer) and "pack" not in effective_stages:
+        command_stages = {}
+        if engine == "cura":
+            effective_stages.append("resolve_templates")
+            command_stages["resolve_templates"] = {
+                "command": ("cura-p1s resolve {sliced_dir}/plate.gcode --settings {cura_settings}"),
+            }
+        effective_stages.append("pack")
+        command_stages["pack"] = {
+            "command": ("bambox pack {sliced_dir}/plate.gcode -o {output_dir}/plate.gcode.3mf")
+            if engine == "cura"
+            else "bambox repack {sliced_3mf}",
+            "output": "{output_dir}/plate.gcode.3mf" if engine == "cura" else "{sliced_3mf}",
+        }
+
     return _build_toml(
         project_name=name,
         engine=engine,
@@ -1286,8 +1377,9 @@ def build_config_toml(
         parts=part_dicts,
         plate_size=plate_size,
         slicer_version=slicer_version,
-        stages=stages or list(DEFAULT_STAGES),
+        stages=effective_stages,
         bed_type=bed_type,
+        command_stages=command_stages,
     )
 
 
