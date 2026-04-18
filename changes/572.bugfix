@@ -1,1 +1,0 @@
-Include machine dimensions (``machine_width``, ``machine_depth``, ``machine_height``) in ``cura_settings.json`` so template variables like ``{machine_height}`` in CuraEngine end gcode are resolved correctly.

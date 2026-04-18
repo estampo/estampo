@@ -1,1 +1,0 @@
-Set ``docker = true`` on generated command stages (resolve_templates, pack) so container-only tools like ``cura-p1s`` run inside the Docker image. Validation now warns when a command stage executable is not on PATH and ``docker`` is not enabled.
