@@ -8,10 +8,12 @@ from estampo import EstampoError
 from estampo.cura import (
     _FILAMENT_TEMPS,
     CuraProfile,
+    _check_local_def,
     _extruder_settings_str,
     _fetch_printer_def,
     _patch_gcode_header,
     _place_on_bed,
+    _resolve_def_chain,
     _resolve_def_name,
     _settings_dict,
     _settings_flags,
@@ -59,6 +61,48 @@ def test_resolve_def_name_unknown_raises():
     """Unknown printer name raises EstampoError."""
     with pytest.raises(EstampoError, match="not found in the definition manifest"):
         _resolve_def_name("Totally Unknown Printer XYZ")
+
+
+# --- _resolve_def_chain ---
+
+
+def test_resolve_def_chain_missing_returns_empty(tmp_path):
+    """Missing definition returns empty chain instead of raising."""
+    chain = _resolve_def_chain("nonexistent_printer", project_dir=tmp_path)
+    assert chain == []
+
+
+def test_resolve_def_chain_finds_pinned(tmp_path):
+    """Pinned definition is found and returned."""
+    import json
+
+    defs_dir = tmp_path / "profiles" / "cura" / "definitions"
+    defs_dir.mkdir(parents=True)
+    (defs_dir / "my_printer.def.json").write_text(
+        json.dumps({"name": "My Printer", "overrides": {}})
+    )
+    chain = _resolve_def_chain("my_printer", project_dir=tmp_path)
+    assert len(chain) == 1
+    assert chain[0].name == "my_printer.def.json"
+
+
+# --- _check_local_def ---
+
+
+def test_check_local_def_raises_when_missing(tmp_path):
+    """Raises EstampoError with guidance when def file missing from staging."""
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    with pytest.raises(EstampoError, match="not found locally"):
+        _check_local_def(staging, "bambox_p1s.def.json", "bambox_p1s")
+
+
+def test_check_local_def_passes_when_present(tmp_path):
+    """No error when def file exists in staging."""
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    (staging / "bambox_p1s.def.json").write_text("{}")
+    _check_local_def(staging, "bambox_p1s.def.json", "bambox_p1s")  # no raise
 
 
 # --- cura_docker_image ---
