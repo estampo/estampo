@@ -424,6 +424,7 @@ version = "2.3.1"
 [pack]
 command = "bambox repack {{sliced_3mf}}"
 output = "{{sliced_3mf}}"
+docker = true
 
 [[parts]]
 file = "{_posix(FIXTURES / "cube_10mm.stl")}"
@@ -431,6 +432,49 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
         result = validate_config(toml)
         assert not any("unknown" in w for w in result.warnings)
         assert any("pack" in p for p in result.passes)
+
+    def test_missing_executable_warns_without_docker(self, tmp_path):
+        """Warn when command stage executable is not on PATH and docker is not set."""
+        toml = tmp_path / "estampo.toml"
+        toml.write_text(f"""
+[pipeline]
+stages = ["load", "arrange", "plate", "slice", "pack"]
+
+[slicer]
+engine = "orca"
+version = "2.3.1"
+
+[pack]
+command = "nonexistent_tool_xyz repack {{sliced_3mf}}"
+output = "{{sliced_3mf}}"
+
+[[parts]]
+file = "{_posix(FIXTURES / "cube_10mm.stl")}"
+""")
+        result = validate_config(toml)
+        assert any("nonexistent_tool_xyz" in w and "docker = true" in w for w in result.warnings)
+
+    def test_no_executable_warning_with_docker_true(self, tmp_path):
+        """No warning when docker=true even if executable is not on PATH."""
+        toml = tmp_path / "estampo.toml"
+        toml.write_text(f"""
+[pipeline]
+stages = ["load", "arrange", "plate", "slice", "pack"]
+
+[slicer]
+engine = "orca"
+version = "2.3.1"
+
+[pack]
+command = "nonexistent_tool_xyz repack {{sliced_3mf}}"
+output = "{{sliced_3mf}}"
+docker = true
+
+[[parts]]
+file = "{_posix(FIXTURES / "cube_10mm.stl")}"
+""")
+        result = validate_config(toml)
+        assert not any("nonexistent_tool_xyz" in w for w in result.warnings)
 
     def test_override_keys_valid_passes(self, tmp_path):
         """Valid override keys produce a pass message."""
@@ -708,6 +752,7 @@ class TestBuildToml:
                 "pack": {
                     "command": "bambox repack {sliced_3mf}",
                     "output": "{sliced_3mf}",
+                    "docker": True,
                 },
             },
         )
@@ -715,6 +760,7 @@ class TestBuildToml:
         assert "[pack]" in toml
         assert "bambox repack" in toml
         assert 'output = "{sliced_3mf}"' in toml
+        assert "docker = true" in toml
 
     def test_cura_resolve_and_pack_stages(self):
         toml = _build_toml(
@@ -731,12 +777,14 @@ class TestBuildToml:
                     "command": (
                         "cura-p1s resolve {sliced_dir}/plate.gcode --settings {cura_settings}"
                     ),
+                    "docker": True,
                 },
                 "pack": {
                     "command": (
                         "bambox pack {sliced_dir}/plate.gcode -o {output_dir}/plate.gcode.3mf"
                     ),
                     "output": "{output_dir}/plate.gcode.3mf",
+                    "docker": True,
                 },
             },
         )
@@ -744,6 +792,7 @@ class TestBuildToml:
         assert '"pack"' in toml
         assert "[resolve_templates]" in toml
         assert "cura-p1s resolve" in toml
+        assert "docker = true" in toml
         assert "[pack]" in toml
         assert "bambox pack" in toml
 
@@ -926,10 +975,12 @@ class TestCheckCuraTemplateGcode:
                 "",
                 "[resolve_templates]",
                 'command = "cura-p1s resolve {sliced_dir}/plate.gcode --settings {cura_settings}"',
+                "docker = true",
                 "",
                 "[pack]",
                 'command = "bambox pack {sliced_dir}/plate.gcode -o {output_dir}/plate.gcode.3mf"',
                 'output = "{output_dir}/plate.gcode.3mf"',
+                "docker = true",
             ]
 
         toml_path = tmp_path / "estampo.toml"
@@ -948,6 +999,7 @@ class TestCheckCuraTemplateGcode:
         assert len(errors) == 1
         assert "template variables" in errors[0]
         assert "resolve_templates" in errors[0]
+        assert "docker = true" in errors[0]
 
     def test_no_error_when_resolve_stage_present(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
@@ -1017,6 +1069,7 @@ class TestBuildConfigTomlCommandStages:
         assert "cura-p1s resolve" in toml
         assert "bambox pack" in toml
         assert '"resolve_templates", "pack"' in toml
+        assert "docker = true" in toml
 
     def test_orca_bambu_adds_pack_only(self):
         toml = build_config_toml(
@@ -1028,6 +1081,7 @@ class TestBuildConfigTomlCommandStages:
         assert "resolve_templates" not in toml
         assert "bambox repack" in toml
         assert '"pack"' in toml
+        assert "docker = true" in toml
 
     def test_non_bambu_no_command_stages(self):
         toml = build_config_toml(
