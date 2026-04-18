@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+from estampo import EstampoError
 from estampo.gcode import parse_gcode_metadata
 
 # Re-export OrcaSlicer symbols for backward compatibility.
@@ -72,7 +73,10 @@ def find_deliverable(sliced_output_dir: Path) -> Path:
     if gcode_files:
         return gcode_files[0]
 
-    raise FileNotFoundError(f"No gcode or 3MF output found in {sliced_output_dir}")
+    raise EstampoError(
+        f"No sliced output found in {sliced_output_dir} — expected a .gcode.3mf or "
+        f".gcode file. Check that the slice stage completed successfully."
+    )
 
 
 # ---------------------------------------------------------------------------

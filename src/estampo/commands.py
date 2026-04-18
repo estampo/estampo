@@ -77,10 +77,7 @@ def build_command_context(
     if packaged_dir:
         from estampo.slicer import find_deliverable
 
-        try:
-            sliced_3mf = str(find_deliverable(Path(str(packaged_dir))))
-        except FileNotFoundError:
-            sliced_3mf = str(packaged_dir)
+        sliced_3mf = str(find_deliverable(Path(str(packaged_dir))))
 
     ctx: dict[str, str] = {
         "name": config.name or "",
