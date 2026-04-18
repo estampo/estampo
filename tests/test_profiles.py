@@ -7,6 +7,7 @@ import pytest
 
 from estampo.profiles import (
     SYSTEM_DIRS,
+    _extract_names,
     _resolve_profile_data_from_dir,
     add_profile,
     detect_category,
@@ -211,6 +212,36 @@ def test_bundled_profiles_loadable():
     assert len(result["machine"]) > 10, "Expected many machine profiles"
     assert len(result["process"]) > 10, "Expected many process profiles"
     assert len(result["filament"]) > 10, "Expected many filament profiles"
+
+
+# ---------------------------------------------------------------------------
+# _extract_names
+# ---------------------------------------------------------------------------
+
+
+def test_extract_names_plain_strings():
+    assert _extract_names(["A", "B"]) == ["A", "B"]
+
+
+def test_extract_names_cura_dicts_include_id():
+    """CuraEngine manifests with id field should include both name and id."""
+    items = [{"name": "Bambu Lab P1S (bambox)", "id": "bambox_p1s"}]
+    names = _extract_names(items)
+    assert "Bambu Lab P1S (bambox)" in names
+    assert "bambox_p1s" in names
+
+
+def test_extract_names_skips_duplicate_id():
+    """When id equals name, don't duplicate."""
+    items = [{"name": "same", "id": "same"}]
+    assert _extract_names(items) == ["same"]
+
+
+def test_extract_names_mixed():
+    """Handles a mix of strings and dicts."""
+    items = ["plain", {"name": "Display", "id": "def_id"}]
+    names = _extract_names(items)
+    assert names == ["plain", "Display", "def_id"]
 
 
 # ---------------------------------------------------------------------------
