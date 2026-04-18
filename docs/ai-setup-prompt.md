@@ -25,7 +25,7 @@ post-processing command stages.
    install command).
 4. Create an `estampo.toml` config file in the repo root.
 5. Validate the config with `estampo validate`.
-6. Optionally add a GitHub Actions workflow that slices on every push.
+6. Optionally add a GitHub Actions workflow (`estampo init --workflow` or create manually).
 
 ### What to ask me
 

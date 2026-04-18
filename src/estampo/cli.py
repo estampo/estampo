@@ -434,6 +434,10 @@ def init(
         list[str] | None,
         typer.Option("--part", help="Part file path (repeatable, non-interactive)"),
     ] = None,
+    workflow: Annotated[
+        bool,
+        typer.Option("--workflow", help="Generate a GitHub Actions slice workflow"),
+    ] = False,
     verbose: Annotated[bool, typer.Option("-v", "--verbose", help="Enable debug logging")] = False,
 ) -> None:
     """Create a new estampo.toml config file.
@@ -446,6 +450,8 @@ def init(
     Use --from-3mf to extract settings from an OrcaSlicer project.
     """
     _setup_logging(verbose)
+
+    config_path = str(output or "estampo.toml")
 
     # Non-interactive mode: all required params provided
     if engine and filament and part:
@@ -479,6 +485,11 @@ def init(
         from estampo.init import run_wizard
 
         run_wizard(output=output)
+
+    if workflow:
+        from estampo.init import write_workflow
+
+        write_workflow(config_path)
 
 
 def _write_or_print(toml: str, output: Path | None) -> None:

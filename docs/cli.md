@@ -7,14 +7,15 @@ estampo provides commands for creating configs (`init`, `validate`), running the
 Create a new `estampo.toml` config file.
 
 ```
-estampo init [--template] [-o OUTPUT] [--engine ENGINE] [--printer PRINTER]
-             [--process PROCESS] [--filament FILAMENT]... [--part PART]...
-             [--from-3mf FILE]
+estampo init [--template] [--workflow] [-o OUTPUT] [--engine ENGINE]
+             [--printer PRINTER] [--process PROCESS]
+             [--filament FILAMENT]... [--part PART]... [--from-3mf FILE]
 ```
 
 | Option         | Description                                         |
 |----------------|-----------------------------------------------------|
 | `--template`   | Dump a commented template to stdout (skip wizard)   |
+| `--workflow`   | Generate a GitHub Actions slice workflow (`.github/workflows/slice.yml`) |
 | `-o, --output` | Output file path (default: `./estampo.toml`)       |
 | `--engine`     | Slicer engine: `orca` or `cura` (non-interactive)  |
 | `--printer`    | Printer profile name (non-interactive)              |
@@ -45,6 +46,8 @@ estampo init -o myproject.toml            # wizard writes to custom path
 estampo init --engine orca --printer "Bambu Lab P1S 0.4 nozzle" \
   --filament "Generic PLA @base" --part bracket.stl   # non-interactive
 estampo init --from-3mf project.3mf       # extract from OrcaSlicer project
+estampo init --workflow                   # wizard + generate GitHub Actions workflow
+estampo init --template --workflow        # template + workflow file
 ```
 
 ## `estampo validate`
