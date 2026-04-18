@@ -168,10 +168,10 @@ recognized (with "did you mean?" suggestions for typos and cross-engine
 detection if you accidentally use CuraEngine setting names with OrcaSlicer or
 vice versa).
 
-**Note:** The validation warning "slicer profile names could not be validated"
-is expected when profiles are not installed locally. This is not an error —
-profiles are resolved at runtime via Docker or the bambox package. The warning
-can be safely ignored.
+**Note:** If validation warns that profile names could not be validated, it
+means no profiles are available locally. Run `estampo profiles pin` to extract
+them from the Docker image. Profiles are also resolved at runtime via Docker,
+so this warning is non-blocking.
 
 ### Common override recipes
 
