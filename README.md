@@ -124,7 +124,7 @@ CuraEngine CLI (`CuraEngine slice -j definition.json -s KEY=VALUE -l model.stl -
 | Multi-extruder mapping | `-g -e0 -l a.stl -g -e1 -l b.stl` per mesh group | `filament = 1` per part |
 | Reproducible builds | Track all definition JSONs yourself | `version = "5.12.0"` + Docker |
 | Version control | Shell scripts + scattered JSON definitions | Single TOML file — git-diffable and reviewable |
-| Run in CI | Install CuraEngine + definitions manually | `uses: estampo/estampo/action@main` |
+| Run in CI | Install CuraEngine + definitions manually | `uses: estampo/estampo/action@v1` |
 | Pack for Bambu printers | Separate manual step | `[pack]` command stage |
 
 With CuraEngine CLI, your build config ends up spread across shell scripts, `-s` flag lists, and JSON definition files — hard to diff, review, or commit as a coherent unit. estampo replaces all of that with a single declarative TOML file: git-friendly, diffable, and accessible to AI assistants and code review.
@@ -265,7 +265,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: estampo/estampo@main
+      - uses: estampo/estampo/action@v1
 ```
 
 The action slices your model, uploads G-code as an artifact, and posts print time / filament stats as a PR comment. See [`action/README.md`](action/README.md) for all options.

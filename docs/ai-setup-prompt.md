@@ -261,7 +261,7 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
-      - uses: estampo/estampo/action@main
+      - uses: estampo/estampo/action@v1
         with:
           config: estampo.toml
 ```
@@ -347,7 +347,7 @@ jobs:
           echo "$BAMBOX_CREDENTIALS" > ~/.config/bambox/credentials.toml
         env:
           BAMBOX_CREDENTIALS: ${{ secrets.BAMBOX_CREDENTIALS }}
-      - uses: estampo/estampo/action@main
+      - uses: estampo/estampo/action@v1
         with:
           config: estampo.toml
           comment: "false"
