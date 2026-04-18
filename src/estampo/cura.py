@@ -232,24 +232,14 @@ def _resolve_def_chain(
                 path = bundled
 
         if path is None:
-            if current_id == def_id:
-                # The root definition itself was not found — give a clear error
-                # rather than silently building a broken Docker command.
-                pinned_loc = (
-                    project_dir / profiles_dir / "cura" / "definitions" / filename
-                    if project_dir
-                    else "(no project dir)"
-                )
-                raise EstampoError(
-                    f"CuraEngine printer definition '{filename}' was not found.\n"
-                    "Search locations checked:\n"
-                    f"  1. {pinned_loc}\n"
-                    f"  2. {_DATA_DIR / filename}\n"
-                    "\n"
-                    "Pin the definition to your project's "
-                    "profiles/cura/definitions/ directory."
-                )
-            # Parent definition not found locally — will rely on Docker's built-in defs
+            # Definition not found locally — Docker has built-in defs, so
+            # this is only fatal for local (non-Docker) slicing.  Callers
+            # that need the file locally will check and raise on their own.
+            log.debug(
+                "CuraEngine definition '%s' not found locally "
+                "(checked pinned + bundled). Docker will provide it.",
+                filename,
+            )
             break
 
         chain.append(path)
@@ -884,6 +874,32 @@ def _prepare_cura_staging(
     return staging, machine_def
 
 
+def _check_local_def(staging: Path, machine_def: str, printer: str | None) -> None:
+    """Raise if the machine definition is missing from staging (local mode only).
+
+    Docker has built-in definitions, but local CuraEngine needs the file
+    on disk.  Gives the user actionable guidance.
+    """
+    if (staging / machine_def).exists():
+        return
+    def_id = machine_def.removesuffix(".def.json")
+    raise EstampoError(
+        f"CuraEngine printer definition '{machine_def}' not found locally.\n"
+        "\n"
+        "This definition exists in the Docker image but is not bundled in\n"
+        "the estampo pip package.  To fix this, either:\n"
+        "\n"
+        f"  1. Pin the definition:  estampo profiles pin\n"
+        f"     (extracts '{def_id}' from the Docker image into profiles/)\n"
+        "\n"
+        "  2. Run via Docker (remove --local flag) — Docker has all\n"
+        "     built-in CuraEngine definitions.\n"
+        "\n"
+        f"  3. Install the definition package:  pip install cura-p1s\n"
+        f"     (if available for your printer)"
+    )
+
+
 def _run_docker_slice(
     inner_cmd: str,
     image: str,
@@ -1039,6 +1055,7 @@ def slice_stl(
     settings = _settings_flags(profile)
 
     if local:
+        _check_local_def(staging, machine_def, printer)
         defs_path = _local_defs_path(staging)
         cura_args = [
             "-d",
@@ -1122,6 +1139,7 @@ def slice_stl_multi(
             shutil.copy2(stl_path, dest)
 
     if local:
+        _check_local_def(staging, machine_def, printer)
         cura_args: list[str] = [
             "-d",
             _local_defs_path(staging),
