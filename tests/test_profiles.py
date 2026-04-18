@@ -1017,7 +1017,7 @@ def test_validate_override_keys_cross_engine_orca_in_cura():
         process=None,
     )
     assert len(warnings) == 1
-    assert "orca" in warnings[0].lower()
+    assert "OrcaSlicer" in warnings[0]
     assert "wall_line_count" in warnings[0]
 
 
@@ -1029,7 +1029,7 @@ def test_validate_override_keys_cross_engine_cura_in_orca():
         process=None,
     )
     assert len(warnings) == 1
-    assert "cura" in warnings[0].lower()
+    assert "CuraEngine" in warnings[0]
     assert "sparse_infill_density" in warnings[0]
 
 

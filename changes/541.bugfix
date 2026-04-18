@@ -1,0 +1,1 @@
+Make ``estampo validate`` exit non-zero when override keys are invalid, with clearer error messages.

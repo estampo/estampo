@@ -437,8 +437,8 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
         result = validate_config(toml)
         assert any("override keys valid" in p.lower() for p in result.passes)
 
-    def test_override_keys_unknown_warns(self, tmp_path):
-        """Unknown override keys produce warnings."""
+    def test_override_keys_unknown_errors(self, tmp_path):
+        """Unknown override keys produce errors (not just warnings)."""
         profiles = tmp_path / "profiles" / "orca" / "process"
         profiles.mkdir(parents=True)
         (profiles / "MyProcess.json").write_text('{"type": "process", "layer_height": "0.2"}')
@@ -458,7 +458,8 @@ bogus_setting = "42"
 file = "{_posix(FIXTURES / "cube_10mm.stl")}"
 """)
         result = validate_config(toml)
-        assert any("bogus_setting" in w for w in result.warnings)
+        assert result.errors is not None
+        assert any("bogus_setting" in e for e in result.errors)
 
 
 # ---------------------------------------------------------------------------
