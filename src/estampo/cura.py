@@ -457,11 +457,12 @@ def extract_cura_docker_defs(
     return tmp_dir
 
 
-def _squash_cura_def(def_id: str, defs_dir: Path) -> dict:
+def _squash_cura_def(def_id: str, defs_dirs: Path | list[Path]) -> dict:
     """Walk the inheritance chain for a CuraEngine definition and squash it.
 
-    Reads ``*.def.json`` files from *defs_dir*, follows ``inherits`` links,
-    and deep-merges overrides from root to leaf.
+    Reads ``*.def.json`` files from *defs_dirs* (single dir or list of
+    candidate dirs searched in order, first match wins), follows
+    ``inherits`` links, and deep-merges overrides from root to leaf.
 
     Root definitions like ``fdmprinter`` provide the full settings schema in
     a ``settings`` tree (not ``overrides``).  Since we only merge
@@ -473,6 +474,15 @@ def _squash_cura_def(def_id: str, defs_dir: Path) -> dict:
     # NOT be squashed — their ``settings`` tree is too large and not
     # representable as ``overrides``.  CuraEngine resolves them at runtime.
     _ROOT_DEFS = {"fdmprinter", "fdmextruder"}
+
+    dirs = [defs_dirs] if isinstance(defs_dirs, Path) else list(defs_dirs)
+
+    def _find(name: str) -> Path | None:
+        for d in dirs:
+            candidate = d / f"{name}.def.json"
+            if candidate.exists():
+                return candidate
+        return None
 
     chain: list[dict] = []
     current_id: str | None = def_id
@@ -487,8 +497,8 @@ def _squash_cura_def(def_id: str, defs_dir: Path) -> dict:
             unresolved_parent = current_id
             break
 
-        path = defs_dir / f"{current_id}.def.json"
-        if not path.exists():
+        path = _find(current_id)
+        if path is None:
             # Parent not available locally — CuraEngine resolves it at runtime
             unresolved_parent = current_id
             break
@@ -499,7 +509,8 @@ def _squash_cura_def(def_id: str, defs_dir: Path) -> dict:
         current_id = parent if isinstance(parent, str) else None
 
     if not chain:
-        raise EstampoError(f"CuraEngine definition '{def_id}' not found in {defs_dir}")
+        searched = ", ".join(str(d) for d in dirs)
+        raise EstampoError(f"CuraEngine definition '{def_id}' not found in {searched}")
 
     # Merge root-first so leaf overrides take precedence
     merged_overrides: dict = {}
@@ -547,28 +558,58 @@ def pin_cura_definitions(
 
     def_id = _resolve_def_name(printer)
 
-    bundled_def = _DATA_DIR / f"{def_id}.def.json"
-    defs_dir: Path | None = None
+    # Build an ordered list of candidate directories to resolve the def chain.
+    # Project profiles dir first (user-added via 'profiles add'), then bundled
+    # data, then Docker-extracted defs.  Docker extraction is skipped when the
+    # full chain already resolves from project or bundled sources.
+    project_defs_dir = project_dir / profiles_dir / "cura" / "definitions"
+    search_dirs: list[Path] = []
+    if project_defs_dir.is_dir():
+        search_dirs.append(project_defs_dir)
+    if _DATA_DIR.is_dir():
+        search_dirs.append(_DATA_DIR)
+
     cleanup_dir: Path | None = None
 
-    try:
-        if bundled_def.exists():
-            # Use bundled defs directory
-            defs_dir = _DATA_DIR
-        elif docker_version:
-            # Extract from Docker
-            defs_dir = extract_cura_docker_defs(docker_version)
-            cleanup_dir = defs_dir
-        else:
-            raise EstampoError(
-                f"CuraEngine definition '{def_id}' not found in bundled data. "
-                "Set slicer.version to extract from the Docker image."
+    def _needs_docker() -> bool:
+        """True if the leaf or any non-root ancestor is missing from search_dirs."""
+        _ROOT = {"fdmprinter", "fdmextruder"}
+        current: str | None = def_id
+        seen: set[str] = set()
+        while current and current not in seen and current not in _ROOT:
+            seen.add(current)
+            path = next(
+                (
+                    d / f"{current}.def.json"
+                    for d in search_dirs
+                    if (d / f"{current}.def.json").exists()
+                ),
+                None,
             )
+            if path is None:
+                return True
+            with open(path) as f:
+                data = json.load(f)
+            parent = data.get("inherits")
+            current = parent if isinstance(parent, str) else None
+        return False
 
-        squashed = _squash_cura_def(def_id, defs_dir)
+    try:
+        if _needs_docker():
+            if not docker_version:
+                raise EstampoError(
+                    f"CuraEngine definition '{def_id}' (or an ancestor) not found "
+                    f"in project profiles or bundled data. Set slicer.version to "
+                    f"extract from the Docker image."
+                )
+            docker_defs_dir = extract_cura_docker_defs(docker_version)
+            cleanup_dir = docker_defs_dir
+            search_dirs.append(docker_defs_dir)
+
+        squashed = _squash_cura_def(def_id, search_dirs)
 
         # Write to profiles/cura/definitions/
-        dest_dir = project_dir / profiles_dir / "cura" / "definitions"
+        dest_dir = project_defs_dir
         dest_dir.mkdir(parents=True, exist_ok=True)
         dest = dest_dir / f"{def_id}.def.json"
 
@@ -581,12 +622,16 @@ def pin_cura_definitions(
         trains = squashed.get("metadata", {}).get("machine_extruder_trains", {})
         for extruder_id in trains.values():
             ext_filename = f"{extruder_id}.def.json"
-            ext_src = defs_dir / ext_filename
             ext_dest = dest_dir / ext_filename
-            if ext_src.exists() and not ext_dest.exists():
-                shutil.copy2(ext_src, ext_dest)
-                log.info("Pinned extruder definition → %s", ext_dest)
-                pinned.append(ext_dest)
+            if ext_dest.exists():
+                continue
+            for d in search_dirs:
+                ext_src = d / ext_filename
+                if ext_src.exists():
+                    shutil.copy2(ext_src, ext_dest)
+                    log.info("Pinned extruder definition → %s", ext_dest)
+                    pinned.append(ext_dest)
+                    break
 
         # Write version marker
         if docker_version:
