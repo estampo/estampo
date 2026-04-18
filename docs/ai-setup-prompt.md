@@ -398,6 +398,9 @@ To set up the secret: run `bambox login` locally, then copy the contents of
 - **Use string values** for OrcaSlicer overrides (they are passed as CLI
   arguments): `layer_height = "0.2"`, not `layer_height = 0.2`.
 - **Pin the slicer version** for reproducibility.
+- **Pin profiles** with `estampo profiles pin` and commit the `profiles/`
+  directory. This makes builds reproducible without depending on locally
+  installed slicer profiles or Docker image contents.
 - estampo runs slicers inside Docker by default. GitHub Actions runners have
   Docker available, so `estampo run` works out of the box in CI.
 
@@ -417,6 +420,25 @@ user's printer. When suggesting or modifying overrides:
   that passes validation can still produce unsafe G-code if the override values
   are wrong for the hardware.
 
+### Pinning profiles for reproducibility
+
+After creating the config, pin the referenced slicer profiles into the project
+so builds are reproducible across machines and CI — regardless of what's
+installed locally:
+
+```bash
+estampo profiles pin
+```
+
+This extracts profiles from the Docker image (using the `slicer.version` in your
+config), squashes the inheritance chain, and writes standalone definition files
+to `profiles/`. **Commit the `profiles/` directory to git.**
+
+For CuraEngine configs using custom printer definitions (e.g. `bambox_p1s`),
+pinning is especially important — the definition file only exists inside the
+Docker image and is not bundled in the pip package. Without pinning, local
+slicing (`--local`) will fail.
+
 ### Verifying the config
 
 After creating or modifying the config, always verify:
@@ -425,7 +447,10 @@ After creating or modifying the config, always verify:
 # 1. Validate — must exit 0 with no errors
 estampo validate
 
-# 2. Test slice — catches profile and override issues
+# 2. Pin profiles for reproducibility
+estampo profiles pin
+
+# 3. Test slice — catches profile and override issues
 estampo run --until slice
 ```
 
