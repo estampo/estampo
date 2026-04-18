@@ -950,6 +950,42 @@ def test_pin_cura_definitions_from_bundled(tmp_path):
     assert "machine_heated_bed" in squashed["overrides"]
 
 
+def test_pin_cura_definitions_from_project_dir(tmp_path):
+    """pin finds a def added to profiles/cura/definitions/ via 'profiles add'."""
+    from estampo.profiles import pin_cura_definitions
+
+    defs_dir = tmp_path / "profiles" / "cura" / "definitions"
+    defs_dir.mkdir(parents=True)
+    parent = {
+        "version": 2,
+        "name": "My Base",
+        "inherits": "fdmprinter",
+        "metadata": {"visible": False},
+        "overrides": {"machine_width": {"value": 200}},
+    }
+    child = {
+        "version": 2,
+        "name": "My AMS Variant",
+        "inherits": "my_base",
+        "metadata": {"visible": True},
+        "overrides": {"machine_depth": {"value": 256}},
+    }
+    (defs_dir / "my_base.def.json").write_text(json.dumps(parent))
+    (defs_dir / "my_ams.def.json").write_text(json.dumps(child))
+
+    # No docker_version — must resolve entirely from the project dir.
+    result = pin_cura_definitions(printer="my_ams", project_dir=tmp_path)
+    assert len(result) == 1
+    dest = result[0]
+    assert dest.name == "my_ams.def.json"
+
+    squashed = json.loads(dest.read_text())
+    assert squashed["name"] == "My AMS Variant"
+    assert squashed["overrides"]["machine_width"] == {"value": 200}
+    assert squashed["overrides"]["machine_depth"] == {"value": 256}
+    assert squashed["inherits"] == "fdmprinter"
+
+
 def test_pin_profiles_delegates_to_cura(tmp_path):
     """pin_profiles delegates to pin_cura_definitions for engine='cura'."""
     result = pin_profiles(

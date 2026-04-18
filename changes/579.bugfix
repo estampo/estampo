@@ -1,0 +1,1 @@
+``estampo profiles pin`` now resolves printer definitions from ``profiles/cura/definitions/`` (where ``profiles add`` drops them) before falling back to bundled data or the CuraEngine Docker image, so user-added variants can be pinned without re-extracting from Docker.
