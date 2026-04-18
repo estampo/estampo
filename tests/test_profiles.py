@@ -270,6 +270,21 @@ def test_discover_profile_names_pinned_fallback(tmp_path):
     assert "MyPrinter" in names["machine"]
 
 
+def test_discover_profile_names_pinned_cura_includes_id(tmp_path):
+    """Pinned CuraEngine definitions include both display name and def ID."""
+    defs_dir = tmp_path / "profiles" / "cura" / "definitions"
+    defs_dir.mkdir(parents=True)
+    (defs_dir / "bambox_p1s.def.json").write_text(
+        json.dumps({"name": "Bambu Lab P1S (bambox)", "overrides": {}})
+    )
+
+    with patch("estampo.profiles.discover_profiles", return_value={}):
+        names, source = discover_profile_names("cura", project_dir=tmp_path)
+    assert source == "pinned"
+    assert "Bambu Lab P1S (bambox)" in names["machine"]
+    assert "bambox_p1s" in names["machine"]
+
+
 def test_discover_profile_names_bundled_fallback(tmp_path):
     """Falls back to bundled profiles when no system or pinned."""
     bundled = {"machine": ["Bundled"], "process": [], "filament": []}

@@ -179,17 +179,22 @@ def discover_profile_names(
                     if f.is_file()
                 )
                 if names:
-                    # Read human names from the definition files
-                    display_names: list[str] = []
+                    # Include both display names and definition IDs so
+                    # users can configure with either (e.g. "Bambu Lab
+                    # P1S (bambox)" or "bambox_p1s").
+                    machine_names: list[str] = []
                     for stem in names:
                         try:
                             with open(defs_dir / f"{stem}.def.json") as fh:
                                 d = json.load(fh)
-                            display_names.append(d.get("name", stem))
+                            display = d.get("name", stem)
+                            machine_names.append(display)
+                            if stem != display:
+                                machine_names.append(stem)
                         except (json.JSONDecodeError, OSError):
-                            display_names.append(stem)
+                            machine_names.append(stem)
                     pinned_cura: dict[str, list[str]] = {
-                        "machine": display_names,
+                        "machine": machine_names,
                         "process": [],
                         "filament": [],
                     }

@@ -1,0 +1,1 @@
+Include CuraEngine definition IDs in pinned profile validation so ``bambox_p1s`` is recognized after ``estampo profiles pin``.
