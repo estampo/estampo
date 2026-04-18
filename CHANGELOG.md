@@ -4,6 +4,42 @@ All notable changes to this project are documented here.
 
 <!-- towncrier release notes start -->
 
+## 0.4.0b1 — 2026-04-18
+
+### Features
+
+- Make GitHub Action engine-agnostic — auto-detects OrcaSlicer or CuraEngine from ``estampo.toml`` ([#513](https://github.com/estampo/estampo/pull/513))
+- Add ``--workflow`` flag to ``estampo init`` to generate a GitHub Actions slice workflow. ([#538](https://github.com/estampo/estampo/pull/538))
+
+### Bugfixes
+
+- Fix ``validate`` falsely flagging command stages (e.g. ``pack``) as unknown, and update AI setup prompt to use Docker-based CI workflows ([#511](https://github.com/estampo/estampo/pull/511))
+- Fix ``{sliced_3mf}`` command variable to resolve to the sliced output file instead of the directory ([#516](https://github.com/estampo/estampo/pull/516))
+- Fix credential path in AI setup prompt from ``~/.config/estampo/`` to ``~/.config/bambox/`` ([#518](https://github.com/estampo/estampo/pull/518))
+- Make ``estampo validate`` exit non-zero when override keys are invalid, with clearer error messages. ([#541](https://github.com/estampo/estampo/pull/541))
+- Error when ``{sliced_3mf}`` cannot resolve to an actual file instead of silently falling back to directory path. ([#543](https://github.com/estampo/estampo/pull/543))
+- Include CuraEngine definition IDs (e.g. ``bambox_p1s``) in profile validation so ID-based printer references are recognized. ([#546](https://github.com/estampo/estampo/pull/546))
+- Give actionable guidance when CuraEngine printer definition is not found locally instead of a bare error. ([#548](https://github.com/estampo/estampo/pull/548))
+- Fix CuraEngine pinned definitions failing at slice time by preserving ``inherits`` for root definitions. ([#552](https://github.com/estampo/estampo/pull/552))
+- Include CuraEngine definition IDs in pinned profile validation so ``bambox_p1s`` is recognized after ``estampo profiles pin``. ([#554](https://github.com/estampo/estampo/pull/554))
+
+### Misc
+
+- Decompose ``orca_slice_plate``, ``load_config``, and ``run_wizard`` into smaller focused functions ([#442](https://github.com/estampo/estampo/pull/442))
+- Add command stages, override recipes, and important rules to human docs ([#521](https://github.com/estampo/estampo/pull/521))
+- Add CuraEngine CLI comparison to README alongside OrcaSlicer comparison ([#523](https://github.com/estampo/estampo/pull/523))
+- Highlight AI-friendly declarative workflow as key differentiator in README ([#531](https://github.com/estampo/estampo/pull/531))
+- Improve CuraEngine CLI comparison to highlight declarative, git-friendly config. ([#535](https://github.com/estampo/estampo/pull/535))
+- Add floating major version tag (``v1``) for the GitHub Action on each stable release. ([#537](https://github.com/estampo/estampo/pull/537))
+- Add safety disclaimers and surface command stage warnings to users. ([#544](https://github.com/estampo/estampo/pull/544))
+- Recommend profile pinning in AI setup prompt for reproducible builds. ([#550](https://github.com/estampo/estampo/pull/550))
+- Add AI authorship note to README
+- Add advanced config features to AI setup prompt and ``gcode-info`` to examples
+- Hide untested ``estampo watch`` command from CLI help and remove from docs
+- Make AI setup prompt copy-paste-ready — AI asks the user questions instead of requiring placeholder editing
+- Replace deprecated printer/credential references in docs with bambox guidance
+
+
 ## 0.4.0a1 — 2026-04-17
 
 ### Features

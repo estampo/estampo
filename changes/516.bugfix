@@ -1,1 +1,0 @@
-Fix ``{sliced_3mf}`` command variable to resolve to the sliced output file instead of the directory
