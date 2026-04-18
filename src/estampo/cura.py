@@ -932,6 +932,41 @@ def _write_cura_settings(
     return settings_path
 
 
+def _strip_value_overrides(staging: Path, setting_keys: set[str]) -> None:
+    """Strip ``value`` expressions from staged defs for settings we pass via ``-s``.
+
+    CuraEngine ``value`` expressions in ``.def.json`` take precedence over
+    ``-s`` command-line flags, silently dropping user overrides (see #584).
+    For any key we're about to pass via ``-s``, remove the ``value`` entry
+    from matching override blocks in every staged def so ``-s`` actually wins.
+    ``default_value`` is left intact.
+    """
+    for def_path in staging.glob("*.def.json"):
+        try:
+            data = json.loads(def_path.read_text())
+        except (json.JSONDecodeError, OSError):
+            continue
+        overrides = data.get("overrides", {})
+        if not isinstance(overrides, dict):
+            continue
+        changed = False
+        for key in setting_keys:
+            entry = overrides.get(key)
+            if isinstance(entry, dict) and "value" in entry:
+                del entry["value"]
+                changed = True
+        if changed:
+            def_path.write_text(json.dumps(data, indent=4))
+
+
+def _profile_setting_keys(profile: CuraProfile) -> set[str]:
+    """Return every setting key we pass via ``-s`` for *profile*."""
+    keys = set(_settings_dict(profile).keys())
+    for ext_overrides in profile.per_extruder:
+        keys.update(ext_overrides.keys())
+    return keys
+
+
 def _prepare_cura_staging(
     printer: str | None,
     project_dir: Path | None,
@@ -1162,6 +1197,7 @@ def slice_stl(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     staging, machine_def = _prepare_cura_staging(printer, project_dir, profiles_dir, output_dir)
+    _strip_value_overrides(staging, _profile_setting_keys(profile))
 
     # Get machine dimensions for mesh centering and settings JSON
     machine_dims = resolve_cura_machine_dims(printer or "", project_dir, profiles_dir)
@@ -1253,6 +1289,7 @@ def slice_stl_multi(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     staging, machine_def = _prepare_cura_staging(printer, project_dir, profiles_dir, output_dir)
+    _strip_value_overrides(staging, _profile_setting_keys(profile))
 
     # Get machine dimensions for settings JSON
     machine_dims = resolve_cura_machine_dims(printer or "", project_dir, profiles_dir)

@@ -13,11 +13,13 @@ from estampo.cura import (
     _fetch_printer_def,
     _patch_gcode_header,
     _place_on_bed,
+    _profile_setting_keys,
     _resolve_def_chain,
     _resolve_def_name,
     _settings_dict,
     _settings_flags,
     _squash_cura_def,
+    _strip_value_overrides,
     _write_cura_settings,
     cura_docker_image,
     cura_profile_from_config,
@@ -343,6 +345,64 @@ def test_bundled_def_path_returns_path():
     path = _bundled_def_path("some_printer.def.json")
     assert path.name == "some_printer.def.json"
     assert "data" in str(path)
+
+
+# --- _strip_value_overrides (#584) ---
+
+
+def test_strip_value_overrides_removes_value_for_overridden_key(tmp_path):
+    """``value`` is removed for keys we pass via ``-s`` so the flag wins."""
+    import json
+
+    def_path = tmp_path / "printer.def.json"
+    def_path.write_text(
+        json.dumps(
+            {
+                "overrides": {
+                    "adhesion_type": {"value": "'skirt'"},
+                    "brim_width": {"default_value": 3, "value": "machine_width / 10"},
+                    "machine_width": {"value": 256},
+                }
+            }
+        )
+    )
+
+    _strip_value_overrides(tmp_path, {"adhesion_type", "brim_width"})
+
+    data = json.loads(def_path.read_text())
+    overrides = data["overrides"]
+    # `value` removed for overridden keys
+    assert "value" not in overrides["adhesion_type"]
+    assert "value" not in overrides["brim_width"]
+    # `default_value` preserved
+    assert overrides["brim_width"]["default_value"] == 3
+    # Non-overridden keys untouched
+    assert overrides["machine_width"]["value"] == 256
+
+
+def test_strip_value_overrides_ignores_missing_keys(tmp_path):
+    """Keys not present in the def are silently skipped."""
+    import json
+
+    def_path = tmp_path / "printer.def.json"
+    original = {"overrides": {"machine_width": {"value": 256}}}
+    def_path.write_text(json.dumps(original))
+
+    _strip_value_overrides(tmp_path, {"adhesion_type"})
+
+    assert json.loads(def_path.read_text()) == original
+
+
+def test_profile_setting_keys_includes_per_extruder():
+    """Per-extruder override keys show up alongside global settings."""
+    profile = CuraProfile()
+    profile.overrides = {"adhesion_type": "brim"}
+    profile.per_extruder = [{"material_type": "PLA"}, {"material_type": "PETG"}]
+
+    keys = _profile_setting_keys(profile)
+    assert "adhesion_type" in keys
+    assert "material_type" in keys
+    assert "layer_height" in keys  # from base settings dict
 
 
 # --- slice_stl Docker execution ---
