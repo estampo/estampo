@@ -336,15 +336,18 @@ stages = ["load", "arrange", "plate", "slice", "resolve_templates", "pack"]
 
 [resolve_templates]
 command = "cura-p1s resolve {sliced_dir}/plate.gcode --settings {cura_settings}"
+docker = true
 
 [pack]
 command = "bambox pack {sliced_dir}/plate.gcode -o {output_dir}/plate.gcode.3mf"
 output = "{output_dir}/plate.gcode.3mf"
+docker = true
 ```
 
 **The `resolve_templates` stage is required for CuraEngine + Bambu printers.**
-Without it, `estampo validate` will report an error. The `cura-p1s` package is
-pre-installed in the Docker images.
+Without it, `estampo validate` will report an error. The `cura-p1s` and `bambox`
+tools are pre-installed in the Docker images — `docker = true` runs the command
+inside the slicer container so they don't need to be installed locally.
 
 **OrcaSlicer** (patches the existing `.gcode.3mf` for Bambu Connect compatibility):
 ```toml
@@ -354,11 +357,12 @@ stages = ["load", "arrange", "plate", "slice", "pack"]
 [pack]
 command = "bambox repack {sliced_3mf}"
 output = "{sliced_3mf}"
+docker = true
 ```
 
-Both `bambox pack` and `bambox repack` are pre-installed in the Docker images,
-so no extra installation is needed when using the GitHub Action or `docker run`
-approach above.
+`docker = true` runs the command inside the slicer Docker image where `bambox`
+is pre-installed. This is the default for locally generated configs — no extra
+host-side installation needed.
 
 ### Cloud printing for Bambu Lab printers (optional)
 

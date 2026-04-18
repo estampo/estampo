@@ -449,6 +449,19 @@ def validate_config(path: Path) -> ValidationResult:
     if stages_ok:
         passes.append(f"Pipeline: {' → '.join(cfg.pipeline.stages)}")
 
+    # Check command stage executables
+    import shutil
+
+    for stage_name, stage_cfg in cfg.pipeline.command_stages.items():
+        executable = stage_cfg.command.split()[0]
+        if not stage_cfg.docker and shutil.which(executable) is None:
+            warnings.append(
+                f"command stage '{stage_name}' uses '{executable}' which is not "
+                f"on PATH.\n"
+                f"  Fix: add 'docker = true' to [{stage_name}] to run it inside "
+                f"the slicer Docker image, or install '{executable}' locally."
+            )
+
     # Check CuraEngine definitions for unresolved template variables
     if cfg.slicer.engine == "cura" and active.printer and "slice" in cfg.pipeline.stages:
         _check_cura_template_gcode(cfg, warnings, errors)
@@ -516,7 +529,8 @@ def _check_cura_template_gcode(
             f"\n"
             f"    [resolve_templates]\n"
             f'    command = "cura-p1s resolve {{sliced_dir}}/plate.gcode '
-            f'--settings {{cura_settings}}"'
+            f'--settings {{cura_settings}}"\n'
+            f"    docker = true"
         )
 
 
@@ -908,17 +922,20 @@ def _wizard_pick_command_stages(
             stages.append("resolve_templates")
             command_stages["resolve_templates"] = {
                 "command": ("cura-p1s resolve {sliced_dir}/plate.gcode --settings {cura_settings}"),
+                "docker": True,
             }
             stages.append("pack")
             command_stages["pack"] = {
                 "command": ("bambox pack {sliced_dir}/plate.gcode -o {output_dir}/plate.gcode.3mf"),
                 "output": "{output_dir}/plate.gcode.3mf",
+                "docker": True,
             }
         else:
             stages.append("pack")
             command_stages["pack"] = {
                 "command": "bambox repack {sliced_3mf}",
                 "output": "{sliced_3mf}",
+                "docker": True,
             }
     ui.console.print()
     return command_stages
@@ -1377,6 +1394,7 @@ def build_config_toml(
             effective_stages.append("resolve_templates")
             command_stages["resolve_templates"] = {
                 "command": ("cura-p1s resolve {sliced_dir}/plate.gcode --settings {cura_settings}"),
+                "docker": True,
             }
         effective_stages.append("pack")
         command_stages["pack"] = {
@@ -1384,6 +1402,7 @@ def build_config_toml(
             if engine == "cura"
             else "bambox repack {sliced_3mf}",
             "output": "{output_dir}/plate.gcode.3mf" if engine == "cura" else "{sliced_3mf}",
+            "docker": True,
         }
 
     return _build_toml(
