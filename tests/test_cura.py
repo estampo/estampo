@@ -17,6 +17,7 @@ from estampo.cura import (
     _resolve_def_name,
     _settings_dict,
     _settings_flags,
+    _squash_cura_def,
     _write_cura_settings,
     cura_docker_image,
     cura_profile_from_config,
@@ -103,6 +104,75 @@ def test_check_local_def_passes_when_present(tmp_path):
     staging.mkdir()
     (staging / "bambox_p1s.def.json").write_text("{}")
     _check_local_def(staging, "bambox_p1s.def.json", "bambox_p1s")  # no raise
+
+
+# --- _squash_cura_def ---
+
+
+def test_squash_preserves_inherits_for_fdmprinter(tmp_path):
+    """Squash must preserve 'inherits': 'fdmprinter' — never merge the root."""
+    import json
+
+    # Create a fake fdmprinter (root definition with settings tree, not overrides)
+    (tmp_path / "fdmprinter.def.json").write_text(
+        json.dumps(
+            {
+                "name": "FDM Printer Base",
+                "version": 2,
+                "settings": {"machine_width": {"default_value": 200}},
+                "overrides": {},
+            }
+        )
+    )
+    # Create a machine definition that inherits from fdmprinter
+    (tmp_path / "my_printer.def.json").write_text(
+        json.dumps(
+            {
+                "name": "My Printer",
+                "version": 2,
+                "inherits": "fdmprinter",
+                "overrides": {"machine_width": {"value": 300}},
+            }
+        )
+    )
+    result = _squash_cura_def("my_printer", tmp_path)
+    # Must keep inherits so CuraEngine resolves fdmprinter at runtime
+    assert result["inherits"] == "fdmprinter"
+    assert result["overrides"]["machine_width"]["value"] == 300
+
+
+def test_squash_merges_intermediate_definitions(tmp_path):
+    """Intermediate definitions (not fdmprinter) should be merged."""
+    import json
+
+    (tmp_path / "fdmprinter.def.json").write_text(
+        json.dumps({"name": "FDM Base", "version": 2, "settings": {}, "overrides": {}})
+    )
+    (tmp_path / "base_printer.def.json").write_text(
+        json.dumps(
+            {
+                "name": "Base Printer",
+                "version": 2,
+                "inherits": "fdmprinter",
+                "overrides": {"speed_print": {"value": 60}},
+            }
+        )
+    )
+    (tmp_path / "my_printer.def.json").write_text(
+        json.dumps(
+            {
+                "name": "My Printer",
+                "version": 2,
+                "inherits": "base_printer",
+                "overrides": {"machine_width": {"value": 300}},
+            }
+        )
+    )
+    result = _squash_cura_def("my_printer", tmp_path)
+    # fdmprinter preserved, intermediate merged
+    assert result["inherits"] == "fdmprinter"
+    assert result["overrides"]["speed_print"]["value"] == 60
+    assert result["overrides"]["machine_width"]["value"] == 300
 
 
 # --- cura_docker_image ---

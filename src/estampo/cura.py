@@ -436,11 +436,19 @@ def _squash_cura_def(def_id: str, defs_dir: Path) -> dict:
     """Walk the inheritance chain for a CuraEngine definition and squash it.
 
     Reads ``*.def.json`` files from *defs_dir*, follows ``inherits`` links,
-    and deep-merges overrides from root to leaf.  If the chain ends at an
-    unresolved parent (e.g. ``fdmprinter`` which ships inside the CuraEngine
-    Docker image), ``inherits`` is preserved so CuraEngine can resolve it
-    at runtime via its ``-d`` search path.
+    and deep-merges overrides from root to leaf.
+
+    Root definitions like ``fdmprinter`` provide the full settings schema in
+    a ``settings`` tree (not ``overrides``).  Since we only merge
+    ``overrides``, we must stop before including root definitions and
+    preserve ``inherits`` so CuraEngine resolves the base at runtime via
+    its ``-d`` search path.
     """
+    # Root definitions that provide the full settings schema.  These must
+    # NOT be squashed — their ``settings`` tree is too large and not
+    # representable as ``overrides``.  CuraEngine resolves them at runtime.
+    _ROOT_DEFS = {"fdmprinter", "fdmextruder"}
+
     chain: list[dict] = []
     current_id: str | None = def_id
     seen: set[str] = set()
@@ -448,6 +456,12 @@ def _squash_cura_def(def_id: str, defs_dir: Path) -> dict:
 
     while current_id and current_id not in seen:
         seen.add(current_id)
+
+        # Stop before root definitions — they provide the base schema
+        if current_id in _ROOT_DEFS and current_id != def_id:
+            unresolved_parent = current_id
+            break
+
         path = defs_dir / f"{current_id}.def.json"
         if not path.exists():
             # Parent not available locally — CuraEngine resolves it at runtime
