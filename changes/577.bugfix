@@ -1,1 +1,0 @@
-Copy ``bambox_p1s_ams.def.json`` into the CuraEngine Docker image so the AMS variant of the P1S printer definition is resolvable by ``estampo profiles pin``.

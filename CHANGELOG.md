@@ -4,6 +4,14 @@ All notable changes to this project are documented here.
 
 <!-- towncrier release notes start -->
 
+## 0.4.0b3 — 2026-04-18
+
+### Bugfixes
+
+- Copy ``bambox_p1s_ams.def.json`` into the CuraEngine Docker image so the AMS variant of the P1S printer definition is resolvable by ``estampo profiles pin``. ([#577](https://github.com/estampo/estampo/pull/577))
+- ``estampo profiles pin`` now resolves printer definitions from ``profiles/cura/definitions/`` (where ``profiles add`` drops them) before falling back to bundled data or the CuraEngine Docker image, so user-added variants can be pinned without re-extracting from Docker. ([#579](https://github.com/estampo/estampo/pull/579))
+
+
 ## 0.4.0b2 — 2026-04-18
 
 ### Features
