@@ -25,6 +25,8 @@ Same repo, same config → same G-code, locally or [in CI](#cicd-example).
 
 > **Warning:** estampo is in active early development. We are moving fast and breaking things — config format, CLI flags, and Python APIs may change between minor versions without deprecation. Pin your version if stability matters to you.
 
+> **Safety:** estampo generates G-code from your configuration but does not verify that settings are safe for your specific printer. Incorrect temperatures, speeds, or missing supports can damage your printer or create a fire hazard. Always review sliced output before sending to a printer. `estampo validate` checks config structure and setting names — it does not check print safety. **Use at your own risk.**
+
 > **Note:** This project was previously called **fabprint**. If you have an existing install,
 > run `pip install estampo` to upgrade — config files and credentials are migrated automatically.
 

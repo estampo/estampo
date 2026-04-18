@@ -401,6 +401,22 @@ To set up the secret: run `bambox login` locally, then copy the contents of
 - estampo runs slicers inside Docker by default. GitHub Actions runners have
   Docker available, so `estampo run` works out of the box in CI.
 
+### Safety
+
+estampo generates G-code but does not verify that settings are safe for the
+user's printer. When suggesting or modifying overrides:
+
+- **Never set temperatures above the filament manufacturer's recommendations.**
+  Excessive nozzle or bed temperatures can damage the printer or create a fire
+  hazard.
+- **Always recommend supports for overhangs** unless the user explicitly says
+  otherwise. Unsupported overhangs can cause print failures and wasted material.
+- **Warn the user to review the sliced output** before sending to a printer,
+  especially when using AI-generated settings for the first time.
+- **`estampo validate` checks config correctness, not print safety.** A config
+  that passes validation can still produce unsafe G-code if the override values
+  are wrong for the hardware.
+
 ### Verifying the config
 
 After creating or modifying the config, always verify:

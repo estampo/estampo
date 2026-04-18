@@ -265,7 +265,13 @@ def run_command_stage(
             f"{result.stderr[:500]}"
         )
 
+    # Surface stdout and stderr from successful runs so downstream tool
+    # warnings (e.g. bambox safety notices) are not silently swallowed.
+    if result.stderr:
+        for line in result.stderr.strip().splitlines():
+            ui.warn(f"[{stage.name}] {line}")
     if result.stdout:
-        log.info("Command stage '%s' stdout:\n%s", stage.name, result.stdout.rstrip())
+        for line in result.stdout.strip().splitlines():
+            ui.info(f"[{stage.name}] {line}")
 
     return output_path

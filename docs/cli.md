@@ -72,6 +72,11 @@ Checks for:
 is expected when profiles are not installed locally. This is not an error —
 profiles are resolved at runtime via Docker. The warning can be safely ignored.
 
+**Safety note:** Validation checks config structure and setting names. It does
+not verify that override values are safe for your printer — for example, it
+will not catch dangerously high temperatures or missing supports. Always review
+sliced output before sending to a printer.
+
 ### Examples
 
 ```bash
