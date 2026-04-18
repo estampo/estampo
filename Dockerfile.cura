@@ -16,7 +16,7 @@ ARG CURA_VERSION=5.12.0
 # ---------------------------------------------------------------------------
 FROM --platform=linux/amd64 debian:bookworm-slim AS bridge-fetcher
 
-ARG BAMBOX_VERSION=0.4.2
+ARG BAMBOX_VERSION=0.4.4
 ARG BAMBU_SLICER_VERSION=02.05.00.00
 ARG BNL_TOKEN=""
 
@@ -59,6 +59,8 @@ RUN curl -fSL -o /out/cert/slicer_base64.cer \
 # ---------------------------------------------------------------------------
 FROM estampo/cura-base:${CURA_VERSION}
 
+ARG BAMBOX_VERSION=0.4.4
+
 USER root
 
 LABEL org.opencontainers.image.description="estampo with CuraEngine ${CURA_VERSION}"
@@ -98,7 +100,7 @@ RUN chmod a+rx /root /root/.local /root/.local/share /root/.local/share/uv \
 # resolver for CuraEngine) from GitHub archive and copy definitions into
 # CuraEngine's search path.
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install bambox \
+    uv pip install "bambox==${BAMBOX_VERSION}" \
         "cura-p1s @ https://github.com/estampo/cura-p1s/archive/refs/heads/main.zip" \
         --python /opt/estampo/.venv/bin/python \
     && cp /opt/estampo/.venv/lib/python3.12/site-packages/cura_p1s/data/bambox_p1s.def.json \
