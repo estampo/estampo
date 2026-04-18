@@ -438,6 +438,13 @@ def init(
         bool,
         typer.Option("--workflow", help="Generate a GitHub Actions slice workflow"),
     ] = False,
+    workflow_only: Annotated[
+        bool,
+        typer.Option(
+            "--workflow-only",
+            help="Generate only the GitHub Actions workflow (requires existing estampo.toml)",
+        ),
+    ] = False,
     verbose: Annotated[bool, typer.Option("-v", "--verbose", help="Enable debug logging")] = False,
 ) -> None:
     """Create a new estampo.toml config file.
@@ -452,6 +459,22 @@ def init(
     _setup_logging(verbose)
 
     config_path = str(output or "estampo.toml")
+
+    # --workflow-only: just generate the workflow, skip all init processing
+    if workflow_only:
+        config_file = Path(config_path)
+        if not config_file.exists():
+            from estampo import ui
+
+            ui.error(
+                f"'{config_path}' not found — --workflow-only requires an existing config.\n"
+                f"  Fix: run 'estampo init' first to create the config file."
+            )
+            raise typer.Exit(1)
+        from estampo.init import write_workflow
+
+        write_workflow(config_path)
+        return
 
     # Non-interactive mode: all required params provided
     if engine and filament and part:
