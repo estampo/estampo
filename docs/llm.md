@@ -413,7 +413,7 @@ estampo profiles pin config.toml                 # pin profiles for reproducibil
 ## Running in CI
 
 ```yaml
-- uses: estampo/estampo/action@main
+- uses: estampo/estampo/action@v1
   with:
     config: estampo.toml
     comment: "true"

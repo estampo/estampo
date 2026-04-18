@@ -456,6 +456,22 @@ jobs:
           fi
           "${ARGS[@]}"
 
+      - name: Update action version tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ needs.version.outputs.version }}"
+          # Only update floating major tag for stable releases (not pre-releases)
+          if [[ "$VERSION" =~ (a|b|rc)[0-9]+$ ]]; then
+            echo "::notice::Pre-release — skipping action version tag update"
+          else
+            MAJOR=$(echo "$VERSION" | cut -d. -f1)
+            # Force-update the floating vN tag to point to this release
+            git tag -f "v${MAJOR}" "v${VERSION}"
+            git push -f origin "v${MAJOR}"
+            echo "::notice::Updated action tag v${MAJOR} → v${VERSION}"
+          fi
+
       - name: Remind to update website
         run: |
           echo "::notice::Release complete! Remember to redeploy estampo.dev — run the deploy workflow at https://github.com/estampo/website/actions/workflows/deploy.yml"
