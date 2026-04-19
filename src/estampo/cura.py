@@ -851,6 +851,7 @@ def _write_cura_settings(
     output_dir: Path,
     overrides: CuraOverrides,
     machine_dims: dict[str, float] | None = None,
+    per_extruder: CuraPerExtruder | None = None,
 ) -> Path:
     """Write CuraEngine settings to JSON for downstream command stages.
 
@@ -859,10 +860,17 @@ def _write_cura_settings(
 
     *machine_dims* adds machine geometry (width, depth, height) so that
     template variables like ``{machine_height}`` can be resolved.
+
+    *per_extruder* — extruder-0 values are merged in so that start-gcode
+    template variables like ``{material_bed_temperature_layer_0}`` and
+    ``{material_print_temperature_layer_0}`` resolve to the first
+    extruder's filament values (start gcode runs before any tool change).
     """
     settings = _settings_dict(overrides)
     if machine_dims:
         settings.update(machine_dims)
+    if per_extruder:
+        settings.update(per_extruder[0])
     settings_path = output_dir / "cura_settings.json"
     settings_path.write_text(json.dumps(settings, indent=2) + "\n")
     log.info("Wrote CuraEngine settings: %s", settings_path)
@@ -1007,6 +1015,7 @@ def _run_docker_slice(
     output_stem: str,
     overrides: CuraOverrides,
     machine_dims: dict[str, float] | None = None,
+    per_extruder: CuraPerExtruder | None = None,
 ) -> Path:
     """Run CuraEngine via Docker, validate output, and post-process G-code.
 
@@ -1060,7 +1069,7 @@ def _run_docker_slice(
 
     _surface_cura_warnings(result.stderr)
     _patch_gcode_header(output_gcode, result.stderr)
-    _write_cura_settings(output_dir, overrides, machine_dims)
+    _write_cura_settings(output_dir, overrides, machine_dims, per_extruder)
 
     log.info("CuraEngine output: %s (%d bytes)", output_gcode, output_gcode.stat().st_size)
     return output_dir
@@ -1073,6 +1082,7 @@ def _run_local_slice(
     output_stem: str,
     overrides: CuraOverrides,
     machine_dims: dict[str, float] | None = None,
+    per_extruder: CuraPerExtruder | None = None,
 ) -> Path:
     """Run CuraEngine locally (without Docker), validate output, and post-process G-code.
 
@@ -1108,7 +1118,7 @@ def _run_local_slice(
 
     _surface_cura_warnings(result.stderr)
     _patch_gcode_header(output_gcode, result.stderr)
-    _write_cura_settings(output_dir, overrides, machine_dims)
+    _write_cura_settings(output_dir, overrides, machine_dims, per_extruder)
 
     log.info("CuraEngine output: %s (%d bytes)", output_gcode, output_gcode.stat().st_size)
     return output_dir
@@ -1180,7 +1190,9 @@ def slice_stl_multi(
             cura_args.extend(["-g", f"-e{ext_idx}"])
             cura_args.extend(_extruder_settings_list(overrides, per_extruder, ext_idx))
             cura_args.extend(["-l", str(staging / stl_path.name)])
-        return _run_local_slice(cura_args, output_dir, staging, "plate", overrides, machine_dims)
+        return _run_local_slice(
+            cura_args, output_dir, staging, "plate", overrides, machine_dims, per_extruder
+        )
 
     c_staging = "/work/output/.cura-staging"
     c_output = "/work/output/plate.gcode"
@@ -1203,7 +1215,7 @@ def slice_stl_multi(
     )
 
     return _run_docker_slice(
-        inner_cmd, image, output_dir, staging, "plate", overrides, machine_dims
+        inner_cmd, image, output_dir, staging, "plate", overrides, machine_dims, per_extruder
     )
 
 

@@ -1088,6 +1088,29 @@ def test_write_cura_settings_includes_machine_dims(tmp_path):
     assert data["machine_height"] == 250.0
 
 
+def test_write_cura_settings_includes_per_extruder_temps(tmp_path):
+    """Per-extruder[0] temps land in JSON so start-gcode templates resolve (#619)."""
+    import json
+
+    per_extruder = [
+        {
+            "material_type": "PLA",
+            "material_print_temperature": 220,
+            "material_print_temperature_layer_0": 220,
+            "material_bed_temperature": 60,
+            "material_bed_temperature_layer_0": 60,
+        },
+        {"material_type": "PETG"},  # extruder 1 — not written to JSON
+    ]
+    path = _write_cura_settings(tmp_path, {}, per_extruder=per_extruder)
+    data = json.loads(path.read_text())
+    assert data["material_bed_temperature_layer_0"] == 60
+    assert data["material_print_temperature_layer_0"] == 220
+    assert data["material_bed_temperature"] == 60
+    assert data["material_print_temperature"] == 220
+    assert data["material_type"] == "PLA"
+
+
 # --- resolve_cura_machine_dims ---
 
 
