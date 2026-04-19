@@ -953,7 +953,12 @@ def test_pin_cura_definitions_from_bundled(tmp_path):
 
 
 def test_pin_cura_definitions_from_project_dir(tmp_path):
-    """pin finds a def added to profiles/cura/definitions/ via 'profiles add'."""
+    """pin finds a def added to profiles/cura/definitions/ via 'profiles add'.
+
+    Under ADR-008 the chain is copied verbatim: each non-root ancestor is
+    returned in the result and its file is preserved byte-for-byte (no
+    squashing, no value→default_value promotion).
+    """
     from estampo.profiles import pin_cura_definitions
 
     defs_dir = tmp_path / "profiles" / "cura" / "definitions"
@@ -977,16 +982,19 @@ def test_pin_cura_definitions_from_project_dir(tmp_path):
 
     # No docker_version — must resolve entirely from the project dir.
     result = pin_cura_definitions(printer="my_ams", project_dir=tmp_path)
-    assert len(result) == 1
-    dest = result[0]
-    assert dest.name == "my_ams.def.json"
+    names = {p.name for p in result}
+    # Leaf + intermediate ancestor; fdmprinter is shipped separately
+    assert names == {"my_ams.def.json", "my_base.def.json"}
 
-    squashed = json.loads(dest.read_text())
-    assert squashed["name"] == "My AMS Variant"
-    # Literal ``value`` is promoted to ``default_value`` at pin-time (#587)
-    assert squashed["overrides"]["machine_width"] == {"default_value": 200}
-    assert squashed["overrides"]["machine_depth"] == {"default_value": 256}
-    assert squashed["inherits"] == "fdmprinter"
+    leaf = json.loads((defs_dir / "my_ams.def.json").read_text())
+    assert leaf["name"] == "My AMS Variant"
+    assert leaf["inherits"] == "my_base"
+    # Verbatim: literal ``value`` is NOT promoted to ``default_value``
+    assert leaf["overrides"]["machine_depth"] == {"value": 256}
+
+    base = json.loads((defs_dir / "my_base.def.json").read_text())
+    assert base["inherits"] == "fdmprinter"
+    assert base["overrides"]["machine_width"] == {"value": 200}
 
 
 def test_pin_profiles_delegates_to_cura(tmp_path):

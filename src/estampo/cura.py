@@ -494,6 +494,67 @@ def extract_cura_docker_defs(
     return tmp_dir
 
 
+def _copy_cura_def_chain(def_id: str, defs_dirs: Path | list[Path]) -> list[Path]:
+    """Walk the inheritance chain for a CuraEngine definition verbatim.
+
+    Reads ``*.def.json`` files from *defs_dirs* (single dir or list of
+    candidate dirs searched in order, first match wins), follows
+    ``inherits`` links, and returns the chain as a list of source
+    ``Path`` objects — leaf first, nearest non-root ancestor last.
+
+    Root definitions (``fdmprinter``, ``fdmextruder``) are not included:
+    estampo ships these in ``src/estampo/data/`` and CuraEngine resolves
+    them at runtime via its ``-d`` search path.  Ancestors that are
+    missing from *defs_dirs* are treated the same way (callers relying
+    on Docker-extracted defs are responsible for pre-populating the
+    search path).
+
+    Raises :class:`EstampoError` if the leaf definition itself cannot be
+    found — there is nothing to pin otherwise.
+    """
+    _ROOT_DEFS = {"fdmprinter", "fdmextruder"}
+
+    dirs = [defs_dirs] if isinstance(defs_dirs, Path) else list(defs_dirs)
+
+    def _find(name: str) -> Path | None:
+        for d in dirs:
+            candidate = d / f"{name}.def.json"
+            if candidate.exists():
+                return candidate
+        return None
+
+    chain: list[Path] = []
+    current_id: str | None = def_id
+    seen: set[str] = set()
+
+    while current_id and current_id not in seen:
+        seen.add(current_id)
+
+        # Stop before root definitions — estampo ships these separately
+        if current_id in _ROOT_DEFS and current_id != def_id:
+            break
+
+        path = _find(current_id)
+        if path is None:
+            # Ancestor unavailable locally — CuraEngine resolves at runtime
+            break
+        chain.append(path)
+
+        try:
+            with open(path) as f:
+                data = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            break
+        parent = data.get("inherits")
+        current_id = parent if isinstance(parent, str) else None
+
+    if not chain:
+        searched = ", ".join(str(d) for d in dirs)
+        raise EstampoError(f"CuraEngine definition '{def_id}' not found in {searched}")
+
+    return chain
+
+
 def _squash_cura_def(def_id: str, defs_dirs: Path | list[Path]) -> dict:
     """Walk the inheritance chain for a CuraEngine definition and squash it.
 
@@ -577,10 +638,13 @@ def pin_cura_definitions(
     docker_version: str | None = None,
     profiles_dir: str = "profiles",
 ) -> list[Path]:
-    """Pin (squash) a CuraEngine printer definition for reproducible builds.
+    """Pin a CuraEngine printer definition for reproducible builds.
 
-    Extracts definitions from the Docker image, walks the inheritance chain,
-    deep-merges overrides, and writes a standalone ``.def.json`` file.
+    Walks the inheritance chain (extracting from the Docker image if
+    needed) and copies each ancestor ``.def.json`` file verbatim into
+    ``profiles/cura/definitions/``.  CuraEngine resolves inheritance at
+    slice time; the root defs (``fdmprinter``, ``fdmextruder``) ship
+    with estampo in ``src/estampo/data/`` and are not copied per printer.
 
     Returns list of pinned file paths.
     """
@@ -589,7 +653,7 @@ def pin_cura_definitions(
         return []
 
     # If the printer is a local file path that already exists, it was placed
-    # there by 'profiles add' — treat it as already pinned, nothing to squash.
+    # there by 'profiles add' — treat it as already pinned, nothing to do.
     existing = _printer_is_file(printer, project_dir)
     if existing:
         log.info("Printer definition is a local file — already pinned: %s", existing)
@@ -645,24 +709,37 @@ def pin_cura_definitions(
             cleanup_dir = docker_defs_dir
             search_dirs.append(docker_defs_dir)
 
-        squashed = _squash_cura_def(def_id, search_dirs)
+        chain = _copy_cura_def_chain(def_id, search_dirs)
 
-        # Write to profiles/cura/definitions/
+        # Copy each def file verbatim into profiles/cura/definitions/
         dest_dir = project_defs_dir
         dest_dir.mkdir(parents=True, exist_ok=True)
-        dest = dest_dir / f"{def_id}.def.json"
 
-        with open(dest, "w") as fh:
-            json.dump(squashed, fh, indent=4)
-        log.info("Pinned CuraEngine definition %s → %s (squashed)", printer, dest)
+        pinned: list[Path] = []
+        for src in chain:
+            dest = dest_dir / src.name
+            if src.resolve() == dest.resolve():
+                # Already pinned (source is the destination) — keep in list
+                pinned.append(dest)
+                continue
+            shutil.copy2(src, dest)
+            pinned.append(dest)
+            log.info("Pinned CuraEngine definition → %s (verbatim)", dest)
 
-        # Pin extruder definitions referenced by the machine def
-        pinned = [dest]
-        trains = squashed.get("metadata", {}).get("machine_extruder_trains", {})
+        # Pin extruder definitions referenced by the leaf machine def
+        leaf_path = chain[0]
+        try:
+            with open(leaf_path) as fh:
+                leaf_data = json.load(fh)
+        except (json.JSONDecodeError, OSError):
+            leaf_data = {}
+        trains = leaf_data.get("metadata", {}).get("machine_extruder_trains", {})
         for extruder_id in trains.values():
             ext_filename = f"{extruder_id}.def.json"
             ext_dest = dest_dir / ext_filename
             if ext_dest.exists():
+                if ext_dest not in pinned:
+                    pinned.append(ext_dest)
                 continue
             for d in search_dirs:
                 ext_src = d / ext_filename
