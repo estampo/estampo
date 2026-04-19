@@ -127,8 +127,6 @@ def slice_plate(
         from estampo.cura import (
             build_cura_config,
             cura_docker_image,
-            resolve_cura_bed_size,
-            resolve_cura_center_is_zero,
             slice_stl_multi,
         )
 
@@ -176,16 +174,15 @@ def slice_plate(
                 )
             extruder_ids = [0] * len(meshes)
 
-        bed_w, bed_d = resolve_cura_bed_size(printer or "", project_dir, profiles_dir)
-        center_is_zero = resolve_cura_center_is_zero(printer or "", project_dir, profiles_dir)
-        target_x = 0.0 if center_is_zero else bed_w / 2
-        target_y = 0.0 if center_is_zero else bed_d / 2
-
+        # CuraEngine shifts input coords by +bed/2 when
+        # machine_center_is_zero=false, and passes them through when =true.
+        # Either way, centring the mesh group at (0, 0) lands the print at
+        # bed centre in the resulting G-code — see #621 for the diagnosis.
         bounds = np.array([m.bounds for m in meshes])
         group_min = bounds[:, 0, :].min(axis=0)
         group_max = bounds[:, 1, :].max(axis=0)
-        dx = float(target_x - (group_min[0] + group_max[0]) / 2)
-        dy = float(target_y - (group_min[1] + group_max[1]) / 2)
+        dx = float(-(group_min[0] + group_max[0]) / 2)
+        dy = float(-(group_min[1] + group_max[1]) / 2)
         dz = float(-group_min[2]) if group_min[2] < 0 else 0.0
 
         stl_dir = output_dir / ".cura-parts"

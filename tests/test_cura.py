@@ -810,7 +810,12 @@ def test_slice_plate_cura_single_filament_uses_extruder_zero(tmp_path):
 
 
 def test_slice_plate_cura_positions_meshes_on_bed(tmp_path):
-    """slice_plate lifts meshes to Z≥0 and group-centers on the printer bed."""
+    """slice_plate lifts meshes to Z≥0 and group-centers at (0, 0).
+
+    CuraEngine shifts input coords by +bed/2 when machine_center_is_zero=false
+    and passes them through when =true; either way, centring the mesh at
+    (0, 0) lands the print at bed centre in the G-code (see #621).
+    """
     import json
 
     import trimesh
@@ -863,13 +868,13 @@ def test_slice_plate_cura_positions_meshes_on_bed(tmp_path):
     min_z = min(b[0][2] for b in all_bounds)
     assert min_z == pytest.approx(0.0, abs=0.01)
 
-    # Group centroid is at bed center (corner-origin 200×200 printer)
+    # Group centroid is at (0, 0) — CuraEngine adds its own +bed/2 shift.
     min_x = min(b[0][0] for b in all_bounds)
     max_x = max(b[1][0] for b in all_bounds)
     min_y = min(b[0][1] for b in all_bounds)
     max_y = max(b[1][1] for b in all_bounds)
-    assert (min_x + max_x) / 2 == pytest.approx(100.0, abs=0.1)
-    assert (min_y + max_y) / 2 == pytest.approx(100.0, abs=0.1)
+    assert (min_x + max_x) / 2 == pytest.approx(0.0, abs=0.1)
+    assert (min_y + max_y) / 2 == pytest.approx(0.0, abs=0.1)
 
 
 def test_slice_plate_cura_preserves_z_when_already_above_bed(tmp_path):
