@@ -1,0 +1,1 @@
+Pass ``machine_width``/``machine_depth``/``machine_height`` as ``-s`` flags so CuraEngine's bed size agrees with mesh placement; fixes silently-dropped brim when the pinned def declares bed dims with ``value`` only.
