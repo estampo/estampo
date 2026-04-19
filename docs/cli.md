@@ -178,9 +178,15 @@ You cannot combine `--until` and `--only`.
 Manage slicer profiles.
 
 ```
-estampo profiles list [--category machine|process|filament]
+estampo profiles list [--engine orca|cura]
+                      [--category machine|process|filament]
+                      [--printer NAME] [--json]
 estampo profiles pin [config]
 ```
 
 - **`list`** — show available profiles from your slicer installation.
+  - `--printer NAME` (OrcaSlicer only) filters `process` and `filament`
+    lists to entries whose `compatible_printers` includes *NAME*. Prefer
+    this over manually scanning the full list — incompatible
+    process/printer combos fail silently at slice time (exit 239).
 - **`pin`** — copy the profiles referenced in your config into a local `profiles/` directory. Commit this to git for reproducible builds across machines.
