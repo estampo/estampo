@@ -9,6 +9,7 @@ image with bundled printer definitions.  Default printer: Ultimaker 2.
 
 from __future__ import annotations
 
+import ast
 import importlib.resources
 import json
 import logging
@@ -419,6 +420,42 @@ def _deep_merge_cura_overrides(base: dict, child: dict) -> dict:
     return merged
 
 
+def _normalize_value_literals(overrides: dict) -> None:
+    """Promote literal ``value`` entries to ``default_value`` in place.
+
+    CuraEngine silently ignores setting entries that carry a ``value`` but no
+    ``default_value`` when the fdmprinter settings tree isn't in scope — it
+    logs ``JSON setting 'X' has no [default_]value!`` and reverts to the
+    root-schema default (see #587).  Squashed pinned defs hit this because
+    ``_squash_cura_def`` only merges ``overrides`` dicts, leaving literal
+    ``value`` entries unpaired with a ``default_value``.
+
+    For each override, if ``value`` is a literal — a native bool/int/float,
+    or a string that parses via :func:`ast.literal_eval` (e.g., ``"'skirt'"``
+    or ``"True"``) — set ``default_value`` to the evaluated literal and drop
+    ``value``.  Entries whose ``value`` is a Python expression referencing
+    other settings (e.g., ``"'zigzag' if infill_sparse_density > 80 else
+    'gyroid'"``) are left untouched so CuraEngine can evaluate them.
+    """
+    for entry in overrides.values():
+        if not isinstance(entry, dict):
+            continue
+        if "default_value" in entry or "value" not in entry:
+            continue
+        raw = entry["value"]
+        if isinstance(raw, bool) or isinstance(raw, (int, float)):
+            literal: object = raw
+        elif isinstance(raw, str):
+            try:
+                literal = ast.literal_eval(raw)
+            except (ValueError, SyntaxError):
+                continue
+        else:
+            literal = raw
+        entry["default_value"] = literal
+        del entry["value"]
+
+
 def extract_cura_docker_defs(
     version: str | None = None,
     image: str | None = None,
@@ -518,6 +555,8 @@ def _squash_cura_def(def_id: str, defs_dirs: Path | list[Path]) -> dict:
     for data in reversed(chain):
         merged_overrides = _deep_merge_cura_overrides(merged_overrides, data.get("overrides", {}))
         merged_metadata.update(data.get("metadata", {}))
+
+    _normalize_value_literals(merged_overrides)
 
     # Build squashed result from the leaf definition
     leaf = chain[0]
@@ -952,6 +991,28 @@ def _write_cura_settings(
     return settings_path
 
 
+def _normalize_staging_value_literals(staging: Path) -> None:
+    """Apply :func:`_normalize_value_literals` to every staged ``.def.json``.
+
+    Runs before :func:`_strip_value_overrides` at slice time so that legacy
+    pinned defs — produced before the pin-time normalization in
+    :func:`_squash_cura_def` existed — still reach CuraEngine in well-formed
+    shape (see #587).
+    """
+    for def_path in staging.glob("*.def.json"):
+        try:
+            data = json.loads(def_path.read_text())
+        except (json.JSONDecodeError, OSError):
+            continue
+        overrides = data.get("overrides")
+        if not isinstance(overrides, dict):
+            continue
+        before = json.dumps(overrides, sort_keys=True)
+        _normalize_value_literals(overrides)
+        if json.dumps(overrides, sort_keys=True) != before:
+            def_path.write_text(json.dumps(data, indent=4))
+
+
 def _strip_value_overrides(staging: Path, setting_keys: set[str]) -> None:
     """Strip ``value`` expressions from staged defs for settings we pass via ``-s``.
 
@@ -1217,6 +1278,7 @@ def slice_stl(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     staging, machine_def = _prepare_cura_staging(printer, project_dir, profiles_dir, output_dir)
+    _normalize_staging_value_literals(staging)
     _strip_value_overrides(staging, _profile_setting_keys(profile))
 
     # Get machine dimensions for mesh centering and settings JSON
@@ -1309,6 +1371,7 @@ def slice_stl_multi(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     staging, machine_def = _prepare_cura_staging(printer, project_dir, profiles_dir, output_dir)
+    _normalize_staging_value_literals(staging)
     _strip_value_overrides(staging, _profile_setting_keys(profile))
 
     # Get machine dimensions for settings JSON
