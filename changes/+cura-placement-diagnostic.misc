@@ -1,0 +1,1 @@
+Log CuraEngine placement inputs (bed size, ``machine_center_is_zero``, group bounds, delta) to aid diagnosis of #621.

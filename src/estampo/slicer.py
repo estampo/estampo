@@ -188,6 +188,27 @@ def slice_plate(
         dy = float(target_y - (group_min[1] + group_max[1]) / 2)
         dz = float(-group_min[2]) if group_min[2] < 0 else 0.0
 
+        # Diagnostic for #621: surface inputs + delta so a single slice
+        # reveals whether a +bed/2 shift is coming from the resolver, the
+        # bed size, or from CuraEngine re-interpreting the STL.
+        log.info(
+            "cura placement: bed=(%.1f,%.1f) center_is_zero=%s "
+            "target=(%.1f,%.1f) group=(%.1f..%.1f, %.1f..%.1f) "
+            "delta=(%.2f,%.2f,%.2f)",
+            bed_w,
+            bed_d,
+            center_is_zero,
+            target_x,
+            target_y,
+            group_min[0],
+            group_max[0],
+            group_min[1],
+            group_max[1],
+            dx,
+            dy,
+            dz,
+        )
+
         stl_dir = output_dir / ".cura-parts"
         stl_dir.mkdir(exist_ok=True)
         stl_meshes: list[tuple[int, Path]] = []

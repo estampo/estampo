@@ -390,7 +390,18 @@ def resolve_cura_center_is_zero(
             if val is None:
                 val = entry.get("value")
             if val is not None:
+                log.info(
+                    "resolve_cura_center_is_zero(%r) -> %s from %s",
+                    printer_name,
+                    bool(val),
+                    path,
+                )
                 return bool(val)
+    log.info(
+        "resolve_cura_center_is_zero(%r) -> False (default; chain=%s)",
+        printer_name,
+        [str(p) for p in chain],
+    )
     return False
 
 
