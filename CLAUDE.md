@@ -63,7 +63,7 @@ Each module has a defined scope. Do not add logic to the wrong module — even i
 
 ## Architecture: Key Decisions
 
-Seven architecture decisions are documented in `docs/decisions/`. Read them before changing any of the following:
+Eight architecture decisions are documented in `docs/decisions/`. Read them before changing any of the following:
 
 1. **`docs/decisions/001-hamilton-dag-pipeline.md`** — Why Hamilton; DAG invariants; what must not go in pipeline nodes
 2. **`docs/decisions/002-docker-local-fallback.md`** — Docker-first + local fallback; `docker_image()` as single source of truth
@@ -72,12 +72,14 @@ Seven architecture decisions are documented in `docs/decisions/`. Read them befo
 5. **`docs/decisions/005-vendor-agnostic-split.md`** — estampo is printer-agnostic; Bambu code is deleted (not moved); bambox is CLI-only (never imported)
 6. **`docs/decisions/006-slicer-plugin-protocol.md`** — Slicer engine modules as first-class peers; dispatch layers stay pure
 7. **`docs/decisions/007-command-stages.md`** — External CLI tools as pipeline stages; `str.format_map()` variable substitution
+8. **`docs/decisions/008-verbatim-cura-def-pinning.md`** — Pin CuraEngine def chain verbatim; no squashing, no value-literal workarounds; trust CuraEngine's own resolution
 
 **Before adding a new slicer engine:** read ADR-006 (the complete protocol a new engine module must implement).  
 **Before adding engine `if/elif` to profiles.py, init.py, or slicer.py:** read ADR-006 — it goes in the engine module instead.  
 **Before touching Docker image tag construction:** read ADR-002.  
 **Before adding logic to pipeline.py:** read ADR-001.  
 **Before changing profile loading:** read ADR-004.  
+**Before changing how CuraEngine definitions are pinned or merged:** read ADR-008 — **do not reintroduce squashing or value-literal promotion.**  
 **Before adding Bambu-specific code anywhere:** read ADR-005 — **do not add it. estampo is printer-agnostic.**  
 **Before adding printer/packaging logic:** read ADR-005 + ADR-007 — it belongs in a command stage, not in estampo.  
 **Before importing bambox:** read ADR-005 + ADR-007 — **do not import it. CLI integration only.**
