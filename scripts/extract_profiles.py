@@ -30,45 +30,90 @@ ORCA_CATEGORIES = ("machine", "process", "filament")
 
 
 def extract_orca(version: str, image: str) -> dict:
-    """Pull profile names from the Docker image for the given OrcaSlicer version."""
+    """Pull profile names and compat metadata from the Docker image.
+
+    Machine entries are plain strings. Process and filament entries are
+    ``{"name": ..., "compatible_printers": [...], ...}`` dicts so callers
+    can filter by printer without re-reading the slicer profile files.
+    """
+    from estampo.orca import _resolve_profile_data_from_dir
+
     print(f"Extracting OrcaSlicer profiles from {image} ...", flush=True)
 
-    result = subprocess.run(
-        [
-            "docker",
-            "run",
-            "--rm",
-            "--entrypoint",
-            "find",
-            image,
-            ORCA_PROFILE_ROOT,
-            "-name",
-            "*.json",
-        ],
-        capture_output=True,
-        text=True,
-        timeout=120,
-    )
+    container_id = None
+    tmp_dir = Path(tempfile.mkdtemp(prefix="orca_profiles_"))
+    try:
+        result = subprocess.run(
+            ["docker", "create", "--platform", "linux/amd64", image, "true"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if result.returncode != 0:
+            print(f"  error creating container: {result.stderr.strip()}", file=sys.stderr)
+            sys.exit(1)
+        container_id = result.stdout.strip()
 
-    if result.returncode != 0:
-        print(f"  error: {result.stderr.strip()}", file=sys.stderr)
-        sys.exit(1)
+        cp_result = subprocess.run(
+            ["docker", "cp", f"{container_id}:{ORCA_PROFILE_ROOT}/.", str(tmp_dir)],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        if cp_result.returncode != 0:
+            print(f"  error copying profiles: {cp_result.stderr.strip()}", file=sys.stderr)
+            sys.exit(1)
+    finally:
+        if container_id:
+            subprocess.run(
+                ["docker", "rm", "-f", container_id],
+                capture_output=True,
+                timeout=15,
+            )
 
-    profiles: dict[str, list[str]] = {cat: [] for cat in ORCA_CATEGORIES}
+    try:
+        profiles: dict[str, list] = {cat: [] for cat in ORCA_CATEGORIES}
 
-    for line in result.stdout.splitlines():
-        path = Path(line.strip())
-        name = path.stem
-        category = path.parent.name
-        if category not in ORCA_CATEGORIES:
-            continue
-        if "template" in name.lower() or name.startswith("fdm_"):
-            continue
-        profiles[category].append(name)
+        for category in ORCA_CATEGORIES:
+            cat_dir = tmp_dir / category
+            if not cat_dir.is_dir():
+                continue
+            for f in sorted(cat_dir.glob("*.json")):
+                name = f.stem
+                if "template" in name.lower() or name.startswith("fdm_"):
+                    continue
+                if category == "machine":
+                    profiles[category].append(name)
+                    continue
 
-    for cat in ORCA_CATEGORIES:
-        profiles[cat] = sorted(profiles[cat])
-        print(f"  {cat}: {len(profiles[cat])} profiles")
+                # process / filament: resolve inheritance to capture the
+                # effective compatible_printers list (leaf profiles often
+                # leave it to the base).
+                try:
+                    data = _resolve_profile_data_from_dir(name, category, tmp_dir)
+                except (FileNotFoundError, json.JSONDecodeError, OSError) as e:
+                    print(f"  skip {category}/{name}: {e}", file=sys.stderr)
+                    continue
+                if data.get("type") != category:
+                    continue
+                entry: dict = {"name": name}
+                compat = data.get("compatible_printers")
+                if isinstance(compat, list):
+                    entry["compatible_printers"] = [str(p) for p in compat]
+                condition = data.get("compatible_printers_condition")
+                if isinstance(condition, str) and condition:
+                    entry["compatible_printers_condition"] = condition
+                profiles[category].append(entry)
+
+        profiles["machine"] = sorted(profiles["machine"])
+        for cat in ("process", "filament"):
+            profiles[cat].sort(key=lambda e: e["name"])
+        for cat in ORCA_CATEGORIES:
+            print(f"  {cat}: {len(profiles[cat])} profiles")
+    finally:
+        import shutil
+
+        shutil.rmtree(tmp_dir, ignore_errors=True)
 
     return {"engine": "orca", "version": version, **profiles}
 

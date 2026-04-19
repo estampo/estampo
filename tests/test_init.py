@@ -618,6 +618,152 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
         assert result.errors is not None
         assert any("bogus_setting" in e for e in result.errors)
 
+    def test_unknown_key_orca_build_plate_points_to_slicer(self, tmp_path):
+        """bed_type misplaced under [slicer.orca] as build_plate — should
+        hint to set it in [slicer]."""
+        toml = tmp_path / "estampo.toml"
+        toml.write_text(f"""
+[slicer]
+engine = "orca"
+version = "2.3.1"
+
+[slicer.orca]
+printer = "Bambu Lab P1S 0.4 nozzle"
+process = "0.12mm Fine @BBL X1C"
+filaments = ["Generic PLA @base"]
+build_plate = "Textured PEI Plate"
+
+[[parts]]
+file = "{_posix(FIXTURES / "cube_10mm.stl")}"
+""")
+        warnings = validate_config(toml)
+        matched = [w for w in warnings if "build_plate" in w]
+        assert matched, f"expected a warning for build_plate, got: {list(warnings)}"
+        assert "bed_type" in matched[0]
+        assert "[slicer]" in matched[0]
+
+    def test_unknown_key_orca_exact_parent_match(self, tmp_path):
+        """bed_type placed directly under [slicer.orca] — exact match on
+        parent table key, should point to [slicer]."""
+        toml = tmp_path / "estampo.toml"
+        toml.write_text(f"""
+[slicer]
+engine = "orca"
+version = "2.3.1"
+
+[slicer.orca]
+printer = "Bambu Lab P1S 0.4 nozzle"
+bed_type = "Textured PEI Plate"
+
+[[parts]]
+file = "{_posix(FIXTURES / "cube_10mm.stl")}"
+""")
+        warnings = validate_config(toml)
+        matched = [w for w in warnings if "bed_type" in w and "[slicer.orca]" in w]
+        assert matched, f"expected a warning for bed_type in [slicer.orca], got: {list(warnings)}"
+        assert "[slicer]" in matched[0]
+
+    def test_unknown_key_typo_same_table(self, tmp_path):
+        """printr → printer in [slicer.orca]."""
+        toml = tmp_path / "estampo.toml"
+        toml.write_text(f"""
+[slicer]
+engine = "orca"
+version = "2.3.1"
+
+[slicer.orca]
+printr = "Bambu Lab P1S 0.4 nozzle"
+
+[[parts]]
+file = "{_posix(FIXTURES / "cube_10mm.stl")}"
+""")
+        warnings = validate_config(toml)
+        matched = [w for w in warnings if "printr" in w]
+        assert matched, f"expected a warning for printr, got: {list(warnings)}"
+        assert "'printer'" in matched[0]
+
+    def test_unknown_key_parts_typo(self, tmp_path):
+        """copys → copies in [[parts]]."""
+        toml = tmp_path / "estampo.toml"
+        toml.write_text(f"""
+[slicer]
+engine = "orca"
+version = "2.3.1"
+
+[[parts]]
+file = "{_posix(FIXTURES / "cube_10mm.stl")}"
+copys = 2
+""")
+        warnings = validate_config(toml)
+        matched = [w for w in warnings if "copys" in w]
+        assert matched, f"expected a warning for copys, got: {list(warnings)}"
+        assert "'copies'" in matched[0]
+
+    def test_unknown_key_command_stage_typo(self, tmp_path):
+        """dcker → docker in a user-defined command-stage table."""
+        toml = tmp_path / "estampo.toml"
+        toml.write_text(f"""
+[slicer]
+engine = "orca"
+version = "2.3.1"
+
+[pipeline]
+stages = ["slice", "pack"]
+
+[pack]
+command = "bambox repack {{gcode}} -o {{output}}"
+output = "packed.gcode.3mf"
+dcker = true
+
+[[parts]]
+file = "{_posix(FIXTURES / "cube_10mm.stl")}"
+""")
+        warnings = validate_config(toml)
+        matched = [w for w in warnings if "dcker" in w]
+        assert matched, f"expected a warning for dcker, got: {list(warnings)}"
+        assert "'docker'" in matched[0]
+
+    def test_declared_command_stage_not_flagged(self, tmp_path):
+        """A top-level table whose name is listed in pipeline.stages is a
+        user-defined command stage, not an unknown key."""
+        toml = tmp_path / "estampo.toml"
+        toml.write_text(f"""
+[slicer]
+engine = "orca"
+version = "2.3.1"
+
+[pipeline]
+stages = ["slice", "pack"]
+
+[pack]
+command = "bambox repack {{gcode}} -o {{output}}"
+output = "packed.gcode.3mf"
+
+[[parts]]
+file = "{_posix(FIXTURES / "cube_10mm.stl")}"
+""")
+        warnings = validate_config(toml)
+        assert not any("'pack'" in w and "Unknown" in w for w in warnings)
+
+    def test_unknown_top_level_key(self, tmp_path):
+        """A top-level key not in the allow-list and not a declared command
+        stage is flagged."""
+        toml = tmp_path / "estampo.toml"
+        toml.write_text(f"""
+outpt_dir = "./build"
+
+[slicer]
+engine = "orca"
+version = "2.3.1"
+
+[[parts]]
+file = "{_posix(FIXTURES / "cube_10mm.stl")}"
+""")
+        warnings = validate_config(toml)
+        matched = [w for w in warnings if "outpt_dir" in w]
+        assert matched, f"expected a warning for outpt_dir, got: {list(warnings)}"
+        assert "'output_dir'" in matched[0]
+
 
 # ---------------------------------------------------------------------------
 # Closest match helper

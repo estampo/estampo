@@ -38,9 +38,18 @@ the repo context):
    `bambox_p1s` (CuraEngine). Run `estampo profiles list --engine orca --category machine`
    to see available profiles.
 3. **Which quality preset?** — OrcaSlicer only, e.g. `0.20mm Standard @BBL X1C`.
-   Run `estampo profiles list --engine orca --category process` to see options.
+   **Always pass `--printer` to narrow the list** to processes that actually work
+   with the chosen printer — OrcaSlicer silently fails at slice time (exit 239)
+   if the process and printer are incompatible:
+   ```bash
+   estampo profiles list --engine orca --category process --printer "Bambu Lab P1S 0.4 nozzle"
+   ```
 4. **Which filament(s)?** — e.g. `Generic PLA @base`, `Generic PETG @base`.
-   Run `estampo profiles list --engine orca --category filament` to see options.
+   Same guidance: pass `--printer` to filter filaments to ones compatible with
+   the printer:
+   ```bash
+   estampo profiles list --engine orca --category filament --printer "Bambu Lab P1S 0.4 nozzle"
+   ```
 5. **Print goals?** — e.g. "strong functional part", "fast draft", "smooth
    surface", "dimensional accuracy". This determines which override recipe to
    apply.
@@ -87,6 +96,7 @@ size = [256, 256]        # bed size in mm [width, depth]
 [slicer]
 engine = "orca"          # or "cura"
 version = "2.3.1"        # "2.3.1" for orca, "5.12.0" for cura
+bed_type = "Textured PEI Plate"   # required for Bambu printers — see note below
 
 # --- OrcaSlicer config ---
 [slicer.orca]
@@ -113,13 +123,21 @@ file = "model.stl"       # .stl, .3mf, or .step / .stp — all three are accepte
 convert STEP to a mesh at the start of the pipeline. Do **not** tell the user to pre-convert STEP
 to STL/3MF; point a `[[parts]]` entry directly at the `.step` or `.stp` file.
 
+**Always set `bed_type` for Bambu Lab printers.** The OrcaSlicer machine profile
+for Bambu printers defaults to `"Cool Plate"`, but the plate that physically ships
+with a P1S / P1P / A1 / A1 mini / X1C is the **Textured PEI Plate**, which sits
+higher than the Cool Plate. If you leave `bed_type` unset and print a slice
+calibrated for Cool Plate on a physical PEI plate, the nozzle's first-layer Z is
+too low and can crash into the plate, damaging the hotend or the plate surface.
+Ask the user which plate is actually installed if unsure; do not rely on the
+profile default.
+
 #### Additional config features
 
 These are optional — skip them for simple setups:
 
 - **`output_dir`** (top-level) — output directory, default `"estampo_output"`.
 - **`gcode-info`** stage — add to pipeline to see print time and filament usage after slicing.
-- **`bed_type`** in `[slicer]` — bed surface (e.g. `"Textured PEI Plate"`).
 - **`profiles_dir`** in `[slicer]` — directory for pinned profiles (default `"profiles"`).
 - **`machine_overrides`** / **`filament_overrides`** in `[slicer.orca]` — override machine or filament profile settings (separate from process `overrides`).
 - **`[slicer.orca.slots]`** — explicit AMS slot-to-filament mapping:
@@ -154,12 +172,25 @@ These are optional — skip them for simple setups:
 # List all printer profiles
 estampo profiles list --engine orca --category machine
 
-# List quality presets
-estampo profiles list --engine orca --category process
+# List only the quality presets compatible with a specific printer.
+# IMPORTANT: prefer this over listing all processes — picking an
+# incompatible process/printer combo fails silently at slice time with
+# exit 239. The --printer flag filters by the resolved compatible_printers
+# field so the result is correctness-preserving.
+estampo profiles list --engine orca --category process \
+  --printer "Bambu Lab P1S 0.4 nozzle"
 
-# List filament profiles
-estampo profiles list --engine orca --category filament
+# Same pattern for filament — compatible_printers applies there too.
+estampo profiles list --engine orca --category filament \
+  --printer "Bambu Lab P1S 0.4 nozzle"
+
+# --printer works with --json for parsable output.
+estampo profiles list --engine orca --category process \
+  --printer "Bambu Lab P1S 0.4 nozzle" --json
 ```
+
+`--printer` is OrcaSlicer only. CuraEngine uses inline settings with no
+process/filament concept, so the flag errors for `--engine cura`.
 
 ### Validating the config
 

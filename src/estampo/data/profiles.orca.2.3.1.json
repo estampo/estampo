@@ -39,569 +39,4400 @@
     "Bambu Lab X1E 0.8 nozzle"
   ],
   "process": [
-    "0.06mm Fine @BBL A1 0.2 nozzle",
-    "0.06mm Fine @BBL A1M 0.2 nozzle",
-    "0.06mm Fine @BBL P1P 0.2 nozzle",
-    "0.06mm High Quality @BBL A1 0.2 nozzle",
-    "0.06mm High Quality @BBL A1M 0.2 nozzle",
-    "0.06mm High Quality @BBL P1P 0.2 nozzle",
-    "0.06mm High Quality @BBL X1C 0.2 nozzle",
-    "0.06mm Standard @BBL X1C 0.2 nozzle",
-    "0.08mm Extra Fine @BBL A1",
-    "0.08mm Extra Fine @BBL A1M",
-    "0.08mm Extra Fine @BBL P1P",
-    "0.08mm Extra Fine @BBL X1C",
-    "0.08mm High Quality @BBL A1",
-    "0.08mm High Quality @BBL A1 0.2 nozzle",
-    "0.08mm High Quality @BBL A1M",
-    "0.08mm High Quality @BBL A1M 0.2 nozzle",
-    "0.08mm High Quality @BBL P1P",
-    "0.08mm High Quality @BBL P1P 0.2 nozzle",
-    "0.08mm High Quality @BBL X1C",
-    "0.08mm High Quality @BBL X1C 0.2 nozzle",
-    "0.08mm Optimal @BBL A1 0.2 nozzle",
-    "0.08mm Optimal @BBL A1M 0.2 nozzle",
-    "0.08mm Optimal @BBL P1P 0.2 nozzle",
-    "0.08mm Standard @BBL X1C 0.2 nozzle",
-    "0.10mm High Quality @BBL A1 0.2 nozzle",
-    "0.10mm High Quality @BBL A1M 0.2 nozzle",
-    "0.10mm High Quality @BBL P1P 0.2 nozzle",
-    "0.10mm High Quality @BBL X1C 0.2 nozzle",
-    "0.10mm Standard @BBL A1 0.2 nozzle",
-    "0.10mm Standard @BBL A1M 0.2 nozzle",
-    "0.10mm Standard @BBL P1P 0.2 nozzle",
-    "0.10mm Standard @BBL X1C 0.2 nozzle",
-    "0.12mm Draft @BBL A1 0.2 nozzle",
-    "0.12mm Draft @BBL A1M 0.2 nozzle",
-    "0.12mm Draft @BBL P1P 0.2 nozzle",
-    "0.12mm Fine @BBL A1",
-    "0.12mm Fine @BBL A1M",
-    "0.12mm Fine @BBL P1P",
-    "0.12mm Fine @BBL X1C",
-    "0.12mm High Quality @BBL A1",
-    "0.12mm High Quality @BBL A1M",
-    "0.12mm High Quality @BBL P1P",
-    "0.12mm High Quality @BBL X1C",
-    "0.12mm Standard @BBL X1C 0.2 nozzle",
-    "0.14mm Extra Draft @BBL A1 0.2 nozzle",
-    "0.14mm Extra Draft @BBL A1M 0.2 nozzle",
-    "0.14mm Extra Draft @BBL P1P 0.2 nozzle",
-    "0.14mm Standard @BBL X1C 0.2 nozzle",
-    "0.16mm High Quality @BBL A1",
-    "0.16mm High Quality @BBL A1M",
-    "0.16mm High Quality @BBL P1P",
-    "0.16mm High Quality @BBL X1C",
-    "0.16mm Optimal @BBL A1",
-    "0.16mm Optimal @BBL A1M",
-    "0.16mm Optimal @BBL P1P",
-    "0.16mm Optimal @BBL X1C",
-    "0.18mm Fine @BBL A1 0.6 nozzle",
-    "0.18mm Fine @BBL A1M 0.6 nozzle",
-    "0.18mm Fine @BBL P1P 0.6 nozzle",
-    "0.18mm Standard @BBL X1C 0.6 nozzle",
-    "0.20mm Bambu Support W @BBL X1C",
-    "0.20mm Standard @BBL A1",
-    "0.20mm Standard @BBL A1M",
-    "0.20mm Standard @BBL P1P",
-    "0.20mm Standard @BBL X1C",
-    "0.20mm Strength @BBL A1",
-    "0.20mm Strength @BBL A1M",
-    "0.20mm Strength @BBL P1P",
-    "0.20mm Strength @BBL X1C",
-    "0.24mm Draft @BBL A1",
-    "0.24mm Draft @BBL A1M",
-    "0.24mm Draft @BBL P1P",
-    "0.24mm Draft @BBL X1C",
-    "0.24mm Fine @BBL A1 0.8 nozzle",
-    "0.24mm Fine @BBL A1M 0.8 nozzle",
-    "0.24mm Fine @BBL P1P 0.8 nozzle",
-    "0.24mm Optimal @BBL A1 0.6 nozzle",
-    "0.24mm Optimal @BBL A1M 0.6 nozzle",
-    "0.24mm Optimal @BBL P1P 0.6 nozzle",
-    "0.24mm Standard @BBL X1C 0.6 nozzle",
-    "0.24mm Standard @BBL X1C 0.8 nozzle",
-    "0.28mm Extra Draft @BBL A1",
-    "0.28mm Extra Draft @BBL A1M",
-    "0.28mm Extra Draft @BBL P1P",
-    "0.28mm Extra Draft @BBL X1C",
-    "0.30mm Standard @BBL A1 0.6 nozzle",
-    "0.30mm Standard @BBL A1M 0.6 nozzle",
-    "0.30mm Standard @BBL P1P 0.6 nozzle",
-    "0.30mm Standard @BBL X1 0.6 nozzle",
-    "0.30mm Standard @BBL X1C 0.6 nozzle",
-    "0.30mm Strength @BBL A1 0.6 nozzle",
-    "0.30mm Strength @BBL A1M 0.6 nozzle",
-    "0.30mm Strength @BBL P1P 0.6 nozzle",
-    "0.30mm Strength @BBL X1C 0.6 nozzle",
-    "0.32mm Optimal @BBL A1 0.8 nozzle",
-    "0.32mm Optimal @BBL A1M 0.8 nozzle",
-    "0.32mm Optimal @BBL P1P 0.8 nozzle",
-    "0.32mm Standard @BBL X1C 0.8 nozzle",
-    "0.36mm Draft @BBL A1 0.6 nozzle",
-    "0.36mm Draft @BBL A1M 0.6 nozzle",
-    "0.36mm Draft @BBL P1P 0.6 nozzle",
-    "0.36mm Standard @BBL X1C 0.6 nozzle",
-    "0.40mm Standard @BBL A1 0.8 nozzle",
-    "0.40mm Standard @BBL A1M 0.8 nozzle",
-    "0.40mm Standard @BBL P1P 0.8 nozzle",
-    "0.40mm Standard @BBL X1 0.8 nozzle",
-    "0.40mm Standard @BBL X1C 0.8 nozzle",
-    "0.42mm Extra Draft @BBL A1 0.6 nozzle",
-    "0.42mm Extra Draft @BBL A1M 0.6 nozzle",
-    "0.42mm Extra Draft @BBL P1P 0.6 nozzle",
-    "0.42mm Standard @BBL X1C 0.6 nozzle",
-    "0.48mm Draft @BBL A1 0.8 nozzle",
-    "0.48mm Draft @BBL A1M 0.8 nozzle",
-    "0.48mm Draft @BBL P1P 0.8 nozzle",
-    "0.48mm Standard @BBL X1C 0.8 nozzle",
-    "0.56mm Extra Draft @BBL A1 0.8 nozzle",
-    "0.56mm Extra Draft @BBL A1M 0.8 nozzle",
-    "0.56mm Extra Draft @BBL P1P 0.8 nozzle",
-    "0.56mm Standard @BBL X1C 0.8 nozzle"
+    {
+      "name": "0.06mm Fine @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "0.06mm Fine @BBL A1M 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "0.06mm Fine @BBL P1P 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "0.06mm High Quality @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "0.06mm High Quality @BBL A1M 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "0.06mm High Quality @BBL P1P 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "0.06mm High Quality @BBL X1C 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1 0.2 nozzle",
+        "Bambu Lab P1S 0.2 nozzle",
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "0.06mm Standard @BBL X1C 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1 0.2 nozzle",
+        "Bambu Lab P1S 0.2 nozzle",
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "0.08mm Extra Fine @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.08mm Extra Fine @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.08mm Extra Fine @BBL P1P",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.08mm Extra Fine @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab X1E 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.08mm High Quality @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.08mm High Quality @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "0.08mm High Quality @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.08mm High Quality @BBL A1M 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "0.08mm High Quality @BBL P1P",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.08mm High Quality @BBL P1P 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "0.08mm High Quality @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab X1E 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.08mm High Quality @BBL X1C 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1 0.2 nozzle",
+        "Bambu Lab P1S 0.2 nozzle",
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "0.08mm Optimal @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "0.08mm Optimal @BBL A1M 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "0.08mm Optimal @BBL P1P 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "0.08mm Standard @BBL X1C 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1 0.2 nozzle",
+        "Bambu Lab P1S 0.2 nozzle",
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "0.10mm High Quality @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "0.10mm High Quality @BBL A1M 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "0.10mm High Quality @BBL P1P 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "0.10mm High Quality @BBL X1C 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1 0.2 nozzle",
+        "Bambu Lab P1S 0.2 nozzle",
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "0.10mm Standard @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "0.10mm Standard @BBL A1M 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "0.10mm Standard @BBL P1P 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "0.10mm Standard @BBL X1C 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1 0.2 nozzle",
+        "Bambu Lab P1S 0.2 nozzle",
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "0.12mm Draft @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "0.12mm Draft @BBL A1M 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "0.12mm Draft @BBL P1P 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "0.12mm Fine @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.12mm Fine @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.12mm Fine @BBL P1P",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.12mm Fine @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab X1E 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.12mm High Quality @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.12mm High Quality @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.12mm High Quality @BBL P1P",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.12mm High Quality @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab X1E 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.12mm Standard @BBL X1C 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1 0.2 nozzle",
+        "Bambu Lab P1S 0.2 nozzle",
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "0.14mm Extra Draft @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "0.14mm Extra Draft @BBL A1M 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "0.14mm Extra Draft @BBL P1P 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "0.14mm Standard @BBL X1C 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1 0.2 nozzle",
+        "Bambu Lab P1S 0.2 nozzle",
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "0.16mm High Quality @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.16mm High Quality @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.16mm High Quality @BBL P1P",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.16mm High Quality @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab X1E 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.16mm Optimal @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.16mm Optimal @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.16mm Optimal @BBL P1P",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.16mm Optimal @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab X1E 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.18mm Fine @BBL A1 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "0.18mm Fine @BBL A1M 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "0.18mm Fine @BBL P1P 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "0.18mm Standard @BBL X1C 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab X1E 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "0.20mm Bambu Support W @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab X1E 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.20mm Standard @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.20mm Standard @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.20mm Standard @BBL P1P",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.20mm Standard @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab X1E 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.20mm Strength @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.20mm Strength @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.20mm Strength @BBL P1P",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.20mm Strength @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab X1E 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.24mm Draft @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.24mm Draft @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.24mm Draft @BBL P1P",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.24mm Draft @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab X1E 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.24mm Fine @BBL A1 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "0.24mm Fine @BBL A1M 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "0.24mm Fine @BBL P1P 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "0.24mm Optimal @BBL A1 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "0.24mm Optimal @BBL A1M 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "0.24mm Optimal @BBL P1P 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "0.24mm Standard @BBL X1C 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab X1E 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "0.24mm Standard @BBL X1C 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "0.28mm Extra Draft @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.28mm Extra Draft @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.28mm Extra Draft @BBL P1P",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.28mm Extra Draft @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab X1E 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "0.30mm Standard @BBL A1 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "0.30mm Standard @BBL A1M 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "0.30mm Standard @BBL P1P 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "0.30mm Standard @BBL X1 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "0.30mm Standard @BBL X1C 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab X1E 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "0.30mm Strength @BBL A1 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "0.30mm Strength @BBL A1M 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "0.30mm Strength @BBL P1P 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "0.30mm Strength @BBL X1C 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab X1E 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "0.32mm Optimal @BBL A1 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "0.32mm Optimal @BBL A1M 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "0.32mm Optimal @BBL P1P 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "0.32mm Standard @BBL X1C 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "0.36mm Draft @BBL A1 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "0.36mm Draft @BBL A1M 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "0.36mm Draft @BBL P1P 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "0.36mm Standard @BBL X1C 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab X1E 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "0.40mm Standard @BBL A1 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "0.40mm Standard @BBL A1M 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "0.40mm Standard @BBL P1P 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "0.40mm Standard @BBL X1 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "0.40mm Standard @BBL X1C 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "0.42mm Extra Draft @BBL A1 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "0.42mm Extra Draft @BBL A1M 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "0.42mm Extra Draft @BBL P1P 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "0.42mm Standard @BBL X1C 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab X1E 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "0.48mm Draft @BBL A1 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "0.48mm Draft @BBL A1M 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "0.48mm Draft @BBL P1P 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "0.48mm Standard @BBL X1C 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "0.56mm Extra Draft @BBL A1 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "0.56mm Extra Draft @BBL A1M 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "0.56mm Extra Draft @BBL P1P 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "0.56mm Standard @BBL X1C 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    }
   ],
   "filament": [
-    "Bambu ABS @BBL A1",
-    "Bambu ABS @BBL A1 0.2 nozzle",
-    "Bambu ABS @BBL X1C",
-    "Bambu ABS @BBL X1C 0.2 nozzle",
-    "Bambu ABS @BBL X1C 0.8 nozzle",
-    "Bambu ABS @BBL X1E",
-    "Bambu ABS @BBL X1E 0.2 nozzle",
-    "Bambu ABS @BBL X1E 0.8 nozzle",
-    "Bambu ABS @base",
-    "Bambu ABS-GF @BBL A1",
-    "Bambu ABS-GF @BBL P1P",
-    "Bambu ABS-GF @BBL X1C",
-    "Bambu ABS-GF @base",
-    "Bambu ASA @BBL A1 0.2 nozzle",
-    "Bambu ASA @BBL A1 0.4 nozzle",
-    "Bambu ASA @BBL A1 0.6 nozzle",
-    "Bambu ASA @BBL X1 0.2 nozzle",
-    "Bambu ASA @BBL X1 0.6 nozzle",
-    "Bambu ASA @BBL X1C",
-    "Bambu ASA @BBL X1C 0.2 nozzle",
-    "Bambu ASA @BBL X1C 0.4 nozzle",
-    "Bambu ASA @BBL X1E",
-    "Bambu ASA @BBL X1E 0.2 nozzle",
-    "Bambu ASA @BBL X1E 0.4 nozzle",
-    "Bambu ASA @base",
-    "Bambu ASA-Aero @BBL A1",
-    "Bambu ASA-Aero @BBL P1P",
-    "Bambu ASA-Aero @BBL X1C",
-    "Bambu ASA-Aero @base",
-    "Bambu ASA-CF @BBL A1",
-    "Bambu ASA-CF @BBL A1 0.6 nozzle",
-    "Bambu ASA-CF @BBL P1P",
-    "Bambu ASA-CF @BBL P1P 0.6 nozzle",
-    "Bambu ASA-CF @BBL X1C",
-    "Bambu ASA-CF @BBL X1C 0.6 nozzle",
-    "Bambu ASA-CF @base",
-    "Bambu PA-CF @BBL A1",
-    "Bambu PA-CF @BBL X1C",
-    "Bambu PA-CF @BBL X1E",
-    "Bambu PA-CF @base",
-    "Bambu PA6-CF @BBL A1",
-    "Bambu PA6-CF @BBL X1C",
-    "Bambu PA6-CF @BBL X1E",
-    "Bambu PA6-CF @base",
-    "Bambu PA6-GF @BBL A1",
-    "Bambu PA6-GF @BBL P1P",
-    "Bambu PA6-GF @BBL X1C",
-    "Bambu PA6-GF @base",
-    "Bambu PAHT-CF @BBL A1",
-    "Bambu PAHT-CF @BBL X1C",
-    "Bambu PAHT-CF @base",
-    "Bambu PC @BBL A1",
-    "Bambu PC @BBL A1 0.2 nozzle",
-    "Bambu PC @BBL P1S",
-    "Bambu PC @BBL P1S 0.2 nozzle",
-    "Bambu PC @BBL P1S 0.6 nozzle",
-    "Bambu PC @BBL P1S 0.8 nozzle",
-    "Bambu PC @BBL X1C",
-    "Bambu PC @BBL X1C 0.2 nozzle",
-    "Bambu PC @BBL X1C 0.6 nozzle",
-    "Bambu PC @BBL X1C 0.8 nozzle",
-    "Bambu PC @BBL X1E",
-    "Bambu PC @BBL X1E 0.2 nozzle",
-    "Bambu PC @BBL X1E 0.6 nozzle",
-    "Bambu PC @BBL X1E 0.8 nozzle",
-    "Bambu PC @base",
-    "Bambu PC FR @BBL A1",
-    "Bambu PC FR @BBL A1 0.2 nozzle",
-    "Bambu PC FR @BBL P1P",
-    "Bambu PC FR @BBL P1P 0.2 nozzle",
-    "Bambu PC FR @BBL P1S",
-    "Bambu PC FR @BBL P1S 0.2 nozzle",
-    "Bambu PC FR @BBL P1S 0.6 nozzle",
-    "Bambu PC FR @BBL P1S 0.8 nozzle",
-    "Bambu PC FR @BBL X1C",
-    "Bambu PC FR @BBL X1C 0.2 nozzle",
-    "Bambu PC FR @BBL X1C 0.6 nozzle",
-    "Bambu PC FR @BBL X1C 0.8 nozzle",
-    "Bambu PC FR @BBL X1E",
-    "Bambu PC FR @BBL X1E 0.2 nozzle",
-    "Bambu PC FR @BBL X1E 0.6 nozzle",
-    "Bambu PC FR @BBL X1E 0.8 nozzle",
-    "Bambu PC FR @base",
-    "Bambu PET-CF @BBL A1",
-    "Bambu PET-CF @BBL X1C",
-    "Bambu PET-CF @BBL X1E",
-    "Bambu PET-CF @base",
-    "Bambu PETG Basic @BBL A1",
-    "Bambu PETG Basic @BBL A1 0.2 nozzle",
-    "Bambu PETG Basic @BBL A1 0.8 nozzle",
-    "Bambu PETG Basic @BBL A1M 0.2 nozzle",
-    "Bambu PETG Basic @BBL A1M 0.4 nozzle",
-    "Bambu PETG Basic @BBL A1M 0.8 nozzle",
-    "Bambu PETG Basic @BBL X1C",
-    "Bambu PETG Basic @BBL X1C 0.2 nozzle",
-    "Bambu PETG Basic @BBL X1C 0.8 nozzle",
-    "Bambu PETG Basic @base",
-    "Bambu PETG HF @BBL A1",
-    "Bambu PETG HF @BBL A1 0.2 nozzle",
-    "Bambu PETG HF @BBL A1 0.8 nozzle",
-    "Bambu PETG HF @BBL A1M",
-    "Bambu PETG HF @BBL A1M 0.2 nozzle",
-    "Bambu PETG HF @BBL A1M 0.8 nozzle",
-    "Bambu PETG HF @BBL X1C",
-    "Bambu PETG HF @BBL X1C 0.2 nozzle",
-    "Bambu PETG HF @BBL X1C 0.8 nozzle",
-    "Bambu PETG HF @base",
-    "Bambu PETG Translucent @BBL A1",
-    "Bambu PETG Translucent @BBL A1 0.2 nozzle",
-    "Bambu PETG Translucent @BBL A1 0.8 nozzle",
-    "Bambu PETG Translucent @BBL A1M",
-    "Bambu PETG Translucent @BBL A1M 0.2 nozzle",
-    "Bambu PETG Translucent @BBL A1M 0.8 nozzle",
-    "Bambu PETG Translucent @BBL X1C",
-    "Bambu PETG Translucent @BBL X1C 0.2 nozzle",
-    "Bambu PETG Translucent @BBL X1C 0.8 nozzle",
-    "Bambu PETG Translucent @base",
-    "Bambu PETG-CF @BBL A1 0.4 nozzle",
-    "Bambu PETG-CF @BBL A1 0.8 nozzle",
-    "Bambu PETG-CF @BBL A1M",
-    "Bambu PETG-CF @BBL A1M 0.4 nozzle",
-    "Bambu PETG-CF @BBL X1C",
-    "Bambu PETG-CF @BBL X1C 0.4 nozzle",
-    "Bambu PETG-CF @base",
-    "Bambu PLA Aero @BBL A1",
-    "Bambu PLA Aero @BBL A1M",
-    "Bambu PLA Aero @BBL X1",
-    "Bambu PLA Aero @BBL X1C",
-    "Bambu PLA Aero @base",
-    "Bambu PLA Basic @BBL A1",
-    "Bambu PLA Basic @BBL A1 0.2 nozzle",
-    "Bambu PLA Basic @BBL A1M",
-    "Bambu PLA Basic @BBL A1M 0.2 nozzle",
-    "Bambu PLA Basic @BBL X1",
-    "Bambu PLA Basic @BBL X1C",
-    "Bambu PLA Basic @BBL X1C 0.2 nozzle",
-    "Bambu PLA Basic @BBL X1C 0.8 nozzle",
-    "Bambu PLA Basic @base",
-    "Bambu PLA Dynamic @BBL A1",
-    "Bambu PLA Dynamic @BBL A1 0.2 nozzle",
-    "Bambu PLA Dynamic @BBL A1M",
-    "Bambu PLA Dynamic @BBL A1M 0.2 nozzle",
-    "Bambu PLA Dynamic @BBL P1P",
-    "Bambu PLA Dynamic @BBL P1P 0.2 nozzle",
-    "Bambu PLA Dynamic @BBL X1C",
-    "Bambu PLA Dynamic @BBL X1C 0.2 nozzle",
-    "Bambu PLA Dynamic @BBL X1C 0.8 nozzle",
-    "Bambu PLA Dynamic @base",
-    "Bambu PLA Galaxy @BBL A1",
-    "Bambu PLA Galaxy @BBL A1 0.2 nozzle",
-    "Bambu PLA Galaxy @BBL A1M",
-    "Bambu PLA Galaxy @BBL A1M 0.2 nozzle",
-    "Bambu PLA Galaxy @BBL P1P",
-    "Bambu PLA Galaxy @BBL P1P 0.2 nozzle",
-    "Bambu PLA Galaxy @BBL X1C",
-    "Bambu PLA Galaxy @BBL X1C 0.2 nozzle",
-    "Bambu PLA Galaxy @BBL X1C 0.8 nozzle",
-    "Bambu PLA Galaxy @base",
-    "Bambu PLA Glow @BBL A1",
-    "Bambu PLA Glow @BBL A1 0.2 nozzle",
-    "Bambu PLA Glow @BBL P1P",
-    "Bambu PLA Glow @BBL P1P 0.2 nozzle",
-    "Bambu PLA Glow @BBL X1",
-    "Bambu PLA Glow @BBL X1 0.2 nozzle",
-    "Bambu PLA Glow @BBL X1C",
-    "Bambu PLA Glow @BBL X1C 0.2 nozzle",
-    "Bambu PLA Glow @BBL X1E",
-    "Bambu PLA Glow @BBL X1E 0.2 nozzle",
-    "Bambu PLA Glow @base",
-    "Bambu PLA Impact @BBL X1C",
-    "Bambu PLA Impact @base",
-    "Bambu PLA Marble @BBL A1",
-    "Bambu PLA Marble @BBL A1M",
-    "Bambu PLA Marble @BBL X1",
-    "Bambu PLA Marble @BBL X1C",
-    "Bambu PLA Marble @base",
-    "Bambu PLA Matte @BBL A1",
-    "Bambu PLA Matte @BBL A1 0.2 nozzle",
-    "Bambu PLA Matte @BBL A1M",
-    "Bambu PLA Matte @BBL A1M 0.2 nozzle",
-    "Bambu PLA Matte @BBL X1",
-    "Bambu PLA Matte @BBL X1C",
-    "Bambu PLA Matte @BBL X1C 0.2 nozzle",
-    "Bambu PLA Matte @BBL X1C 0.8 nozzle",
-    "Bambu PLA Matte @base",
-    "Bambu PLA Metal @BBL A1",
-    "Bambu PLA Metal @BBL A1 0.2 nozzle",
-    "Bambu PLA Metal @BBL A1M",
-    "Bambu PLA Metal @BBL A1M 0.2 nozzle",
-    "Bambu PLA Metal @BBL X1",
-    "Bambu PLA Metal @BBL X1C",
-    "Bambu PLA Metal @BBL X1C 0.2 nozzle",
-    "Bambu PLA Metal @base",
-    "Bambu PLA Silk @BBL A1",
-    "Bambu PLA Silk @BBL A1 0.2 nozzle",
-    "Bambu PLA Silk @BBL A1M",
-    "Bambu PLA Silk @BBL A1M 0.2 nozzle",
-    "Bambu PLA Silk @BBL X1",
-    "Bambu PLA Silk @BBL X1C",
-    "Bambu PLA Silk @BBL X1C 0.2 nozzle",
-    "Bambu PLA Silk @base",
-    "Bambu PLA Silk+ @BBL A1",
-    "Bambu PLA Silk+ @BBL A1 0.2 nozzle",
-    "Bambu PLA Silk+ @BBL A1M",
-    "Bambu PLA Silk+ @BBL A1M 0.2 nozzle",
-    "Bambu PLA Silk+ @BBL P1P",
-    "Bambu PLA Silk+ @BBL P1P 0.2 nozzle",
-    "Bambu PLA Silk+ @BBL X1",
-    "Bambu PLA Silk+ @BBL X1C",
-    "Bambu PLA Silk+ @BBL X1C 0.2 nozzle",
-    "Bambu PLA Silk+ @base",
-    "Bambu PLA Sparkle @BBL A1",
-    "Bambu PLA Sparkle @BBL A1M",
-    "Bambu PLA Sparkle @BBL X1",
-    "Bambu PLA Sparkle @BBL X1C",
-    "Bambu PLA Sparkle @base",
-    "Bambu PLA Tough @BBL A1",
-    "Bambu PLA Tough @BBL A1 0.2 nozzle",
-    "Bambu PLA Tough @BBL A1M",
-    "Bambu PLA Tough @BBL A1M 0.2 nozzle",
-    "Bambu PLA Tough @BBL X1",
-    "Bambu PLA Tough @BBL X1C",
-    "Bambu PLA Tough @BBL X1C 0.2 nozzle",
-    "Bambu PLA Tough @base",
-    "Bambu PLA Wood @BBL A1",
-    "Bambu PLA Wood @BBL A1M",
-    "Bambu PLA Wood @BBL P1P",
-    "Bambu PLA Wood @BBL X1",
-    "Bambu PLA Wood @BBL X1C",
-    "Bambu PLA Wood @BBL X1C 0.8 nozzle",
-    "Bambu PLA Wood @base",
-    "Bambu PLA-CF @BBL A1",
-    "Bambu PLA-CF @BBL A1 0.8 nozzle",
-    "Bambu PLA-CF @BBL A1M",
-    "Bambu PLA-CF @BBL A1M 0.8 nozzle",
-    "Bambu PLA-CF @BBL X1C",
-    "Bambu PLA-CF @BBL X1C 0.8 nozzle",
-    "Bambu PLA-CF @base",
-    "Bambu PPA-CF @BBL X1C",
-    "Bambu PPA-CF @BBL X1E",
-    "Bambu PPA-CF @base",
-    "Bambu PPS-CF @BBL X1E",
-    "Bambu PPS-CF @base",
-    "Bambu PVA @BBL A1",
-    "Bambu PVA @BBL A1 0.2 nozzle",
-    "Bambu PVA @BBL A1M",
-    "Bambu PVA @BBL A1M 0.2 nozzle",
-    "Bambu PVA @BBL P1P",
-    "Bambu PVA @BBL P1P 0.2 nozzle",
-    "Bambu PVA @BBL X1C",
-    "Bambu PVA @BBL X1C 0.2 nozzle",
-    "Bambu PVA @base",
-    "Bambu Support For PA PET @BBL A1",
-    "Bambu Support For PA PET @BBL X1C",
-    "Bambu Support For PA PET @base",
-    "Bambu Support For PLA @BBL A1",
-    "Bambu Support For PLA @BBL A1 0.2 nozzle",
-    "Bambu Support For PLA @BBL A1M",
-    "Bambu Support For PLA @BBL A1M 0.2 nozzle",
-    "Bambu Support For PLA @BBL X1C",
-    "Bambu Support For PLA @BBL X1C 0.2 nozzle",
-    "Bambu Support For PLA @base",
-    "Bambu Support For PLA-PETG @BBL A1",
-    "Bambu Support For PLA-PETG @BBL A1 0.2 nozzle",
-    "Bambu Support For PLA-PETG @BBL A1M",
-    "Bambu Support For PLA-PETG @BBL A1M 0.2 nozzle",
-    "Bambu Support For PLA-PETG @BBL P1P",
-    "Bambu Support For PLA-PETG @BBL P1P 0.2 nozzle",
-    "Bambu Support For PLA-PETG @BBL X1C",
-    "Bambu Support For PLA-PETG @BBL X1C 0.2 nozzle",
-    "Bambu Support For PLA-PETG @base",
-    "Bambu Support G @BBL A1",
-    "Bambu Support G @BBL X1C",
-    "Bambu Support G @BBL X1E",
-    "Bambu Support G @base",
-    "Bambu Support W @BBL A1",
-    "Bambu Support W @BBL A1 0.2 nozzle",
-    "Bambu Support W @BBL A1M",
-    "Bambu Support W @BBL A1M 0.2 nozzle",
-    "Bambu Support W @BBL X1",
-    "Bambu Support W @BBL X1C",
-    "Bambu Support W @BBL X1C 0.2 nozzle",
-    "Bambu Support W @base",
-    "Bambu Support for ABS @BBL A1",
-    "Bambu Support for ABS @BBL X1C",
-    "Bambu Support for ABS @base",
-    "Bambu TPU 95A @BBL A1",
-    "Bambu TPU 95A @BBL A1M",
-    "Bambu TPU 95A @BBL X1",
-    "Bambu TPU 95A @BBL X1C",
-    "Bambu TPU 95A @base",
-    "Bambu TPU 95A HF @BBL A1",
-    "Bambu TPU 95A HF @BBL A1M",
-    "Bambu TPU 95A HF @BBL P1P",
-    "Bambu TPU 95A HF @BBL P1S",
-    "Bambu TPU 95A HF @BBL X1",
-    "Bambu TPU 95A HF @BBL X1C",
-    "Bambu TPU 95A HF @BBL X1E",
-    "Bambu TPU 95A HF @base",
-    "Bambu TPU for AMS @BBL A1",
-    "Bambu TPU for AMS @BBL A1M",
-    "Bambu TPU for AMS @BBL P1P",
-    "Bambu TPU for AMS @BBL X1C",
-    "Bambu TPU for AMS @base",
-    "Generic ABS",
-    "Generic ABS @0.2 nozzle",
-    "Generic ABS @BBL A1",
-    "Generic ABS @BBL A1 0.2 nozzle",
-    "Generic ABS @BBL X1E",
-    "Generic ABS @BBL X1E 0.2 nozzle",
-    "Generic ABS @base",
-    "Generic ASA",
-    "Generic ASA @0.2 nozzle",
-    "Generic ASA @BBL A1",
-    "Generic ASA @BBL A1 0.2 nozzle",
-    "Generic ASA @BBL X1E",
-    "Generic ASA @BBL X1E 0.2 nozzle",
-    "Generic ASA @base",
-    "Generic BVOH @BBL A1",
-    "Generic BVOH @BBL A1M",
-    "Generic BVOH @BBL X1C",
-    "Generic BVOH @base",
-    "Generic EVA @BBL A1",
-    "Generic EVA @BBL A1M",
-    "Generic EVA @BBL X1C",
-    "Generic EVA @base",
-    "Generic HIPS @BBL A1",
-    "Generic HIPS @BBL A1 0.2 nozzle",
-    "Generic HIPS @BBL A1M",
-    "Generic HIPS @BBL A1M 0.2 nozzle",
-    "Generic HIPS @BBL X1C",
-    "Generic HIPS @BBL X1C 0.2 nozzle",
-    "Generic HIPS @base",
-    "Generic PA",
-    "Generic PA @BBL A1",
-    "Generic PA-CF",
-    "Generic PA-CF @BBL A1",
-    "Generic PA-CF @BBL X1E",
-    "Generic PC",
-    "Generic PC @0.2 nozzle",
-    "Generic PC @BBL A1",
-    "Generic PC @BBL A1 0.2 nozzle",
-    "Generic PC @BBL P1S",
-    "Generic PC @BBL P1S 0.2 nozzle",
-    "Generic PC @BBL X1E",
-    "Generic PC @BBL X1E 0.2 nozzle",
-    "Generic PC @base",
-    "Generic PCTG @BBL A1",
-    "Generic PCTG @BBL A1M",
-    "Generic PCTG @BBL X1C",
-    "Generic PCTG @base",
-    "Generic PE @BBL A1",
-    "Generic PE @BBL A1M",
-    "Generic PE @BBL X1C",
-    "Generic PE @base",
-    "Generic PE-CF @BBL A1",
-    "Generic PE-CF @BBL A1M",
-    "Generic PE-CF @BBL X1C",
-    "Generic PE-CF @base",
-    "Generic PETG",
-    "Generic PETG @0.2 nozzle",
-    "Generic PETG @BBL A1",
-    "Generic PETG @BBL A1 0.2 nozzle",
-    "Generic PETG @BBL A1M",
-    "Generic PETG @BBL A1M 0.2 nozzle",
-    "Generic PETG @base",
-    "Generic PETG HF @BBL A1",
-    "Generic PETG HF @BBL A1 0.2 nozzle",
-    "Generic PETG HF @BBL A1M",
-    "Generic PETG HF @BBL A1M 0.2 nozzle",
-    "Generic PETG HF @BBL P1P",
-    "Generic PETG HF @BBL P1P 0.2 nozzle",
-    "Generic PETG HF @BBL X1C",
-    "Generic PETG HF @BBL X1C 0.2 nozzle",
-    "Generic PETG HF @base",
-    "Generic PETG-CF @BBL A1",
-    "Generic PETG-CF @BBL X1C",
-    "Generic PETG-CF @base",
-    "Generic PHA @BBL A1",
-    "Generic PHA @BBL A1M",
-    "Generic PHA @BBL X1C",
-    "Generic PHA @base",
-    "Generic PLA",
-    "Generic PLA @0.2 nozzle",
-    "Generic PLA @BBL A1",
-    "Generic PLA @BBL A1 0.2 nozzle",
-    "Generic PLA @BBL A1M",
-    "Generic PLA @BBL A1M 0.2 nozzle",
-    "Generic PLA @base",
-    "Generic PLA High Speed @BBL A1",
-    "Generic PLA High Speed @BBL A1 0.2 nozzle",
-    "Generic PLA High Speed @BBL A1M",
-    "Generic PLA High Speed @BBL A1M 0.2 nozzle",
-    "Generic PLA High Speed @BBL P1P",
-    "Generic PLA High Speed @BBL P1P 0.2 nozzle",
-    "Generic PLA High Speed @BBL X1C",
-    "Generic PLA High Speed @BBL X1C 0.2 nozzle",
-    "Generic PLA High Speed @base",
-    "Generic PLA Silk",
-    "Generic PLA Silk @BBL A1",
-    "Generic PLA Silk @BBL A1M",
-    "Generic PLA Silk @base",
-    "Generic PLA-CF",
-    "Generic PLA-CF @BBL A1",
-    "Generic PLA-CF @BBL A1M",
-    "Generic PLA-CF @base",
-    "Generic PP @BBL A1",
-    "Generic PP @BBL A1M",
-    "Generic PP @BBL X1C",
-    "Generic PP @base",
-    "Generic PP-CF @BBL A1",
-    "Generic PP-CF @BBL X1C",
-    "Generic PP-CF @base",
-    "Generic PP-GF @BBL A1",
-    "Generic PP-GF @BBL X1C",
-    "Generic PP-GF @base",
-    "Generic PPA-CF @BBL X1C",
-    "Generic PPA-CF @BBL X1E",
-    "Generic PPA-CF @base",
-    "Generic PPA-GF @BBL X1C",
-    "Generic PPA-GF @BBL X1E",
-    "Generic PPA-GF @base",
-    "Generic PPS @BBL X1E",
-    "Generic PPS @base",
-    "Generic PPS-CF @BBL X1E",
-    "Generic PPS-CF @base",
-    "Generic PVA",
-    "Generic PVA @0.2 nozzle",
-    "Generic PVA @BBL A1",
-    "Generic PVA @BBL A1 0.2 nozzle",
-    "Generic PVA @BBL A1M",
-    "Generic PVA @BBL A1M 0.2 nozzle",
-    "Generic PVA @base",
-    "Generic SBS",
-    "Generic SBS @base",
-    "Generic TPU",
-    "Generic TPU @BBL A1",
-    "Generic TPU @BBL A1M",
-    "Generic TPU for AMS @BBL A1",
-    "Generic TPU for AMS @BBL A1M",
-    "Generic TPU for AMS @BBL P1P",
-    "Generic TPU for AMS @BBL X1C",
-    "Generic TPU for AMS @base"
+    {
+      "name": "Bambu ABS @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu ABS @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu ABS @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu ABS @BBL X1C 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1 0.2 nozzle",
+        "Bambu Lab P1S 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu ABS @BBL X1C 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab P1S 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu ABS @BBL X1E",
+      "compatible_printers": [
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu ABS @BBL X1E 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu ABS @BBL X1E 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu ABS @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu ABS-GF @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu ABS-GF @BBL P1P",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.8 nozzle",
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab P1P 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu ABS-GF @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu ABS-GF @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu ASA @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu ASA @BBL A1 0.4 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu ASA @BBL A1 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu ASA @BBL X1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu ASA @BBL X1 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu ASA @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab P1P 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu ASA @BBL X1C 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab P1S 0.2 nozzle",
+        "Bambu Lab P1P 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu ASA @BBL X1C 0.4 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab P1P 0.4 nozzle",
+        "Bambu Lab P1P 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu ASA @BBL X1E",
+      "compatible_printers": [
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu ASA @BBL X1E 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu ASA @BBL X1E 0.4 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1E 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu ASA @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu ASA-Aero @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu ASA-Aero @BBL P1P",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.4 nozzle",
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab P1P 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu ASA-Aero @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu ASA-Aero @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu ASA-CF @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu ASA-CF @BBL A1 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu ASA-CF @BBL P1P",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu ASA-CF @BBL P1P 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab P1P 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu ASA-CF @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab X1E 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu ASA-CF @BBL X1C 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu ASA-CF @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu PA-CF @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PA-CF @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PA-CF @BBL X1E",
+      "compatible_printers": [
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PA-CF @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu PA6-CF @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PA6-CF @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab P1P 0.4 nozzle",
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab P1P 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PA6-CF @BBL X1E",
+      "compatible_printers": [
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PA6-CF @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu PA6-GF @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PA6-GF @BBL P1P",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.4 nozzle",
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab P1P 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PA6-GF @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PA6-GF @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu PAHT-CF @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PAHT-CF @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PAHT-CF @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu PC @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PC @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PC @BBL P1S",
+      "compatible_printers": [
+        "Bambu Lab P1S 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PC @BBL P1S 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1S 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PC @BBL P1S 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1S 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PC @BBL P1S 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1S 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PC @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PC @BBL X1C 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PC @BBL X1C 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PC @BBL X1C 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PC @BBL X1E",
+      "compatible_printers": [
+        "Bambu Lab X1E 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PC @BBL X1E 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PC @BBL X1E 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1E 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PC @BBL X1E 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PC @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu PC FR @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PC FR @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PC FR @BBL P1P",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.4 nozzle",
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab P1P 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PC FR @BBL P1P 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PC FR @BBL P1S",
+      "compatible_printers": [
+        "Bambu Lab P1S 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PC FR @BBL P1S 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1S 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PC FR @BBL P1S 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1S 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PC FR @BBL P1S 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1S 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PC FR @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PC FR @BBL X1C 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PC FR @BBL X1C 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PC FR @BBL X1C 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PC FR @BBL X1E",
+      "compatible_printers": [
+        "Bambu Lab X1E 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PC FR @BBL X1E 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PC FR @BBL X1E 0.6 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1E 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PC FR @BBL X1E 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PC FR @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu PET-CF @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.8 nozzle",
+        "Bambu Lab A1 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PET-CF @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PET-CF @BBL X1E",
+      "compatible_printers": [
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PET-CF @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu PETG Basic @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PETG Basic @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PETG Basic @BBL A1 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.8 nozzle",
+        "Bambu Lab A1 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PETG Basic @BBL A1M 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PETG Basic @BBL A1M 0.4 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PETG Basic @BBL A1M 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PETG Basic @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab P1P 0.4 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab X1E 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PETG Basic @BBL X1C 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1 0.2 nozzle",
+        "Bambu Lab P1P 0.2 nozzle",
+        "Bambu Lab P1S 0.2 nozzle",
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PETG Basic @BBL X1C 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab P1P 0.8 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PETG Basic @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu PETG HF @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PETG HF @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PETG HF @BBL A1 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PETG HF @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PETG HF @BBL A1M 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PETG HF @BBL A1M 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PETG HF @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1P 0.4 nozzle",
+        "Bambu Lab X1E 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PETG HF @BBL X1C 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.2 nozzle",
+        "Bambu Lab P1S 0.2 nozzle",
+        "Bambu Lab X1 0.2 nozzle",
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PETG HF @BBL X1C 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab P1P 0.8 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PETG HF @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu PETG Translucent @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PETG Translucent @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PETG Translucent @BBL A1 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.8 nozzle",
+        "Bambu Lab A1 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PETG Translucent @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PETG Translucent @BBL A1M 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PETG Translucent @BBL A1M 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PETG Translucent @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab P1P 0.4 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab X1E 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PETG Translucent @BBL X1C 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 0.2 nozzle",
+        "Bambu Lab P1P 0.2 nozzle",
+        "Bambu Lab P1S 0.2 nozzle",
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PETG Translucent @BBL X1C 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab P1P 0.8 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PETG Translucent @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu PETG-CF @BBL A1 0.4 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PETG-CF @BBL A1 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PETG-CF @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PETG-CF @BBL A1M 0.4 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PETG-CF @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PETG-CF @BBL X1C 0.4 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab X1E 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PETG-CF @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu PLA Aero @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Aero @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle",
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Aero @BBL X1",
+      "compatible_printers": [
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Aero @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Aero @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu PLA Basic @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Basic @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Basic @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle",
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Basic @BBL A1M 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Basic @BBL X1",
+      "compatible_printers": [
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Basic @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Basic @BBL X1C 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1 0.2 nozzle",
+        "Bambu Lab P1S 0.2 nozzle",
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Basic @BBL X1C 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Basic @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu PLA Dynamic @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Dynamic @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Dynamic @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle",
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Dynamic @BBL A1M 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Dynamic @BBL P1P",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.4 nozzle",
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab P1P 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Dynamic @BBL P1P 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Dynamic @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Dynamic @BBL X1C 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1 0.2 nozzle",
+        "Bambu Lab P1S 0.2 nozzle",
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Dynamic @BBL X1C 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.8 nozzle",
+        "Bambu Lab X1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Dynamic @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu PLA Galaxy @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Galaxy @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Galaxy @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle",
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Galaxy @BBL A1M 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Galaxy @BBL P1P",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.4 nozzle",
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab P1P 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Galaxy @BBL P1P 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Galaxy @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Galaxy @BBL X1C 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1 0.2 nozzle",
+        "Bambu Lab P1S 0.2 nozzle",
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Galaxy @BBL X1C 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.8 nozzle",
+        "Bambu Lab X1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Galaxy @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu PLA Glow @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Glow @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Glow @BBL P1P",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab P1P 0.4 nozzle",
+        "Bambu Lab P1P 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Glow @BBL P1P 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Glow @BBL X1",
+      "compatible_printers": [
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Glow @BBL X1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Glow @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Glow @BBL X1C 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab P1S 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Glow @BBL X1E",
+      "compatible_printers": [
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Glow @BBL X1E 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Glow @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu PLA Impact @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab P1S 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Impact @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu PLA Marble @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Marble @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle",
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Marble @BBL X1",
+      "compatible_printers": [
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Marble @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Marble @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu PLA Matte @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Matte @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Matte @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle",
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Matte @BBL A1M 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Matte @BBL X1",
+      "compatible_printers": [
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Matte @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Matte @BBL X1C 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1 0.2 nozzle",
+        "Bambu Lab P1S 0.2 nozzle",
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Matte @BBL X1C 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Matte @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu PLA Metal @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Metal @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Metal @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle",
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Metal @BBL A1M 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Metal @BBL X1",
+      "compatible_printers": [
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Metal @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Metal @BBL X1C 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1 0.2 nozzle",
+        "Bambu Lab P1S 0.2 nozzle",
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Metal @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu PLA Silk @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Silk @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Silk @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle",
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Silk @BBL A1M 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Silk @BBL X1",
+      "compatible_printers": [
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Silk @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Silk @BBL X1C 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1 0.2 nozzle",
+        "Bambu Lab P1S 0.2 nozzle",
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Silk @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu PLA Silk+ @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Silk+ @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Silk+ @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle",
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Silk+ @BBL A1M 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Silk+ @BBL P1P",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.4 nozzle",
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab P1P 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Silk+ @BBL P1P 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Silk+ @BBL X1",
+      "compatible_printers": [
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Silk+ @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Silk+ @BBL X1C 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1 0.2 nozzle",
+        "Bambu Lab P1S 0.2 nozzle",
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Silk+ @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu PLA Sparkle @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Sparkle @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle",
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Sparkle @BBL X1",
+      "compatible_printers": [
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Sparkle @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Sparkle @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu PLA Tough @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Tough @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Tough @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle",
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Tough @BBL A1M 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Tough @BBL X1",
+      "compatible_printers": [
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Tough @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Tough @BBL X1C 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1 0.2 nozzle",
+        "Bambu Lab P1S 0.2 nozzle",
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Tough @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu PLA Wood @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Wood @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle",
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Wood @BBL P1P",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.4 nozzle",
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab P1P 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Wood @BBL X1",
+      "compatible_printers": [
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Wood @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Wood @BBL X1C 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA Wood @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu PLA-CF @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA-CF @BBL A1 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA-CF @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA-CF @BBL A1M 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA-CF @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab X1E 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA-CF @BBL X1C 0.8 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PLA-CF @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu PPA-CF @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab P1P 0.4 nozzle",
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab P1P 0.8 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PPA-CF @BBL X1E",
+      "compatible_printers": [
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PPA-CF @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu PPS-CF @BBL X1E",
+      "compatible_printers": [
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PPS-CF @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu PVA @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PVA @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PVA @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle",
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PVA @BBL A1M 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PVA @BBL P1P",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.4 nozzle",
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab P1P 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PVA @BBL P1P 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PVA @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PVA @BBL X1C 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1E 0.2 nozzle",
+        "Bambu Lab X1 0.2 nozzle",
+        "Bambu Lab P1S 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu PVA @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu Support For PA PET @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu Support For PA PET @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu Support For PA PET @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu Support For PLA @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu Support For PLA @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu Support For PLA @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle",
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu Support For PLA @BBL A1M 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu Support For PLA @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu Support For PLA @BBL X1C 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1 0.2 nozzle",
+        "Bambu Lab P1S 0.2 nozzle",
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu Support For PLA @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu Support For PLA-PETG @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu Support For PLA-PETG @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu Support For PLA-PETG @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle",
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu Support For PLA-PETG @BBL A1M 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu Support For PLA-PETG @BBL P1P",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.4 nozzle",
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab P1P 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu Support For PLA-PETG @BBL P1P 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu Support For PLA-PETG @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu Support For PLA-PETG @BBL X1C 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1S 0.2 nozzle",
+        "Bambu Lab X1 0.2 nozzle",
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu Support For PLA-PETG @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu Support G @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu Support G @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu Support G @BBL X1E",
+      "compatible_printers": [
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu Support G @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu Support W @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu Support W @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu Support W @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle",
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu Support W @BBL A1M 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu Support W @BBL X1",
+      "compatible_printers": [
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu Support W @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu Support W @BBL X1C 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1 0.2 nozzle",
+        "Bambu Lab P1S 0.2 nozzle",
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu Support W @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu Support for ABS @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu Support for ABS @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.4 nozzle",
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab P1P 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu Support for ABS @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu TPU 95A @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu TPU 95A @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle",
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu TPU 95A @BBL X1",
+      "compatible_printers": [
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu TPU 95A @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu TPU 95A @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu TPU 95A HF @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu TPU 95A HF @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle",
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu TPU 95A HF @BBL P1P",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.4 nozzle",
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab P1P 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu TPU 95A HF @BBL P1S",
+      "compatible_printers": [
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu TPU 95A HF @BBL X1",
+      "compatible_printers": [
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu TPU 95A HF @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu TPU 95A HF @BBL X1E",
+      "compatible_printers": [
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu TPU 95A HF @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Bambu TPU for AMS @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu TPU for AMS @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle",
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu TPU for AMS @BBL P1P",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.4 nozzle",
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab P1P 0.8 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu TPU for AMS @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.8 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Bambu TPU for AMS @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Generic ABS",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic ABS @0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1 0.2 nozzle",
+        "Bambu Lab P1S 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Generic ABS @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic ABS @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Generic ABS @BBL X1E",
+      "compatible_printers": [
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic ABS @BBL X1E 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Generic ABS @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Generic ASA",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic ASA @0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1 0.2 nozzle",
+        "Bambu Lab P1S 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Generic ASA @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic ASA @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Generic ASA @BBL X1E",
+      "compatible_printers": [
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic ASA @BBL X1E 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Generic ASA @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Generic BVOH @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic BVOH @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle",
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic BVOH @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab P1P 0.4 nozzle",
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab P1P 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic BVOH @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Generic EVA @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic EVA @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle",
+        "Bambu Lab A1 mini 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "Generic EVA @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.4 nozzle",
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab P1P 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic EVA @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Generic HIPS @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic HIPS @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Generic HIPS @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle",
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic HIPS @BBL A1M 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Generic HIPS @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab P1P 0.4 nozzle",
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab P1P 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic HIPS @BBL X1C 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1 0.2 nozzle",
+        "Bambu Lab P1P 0.2 nozzle",
+        "Bambu Lab P1S 0.2 nozzle",
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Generic HIPS @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Generic PA",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PA @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PA-CF",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PA-CF @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PA-CF @BBL X1E",
+      "compatible_printers": [
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PC",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PC @0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PC @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PC @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PC @BBL P1S",
+      "compatible_printers": [
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PC @BBL P1S 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1S 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PC @BBL X1E",
+      "compatible_printers": [
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PC @BBL X1E 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PC @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Generic PCTG @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PCTG @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle",
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PCTG @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.4 nozzle",
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab P1P 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PCTG @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Generic PE @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PE @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.4 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PE @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.4 nozzle",
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab P1P 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PE @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Generic PE-CF @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PE-CF @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle",
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PE-CF @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.4 nozzle",
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab P1P 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PE-CF @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Generic PETG",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PETG @0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1 0.2 nozzle",
+        "Bambu Lab P1S 0.2 nozzle",
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PETG @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PETG @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PETG @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle",
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PETG @BBL A1M 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PETG @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Generic PETG HF @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PETG HF @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PETG HF @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle",
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PETG HF @BBL A1M 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PETG HF @BBL P1P",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.4 nozzle",
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab P1P 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PETG HF @BBL P1P 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PETG HF @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PETG HF @BBL X1C 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1S 0.2 nozzle",
+        "Bambu Lab X1 0.2 nozzle",
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PETG HF @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Generic PETG-CF @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PETG-CF @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PETG-CF @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Generic PHA @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle",
+        "Bambu Lab A1 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PHA @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle",
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PHA @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab P1P 0.8 nozzle",
+        "Bambu Lab P1P 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PHA @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Generic PLA",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PLA @0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1 0.2 nozzle",
+        "Bambu Lab P1S 0.2 nozzle",
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PLA @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PLA @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PLA @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle",
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PLA @BBL A1M 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PLA @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Generic PLA High Speed @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PLA High Speed @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PLA High Speed @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle",
+        "Bambu Lab A1 mini 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PLA High Speed @BBL A1M 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PLA High Speed @BBL P1P",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.4 nozzle",
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab P1P 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PLA High Speed @BBL P1P 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PLA High Speed @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PLA High Speed @BBL X1C 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1 0.2 nozzle",
+        "Bambu Lab P1S 0.2 nozzle",
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PLA High Speed @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Generic PLA Silk",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PLA Silk @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PLA Silk @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle",
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PLA Silk @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Generic PLA-CF",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PLA-CF @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PLA-CF @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle",
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PLA-CF @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Generic PP @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PP @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle",
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PP @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.4 nozzle",
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab P1P 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PP @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Generic PP-CF @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PP-CF @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.4 nozzle",
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab P1P 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PP-CF @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Generic PP-GF @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PP-GF @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.4 nozzle",
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab P1P 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PP-GF @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Generic PPA-CF @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab P1P 0.4 nozzle",
+        "Bambu Lab P1P 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PPA-CF @BBL X1E",
+      "compatible_printers": [
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PPA-CF @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Generic PPA-GF @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab P1P 0.4 nozzle",
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab P1P 0.8 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PPA-GF @BBL X1E",
+      "compatible_printers": [
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PPA-GF @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Generic PPS @BBL X1E",
+      "compatible_printers": [
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PPS @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Generic PPS-CF @BBL X1E",
+      "compatible_printers": [
+        "Bambu Lab X1E 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PPS-CF @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Generic PVA",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PVA @0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.2 nozzle",
+        "Bambu Lab X1 0.2 nozzle",
+        "Bambu Lab P1S 0.2 nozzle",
+        "Bambu Lab X1E 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PVA @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PVA @BBL A1 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PVA @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle",
+        "Bambu Lab A1 mini 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PVA @BBL A1M 0.2 nozzle",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.2 nozzle"
+      ]
+    },
+    {
+      "name": "Generic PVA @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Generic SBS",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic SBS @base",
+      "compatible_printers": []
+    },
+    {
+      "name": "Generic TPU",
+      "compatible_printers": [
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle",
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic TPU @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic TPU @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.4 nozzle",
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic TPU for AMS @BBL A1",
+      "compatible_printers": [
+        "Bambu Lab A1 0.4 nozzle",
+        "Bambu Lab A1 0.6 nozzle",
+        "Bambu Lab A1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic TPU for AMS @BBL A1M",
+      "compatible_printers": [
+        "Bambu Lab A1 mini 0.8 nozzle",
+        "Bambu Lab A1 mini 0.6 nozzle",
+        "Bambu Lab A1 mini 0.4 nozzle"
+      ]
+    },
+    {
+      "name": "Generic TPU for AMS @BBL P1P",
+      "compatible_printers": [
+        "Bambu Lab P1P 0.6 nozzle",
+        "Bambu Lab P1P 0.8 nozzle",
+        "Bambu Lab P1P 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle",
+        "Bambu Lab X1 0.6 nozzle",
+        "Bambu Lab X1 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic TPU for AMS @BBL X1C",
+      "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab P1S 0.4 nozzle",
+        "Bambu Lab P1S 0.6 nozzle",
+        "Bambu Lab P1S 0.8 nozzle",
+        "Bambu Lab X1 Carbon 0.6 nozzle",
+        "Bambu Lab X1 Carbon 0.8 nozzle",
+        "Bambu Lab X1E 0.4 nozzle",
+        "Bambu Lab X1E 0.6 nozzle",
+        "Bambu Lab X1E 0.8 nozzle"
+      ]
+    },
+    {
+      "name": "Generic TPU for AMS @base",
+      "compatible_printers": []
+    }
   ]
 }
