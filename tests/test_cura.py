@@ -23,6 +23,7 @@ from estampo.cura import (
     _settings_flags,
     _squash_cura_def,
     _strip_value_overrides,
+    _surface_cura_warnings,
     _write_cura_settings,
     cura_docker_image,
     cura_profile_from_config,
@@ -511,6 +512,86 @@ def test_normalize_staging_value_literals_skips_when_no_changes(tmp_path):
     assert json.loads(def_path.read_text()) == payload
     # And we didn't rewrite the file (mtime preserved)
     assert def_path.stat().st_mtime_ns == mtime_before
+
+
+# --- _surface_cura_warnings (#590) ---
+
+
+def test_surface_cura_warnings_flags_dropped_settings(caplog):
+    """``has no [default_]value!`` warnings produce a strong dropped-settings log."""
+    import logging
+
+    stderr = (
+        "[2026-04-19 06:00:00.000] [1] [tid] [warning] "
+        "JSON setting 'machine_width' has no [default_]value!\n"
+        "[2026-04-19 06:00:00.001] [1] [tid] [warning] "
+        "JSON setting 'adhesion_type' has no [default_]value!\n"
+    )
+    with caplog.at_level(logging.WARNING, logger="estampo.cura"):
+        _surface_cura_warnings(stderr)
+
+    text = "\n".join(r.getMessage() for r in caplog.records)
+    assert "silently dropped 2 printer-profile setting(s)" in text
+    # Sorted & unique
+    assert "adhesion_type, machine_width" in text
+    assert "emitted 2 warning(s)" in text
+
+
+def test_surface_cura_warnings_deduplicates_dropped_keys(caplog):
+    """Repeated warnings for the same setting collapse to one dropped key."""
+    import logging
+
+    stderr = (
+        "[warning] JSON setting 'machine_width' has no [default_]value!\n"
+        "[warning] JSON setting 'machine_width' has no [default_]value!\n"
+    )
+    with caplog.at_level(logging.WARNING, logger="estampo.cura"):
+        _surface_cura_warnings(stderr)
+
+    text = "\n".join(r.getMessage() for r in caplog.records)
+    assert "silently dropped 1 printer-profile setting(s)" in text
+    assert "machine_width" in text
+
+
+def test_surface_cura_warnings_generic_summary(caplog):
+    """Non-dropped warnings still produce a generic count summary."""
+    import logging
+
+    stderr = "[warning] Unknown setting 'something_weird'\n[warning] Mesh has non-manifold edges\n"
+    with caplog.at_level(logging.WARNING, logger="estampo.cura"):
+        _surface_cura_warnings(stderr)
+
+    text = "\n".join(r.getMessage() for r in caplog.records)
+    # No dropped-setting message
+    assert "silently dropped" not in text
+    assert "emitted 2 warning(s)" in text
+
+
+def test_surface_cura_warnings_silent_when_no_warnings(caplog):
+    """Stderr with no ``[warning]`` lines produces no log output."""
+    import logging
+
+    stderr = "[info] Slicing started\nSome random license banner text\n"
+    with caplog.at_level(logging.DEBUG, logger="estampo.cura"):
+        _surface_cura_warnings(stderr)
+
+    assert caplog.records == []
+
+
+def test_surface_cura_warnings_debug_surfaces_each_line(caplog):
+    """Every warning is logged at DEBUG so ``-v`` shows them inline."""
+    import logging
+
+    stderr = (
+        "[warning] JSON setting 'machine_width' has no [default_]value!\n"
+        "[warning] Something else weird\n"
+    )
+    with caplog.at_level(logging.DEBUG, logger="estampo.cura"):
+        _surface_cura_warnings(stderr)
+
+    debug_msgs = [r.getMessage() for r in caplog.records if r.levelno == logging.DEBUG]
+    assert any("machine_width" in m for m in debug_msgs)
+    assert any("Something else weird" in m for m in debug_msgs)
 
 
 def test_machine_dims_flags_emits_s_flags():
