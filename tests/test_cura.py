@@ -12,6 +12,8 @@ from estampo.cura import (
     _extruder_settings_str,
     _fetch_printer_def,
     _machine_dims_flags,
+    _normalize_staging_value_literals,
+    _normalize_value_literals,
     _patch_gcode_header,
     _place_on_bed,
     _profile_setting_keys,
@@ -142,7 +144,8 @@ def test_squash_preserves_inherits_for_fdmprinter(tmp_path):
     result = _squash_cura_def("my_printer", tmp_path)
     # Must keep inherits so CuraEngine resolves fdmprinter at runtime
     assert result["inherits"] == "fdmprinter"
-    assert result["overrides"]["machine_width"]["value"] == 300
+    # Literal ``value`` is promoted to ``default_value`` at pin-time (#587)
+    assert result["overrides"]["machine_width"]["default_value"] == 300
 
 
 def test_squash_merges_intermediate_definitions(tmp_path):
@@ -175,8 +178,9 @@ def test_squash_merges_intermediate_definitions(tmp_path):
     result = _squash_cura_def("my_printer", tmp_path)
     # fdmprinter preserved, intermediate merged
     assert result["inherits"] == "fdmprinter"
-    assert result["overrides"]["speed_print"]["value"] == 60
-    assert result["overrides"]["machine_width"]["value"] == 300
+    # Literal ``value`` is promoted to ``default_value`` at pin-time (#587)
+    assert result["overrides"]["speed_print"]["default_value"] == 60
+    assert result["overrides"]["machine_width"]["default_value"] == 300
 
 
 # --- cura_docker_image ---
@@ -392,6 +396,121 @@ def test_strip_value_overrides_ignores_missing_keys(tmp_path):
     _strip_value_overrides(tmp_path, {"adhesion_type"})
 
     assert json.loads(def_path.read_text()) == original
+
+
+# --- _normalize_value_literals (#587) ---
+
+
+def test_normalize_value_literals_promotes_native_literals():
+    """Native bool/int/float ``value`` entries become ``default_value``."""
+    overrides = {
+        "machine_width": {"value": 256},
+        "retraction_amount": {"value": 0.8},
+        "relative_extrusion": {"value": True},
+    }
+    _normalize_value_literals(overrides)
+    assert overrides == {
+        "machine_width": {"default_value": 256},
+        "retraction_amount": {"default_value": 0.8},
+        "relative_extrusion": {"default_value": True},
+    }
+
+
+def test_normalize_value_literals_evaluates_quoted_string_literals():
+    """Python-literal strings (e.g., ``"'skirt'"``) evaluate and promote."""
+    overrides = {
+        "adhesion_type": {"value": "'skirt'"},
+        "retraction_hop_enabled": {"value": "True"},
+    }
+    _normalize_value_literals(overrides)
+    assert overrides == {
+        "adhesion_type": {"default_value": "skirt"},
+        "retraction_hop_enabled": {"default_value": True},
+    }
+
+
+def test_normalize_value_literals_leaves_expressions_alone():
+    """Expressions referencing other settings are not touched."""
+    overrides = {
+        "infill_pattern": {"value": "'zigzag' if infill_sparse_density > 80 else 'gyroid'"},
+        "brim_width": {"value": "machine_width / 10"},
+    }
+    before = {k: dict(v) for k, v in overrides.items()}
+    _normalize_value_literals(overrides)
+    assert overrides == before
+
+
+def test_normalize_value_literals_preserves_existing_default_value():
+    """Entries already carrying ``default_value`` are left untouched."""
+    overrides = {
+        "brim_width": {"default_value": 3, "value": "machine_width / 10"},
+    }
+    _normalize_value_literals(overrides)
+    assert overrides == {
+        "brim_width": {"default_value": 3, "value": "machine_width / 10"},
+    }
+
+
+def test_normalize_value_literals_skips_entries_without_value():
+    """Entries with only ``default_value`` or unrelated keys are unchanged."""
+    overrides = {
+        "speed_print": {"default_value": 60},
+        "metadata_only": {"label": "Hello"},
+    }
+    _normalize_value_literals(overrides)
+    assert overrides == {
+        "speed_print": {"default_value": 60},
+        "metadata_only": {"label": "Hello"},
+    }
+
+
+def test_normalize_staging_value_literals_rewrites_files(tmp_path):
+    """Staging normalization rewrites defs on disk, in place."""
+    import json
+
+    def_path = tmp_path / "bambox_p1s.def.json"
+    def_path.write_text(
+        json.dumps(
+            {
+                "overrides": {
+                    "machine_width": {"value": 256},
+                    "relative_extrusion": {"value": True},
+                    "adhesion_type": {"value": "'skirt'"},
+                    "infill_pattern": {
+                        "value": "'zigzag' if infill_sparse_density > 80 else 'gyroid'"
+                    },
+                }
+            }
+        )
+    )
+    _normalize_staging_value_literals(tmp_path)
+
+    data = json.loads(def_path.read_text())
+    overrides = data["overrides"]
+    assert overrides["machine_width"] == {"default_value": 256}
+    assert overrides["relative_extrusion"] == {"default_value": True}
+    assert overrides["adhesion_type"] == {"default_value": "skirt"}
+    # Expression untouched
+    assert overrides["infill_pattern"] == {
+        "value": "'zigzag' if infill_sparse_density > 80 else 'gyroid'"
+    }
+
+
+def test_normalize_staging_value_literals_skips_when_no_changes(tmp_path):
+    """Files whose overrides are already normalized are not rewritten."""
+    import json
+
+    def_path = tmp_path / "already_ok.def.json"
+    payload = {"overrides": {"speed_print": {"default_value": 60}}}
+    def_path.write_text(json.dumps(payload))
+    mtime_before = def_path.stat().st_mtime_ns
+
+    _normalize_staging_value_literals(tmp_path)
+
+    # Content is unchanged
+    assert json.loads(def_path.read_text()) == payload
+    # And we didn't rewrite the file (mtime preserved)
+    assert def_path.stat().st_mtime_ns == mtime_before
 
 
 def test_machine_dims_flags_emits_s_flags():

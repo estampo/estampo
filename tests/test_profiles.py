@@ -864,12 +864,12 @@ def test_squash_cura_def(tmp_path):
     # Both definitions are local — fully resolved, no inherits
     assert "inherits" not in squashed
     assert squashed["name"] == "Child Printer"
-    # Child overrides parent
-    assert squashed["overrides"]["machine_width"] == {"value": 256}
-    # Parent-only setting preserved
+    # Child overrides parent; literal ``value`` is promoted to ``default_value`` (#587)
+    assert squashed["overrides"]["machine_width"] == {"default_value": 256}
+    # Parent-only setting preserved — existing ``default_value`` blocks promotion
     assert squashed["overrides"]["speed_print"] == {"value": 60, "default_value": 60}
-    # Child-only setting added
-    assert squashed["overrides"]["machine_depth"] == {"value": 256}
+    # Child-only setting added (also promoted)
+    assert squashed["overrides"]["machine_depth"] == {"default_value": 256}
     # Metadata merged (child visible overrides parent)
     assert squashed["metadata"]["visible"] is True
     assert squashed["metadata"]["author"] == "test"
@@ -904,8 +904,10 @@ def test_squash_cura_def_keeps_unresolved_parent(tmp_path):
     # fdmprinter is not local — keep inherits so CuraEngine resolves at runtime
     assert squashed["inherits"] == "fdmprinter"
     assert squashed["name"] == "My Printer"
-    assert squashed["overrides"]["machine_width"] == {"value": 256}
-    assert squashed["overrides"]["speed_print"] == {"value": 100}
+    # Literal ``value`` entries are promoted to ``default_value`` at pin-time (#587)
+    assert squashed["overrides"]["machine_width"] == {"default_value": 256}
+    assert squashed["overrides"]["speed_print"] == {"default_value": 100}
+    # Expression left intact — depends on another setting
     assert squashed["overrides"]["acceleration_infill"] == {"value": "acceleration_print"}
 
 
@@ -981,8 +983,9 @@ def test_pin_cura_definitions_from_project_dir(tmp_path):
 
     squashed = json.loads(dest.read_text())
     assert squashed["name"] == "My AMS Variant"
-    assert squashed["overrides"]["machine_width"] == {"value": 200}
-    assert squashed["overrides"]["machine_depth"] == {"value": 256}
+    # Literal ``value`` is promoted to ``default_value`` at pin-time (#587)
+    assert squashed["overrides"]["machine_width"] == {"default_value": 200}
+    assert squashed["overrides"]["machine_depth"] == {"default_value": 256}
     assert squashed["inherits"] == "fdmprinter"
 
 

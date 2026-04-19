@@ -1,0 +1,1 @@
+Promote literal ``value`` overrides to ``default_value`` when pinning CuraEngine defs, so settings like ``relative_extrusion``, ``retraction_amount``, ``speed_print``, and the machine dimensions are no longer silently dropped and replaced with fdmprinter defaults.
