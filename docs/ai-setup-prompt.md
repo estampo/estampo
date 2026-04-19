@@ -87,6 +87,7 @@ size = [256, 256]        # bed size in mm [width, depth]
 [slicer]
 engine = "orca"          # or "cura"
 version = "2.3.1"        # "2.3.1" for orca, "5.12.0" for cura
+bed_type = "Textured PEI Plate"   # required for Bambu printers — see note below
 
 # --- OrcaSlicer config ---
 [slicer.orca]
@@ -113,13 +114,21 @@ file = "model.stl"       # .stl, .3mf, or .step / .stp — all three are accepte
 convert STEP to a mesh at the start of the pipeline. Do **not** tell the user to pre-convert STEP
 to STL/3MF; point a `[[parts]]` entry directly at the `.step` or `.stp` file.
 
+**Always set `bed_type` for Bambu Lab printers.** The OrcaSlicer machine profile
+for Bambu printers defaults to `"Cool Plate"`, but the plate that physically ships
+with a P1S / P1P / A1 / A1 mini / X1C is the **Textured PEI Plate**, which sits
+higher than the Cool Plate. If you leave `bed_type` unset and print a slice
+calibrated for Cool Plate on a physical PEI plate, the nozzle's first-layer Z is
+too low and can crash into the plate, damaging the hotend or the plate surface.
+Ask the user which plate is actually installed if unsure; do not rely on the
+profile default.
+
 #### Additional config features
 
 These are optional — skip them for simple setups:
 
 - **`output_dir`** (top-level) — output directory, default `"estampo_output"`.
 - **`gcode-info`** stage — add to pipeline to see print time and filament usage after slicing.
-- **`bed_type`** in `[slicer]` — bed surface (e.g. `"Textured PEI Plate"`).
 - **`profiles_dir`** in `[slicer]` — directory for pinned profiles (default `"profiles"`).
 - **`machine_overrides`** / **`filament_overrides`** in `[slicer.orca]` — override machine or filament profile settings (separate from process `overrides`).
 - **`[slicer.orca.slots]`** — explicit AMS slot-to-filament mapping:
