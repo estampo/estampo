@@ -176,8 +176,8 @@ If you mostly want interactive print setup in a GUI, use OrcaSlicer or Cura dire
 
 ## Quick start
 
-**Prerequisites:** Python 3.11+ and [Docker](https://docs.docker.com/get-docker/). Docker is
-central to estampo — it runs the slicer (OrcaSlicer or CuraEngine) in a container with a pinned
+**Prerequisites:** Python 3.11, 3.12, or 3.13 (3.14 is not yet supported) and [Docker](https://docs.docker.com/get-docker/).
+Docker is central to estampo — it runs the slicer (OrcaSlicer or CuraEngine) in a container with a pinned
 version so every machine produces identical G-code. A locally installed slicer can be used as a
 fallback but is not recommended.
 
@@ -185,6 +185,8 @@ fallback but is not recommended.
 pip install estampo
 # or, to install as an isolated CLI tool:
 pipx install estampo
+# or, with uv:
+uv tool install estampo
 ```
 
 Generate a config with the interactive wizard, or dump a commented template:
