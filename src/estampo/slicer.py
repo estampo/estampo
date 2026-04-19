@@ -124,8 +124,8 @@ def slice_plate(
         import trimesh
 
         from estampo.cura import (
+            build_cura_config,
             cura_docker_image,
-            cura_profile_from_config,
             resolve_cura_bed_size,
             slice_stl,
             slice_stl_multi,
@@ -143,7 +143,7 @@ def slice_plate(
         else:
             filament_type = None
 
-        profile = cura_profile_from_config(
+        cura_overrides, cura_per_extruder = build_cura_config(
             overrides=overrides,
             bed_type=bed_type,
             filament_type=filament_type,
@@ -191,7 +191,8 @@ def slice_plate(
                 return slice_stl_multi(
                     stl_meshes,
                     output_dir,
-                    profile,
+                    overrides=cura_overrides,
+                    per_extruder=cura_per_extruder,
                     image=image,
                     printer=printer,
                     project_dir=project_dir,
@@ -221,7 +222,8 @@ def slice_plate(
         return slice_stl(
             stl_path,
             output_dir,
-            profile,
+            overrides=cura_overrides,
+            per_extruder=cura_per_extruder,
             image=image,
             printer=printer,
             project_dir=project_dir,

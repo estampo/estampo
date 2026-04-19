@@ -22,7 +22,7 @@ from pathlib import Path
 # Ensure project root is on sys.path for imports
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from estampo.cura import CuraProfile, cura_docker_image, slice_stl
+from estampo.cura import cura_docker_image, slice_stl
 from estampo.gcode import analyze_gcode, parse_gcode_metadata
 from estampo.slicer import slice_plate
 
@@ -139,19 +139,19 @@ def _slice_cura(stl_path: Path, output_base: Path) -> Path:
     output_dir = output_base / "cura"
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    profile = CuraProfile(
-        layer_height=0.20,
-        wall_line_count=3,
-        infill_sparse_density=25,
-        top_layers=5,
-        bottom_layers=4,
-        material_print_temperature=260,
-        material_bed_temperature=70,
-        bed_type="Textured PEI Plate",
-        filament_type="PETG-CF",
-    )
+    overrides: dict[str, str | int | float | bool] = {
+        "layer_height": 0.20,
+        "wall_line_count": 3,
+        "infill_sparse_density": 25,
+        "top_layers": 5,
+        "bottom_layers": 4,
+        "material_print_temperature": 260,
+        "material_bed_temperature": 70,
+        "machine_buildplate_type": "textured_pei_plate",
+        "material_type": "PETG-CF",
+    }
     image = cura_docker_image(CURA_VERSION)
-    return slice_stl(stl_path, output_dir, profile, image=image)
+    return slice_stl(stl_path, output_dir, overrides=overrides, image=image)
 
 
 def _pct_diff(a: float, b: float) -> str:
