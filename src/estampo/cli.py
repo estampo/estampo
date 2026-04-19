@@ -596,6 +596,14 @@ def profiles_list(
     category: Annotated[
         str | None, typer.Option(help="Filter by category (machine, process, filament)")
     ] = None,
+    printer: Annotated[
+        str | None,
+        typer.Option(
+            "--printer",
+            help="Filter process/filament lists to profiles whose compatible_printers "
+            "includes PRINTER. OrcaSlicer only.",
+        ),
+    ] = None,
     json_flag: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
     verbose: Annotated[bool, typer.Option("-v", "--verbose", help="Enable debug logging")] = False,
 ) -> None:
@@ -606,6 +614,7 @@ def profiles_list(
         CATEGORIES,
         discover_profile_names,
         discover_profiles,
+        filter_profiles_by_printer,
     )
 
     if engine in _INLINE_ENGINES:
@@ -619,12 +628,25 @@ def profiles_list(
 
     if json_flag:
         names, source = discover_profile_names(engine)
+        if printer:
+            names = filter_profiles_by_printer(engine, names, printer)
         if category:
             names = {category: names.get(category, [])}
         print(json.dumps({"profiles": names, "source": source, "engine": engine}, indent=2))
         raise typer.Exit(0)
 
     from estampo import ui
+
+    if printer:
+        names_by_cat, _source = discover_profile_names(engine)
+        names_by_cat = filter_profiles_by_printer(engine, names_by_cat, printer)
+        categories = [category] if category else list(CATEGORIES)
+        for cat in categories:
+            cat_names = names_by_cat.get(cat, [])
+            ui.console.print(f"\n{cat} ({len(cat_names)} profiles):")
+            for name in cat_names:
+                ui.console.print(f"  {name}")
+        return
 
     profiles = discover_profiles(engine)
     categories = [category] if category else list(CATEGORIES)

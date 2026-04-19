@@ -22,6 +22,9 @@ from estampo.orca import (  # noqa: F401
     _system_dirs,
     extract_docker_profiles,
 )
+from estampo.orca import (
+    filter_profiles_by_printer as _orca_filter_profiles_by_printer,
+)
 
 log = logging.getLogger(__name__)
 
@@ -213,6 +216,33 @@ def discover_profile_names(
         return bundled, "bundled"
 
     return {cat: [] for cat in CATEGORIES}, "none"
+
+
+def filter_profiles_by_printer(
+    engine: str,
+    names_by_category: dict[str, list[str]],
+    printer: str,
+    version: str | None = None,
+    project_dir: Path | None = None,
+    profiles_dir: str = "profiles",
+) -> dict[str, list[str]]:
+    """Filter process/filament names to those compatible with *printer*.
+
+    Dispatches to the engine module. CuraEngine has no compatibility concept
+    (inline settings), so this is only meaningful for OrcaSlicer.
+    """
+    if engine == "orca":
+        return _orca_filter_profiles_by_printer(
+            names_by_category,
+            printer,
+            version=version,
+            project_dir=project_dir,
+            profiles_dir=profiles_dir,
+        )
+    raise EstampoError(
+        f"--printer filter is not supported for engine '{engine}'. "
+        "CuraEngine uses inline settings with no process/filament compatibility data."
+    )
 
 
 # ---------------------------------------------------------------------------
