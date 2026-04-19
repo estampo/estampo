@@ -9,7 +9,6 @@ image with bundled printer definitions.  Default printer: Ultimaker 2.
 
 from __future__ import annotations
 
-import ast
 import importlib.resources
 import json
 import logging
@@ -367,6 +366,34 @@ def resolve_cura_machine_dims(
     }
 
 
+def resolve_cura_center_is_zero(
+    printer_name: str,
+    project_dir: Path | None = None,
+    profiles_dir: str = "profiles",
+) -> bool:
+    """Return True if the printer's build plate origin is at the bed center.
+
+    Walks the definition chain for ``machine_center_is_zero``.  Falls back
+    to CuraEngine's own default (``False`` — origin at front-left corner)
+    when the setting is not declared in the chain.
+    """
+    chain = _resolve_def_chain_for_printer(printer_name, project_dir, profiles_dir)
+    for path in chain:
+        try:
+            with open(path) as f:
+                data = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            continue
+        entry = data.get("overrides", {}).get("machine_center_is_zero")
+        if isinstance(entry, dict):
+            val = entry.get("default_value")
+            if val is None:
+                val = entry.get("value")
+            if val is not None:
+                return bool(val)
+    return False
+
+
 def cura_docker_image(version: str | None = None) -> str:
     """Return the Docker image name for a given CuraEngine version."""
     if version:
@@ -400,59 +427,8 @@ def load_cura_definition_map(version: str | None = None) -> dict[str, str]:
 
 
 # ---------------------------------------------------------------------------
-# CuraEngine definition pinning (inheritance squashing)
+# CuraEngine definition pinning
 # ---------------------------------------------------------------------------
-
-
-def _deep_merge_cura_overrides(base: dict, child: dict) -> dict:
-    """Deep-merge CuraEngine overrides dicts.
-
-    Each key maps to a sub-dict like ``{"value": X, "default_value": Y}``.
-    Child values override parent values at the per-setting sub-dict level.
-    """
-    merged = dict(base)
-    for key, val in child.items():
-        if key in merged and isinstance(merged[key], dict) and isinstance(val, dict):
-            merged[key] = {**merged[key], **val}
-        else:
-            merged[key] = val
-    return merged
-
-
-def _normalize_value_literals(overrides: dict) -> None:
-    """Promote literal ``value`` entries to ``default_value`` in place.
-
-    CuraEngine silently ignores setting entries that carry a ``value`` but no
-    ``default_value`` when the fdmprinter settings tree isn't in scope — it
-    logs ``JSON setting 'X' has no [default_]value!`` and reverts to the
-    root-schema default (see #587).  Squashed pinned defs hit this because
-    ``_squash_cura_def`` only merges ``overrides`` dicts, leaving literal
-    ``value`` entries unpaired with a ``default_value``.
-
-    For each override, if ``value`` is a literal — a native bool/int/float,
-    or a string that parses via :func:`ast.literal_eval` (e.g., ``"'skirt'"``
-    or ``"True"``) — set ``default_value`` to the evaluated literal and drop
-    ``value``.  Entries whose ``value`` is a Python expression referencing
-    other settings (e.g., ``"'zigzag' if infill_sparse_density > 80 else
-    'gyroid'"``) are left untouched so CuraEngine can evaluate them.
-    """
-    for entry in overrides.values():
-        if not isinstance(entry, dict):
-            continue
-        if "default_value" in entry or "value" not in entry:
-            continue
-        raw = entry["value"]
-        if isinstance(raw, bool) or isinstance(raw, (int, float)):
-            literal: object = raw
-        elif isinstance(raw, str):
-            try:
-                literal = ast.literal_eval(raw)
-            except (ValueError, SyntaxError):
-                continue
-        else:
-            literal = raw
-        entry["default_value"] = literal
-        del entry["value"]
 
 
 def extract_cura_docker_defs(
@@ -552,83 +528,6 @@ def _copy_cura_def_chain(def_id: str, defs_dirs: Path | list[Path]) -> list[Path
         raise EstampoError(f"CuraEngine definition '{def_id}' not found in {searched}")
 
     return chain
-
-
-def _squash_cura_def(def_id: str, defs_dirs: Path | list[Path]) -> dict:
-    """Walk the inheritance chain for a CuraEngine definition and squash it.
-
-    Reads ``*.def.json`` files from *defs_dirs* (single dir or list of
-    candidate dirs searched in order, first match wins), follows
-    ``inherits`` links, and deep-merges overrides from root to leaf.
-
-    Root definitions like ``fdmprinter`` provide the full settings schema in
-    a ``settings`` tree (not ``overrides``).  Since we only merge
-    ``overrides``, we must stop before including root definitions and
-    preserve ``inherits`` so CuraEngine resolves the base at runtime via
-    its ``-d`` search path.
-    """
-    # Root definitions that provide the full settings schema.  These must
-    # NOT be squashed — their ``settings`` tree is too large and not
-    # representable as ``overrides``.  CuraEngine resolves them at runtime.
-    _ROOT_DEFS = {"fdmprinter", "fdmextruder"}
-
-    dirs = [defs_dirs] if isinstance(defs_dirs, Path) else list(defs_dirs)
-
-    def _find(name: str) -> Path | None:
-        for d in dirs:
-            candidate = d / f"{name}.def.json"
-            if candidate.exists():
-                return candidate
-        return None
-
-    chain: list[dict] = []
-    current_id: str | None = def_id
-    seen: set[str] = set()
-    unresolved_parent: str | None = None
-
-    while current_id and current_id not in seen:
-        seen.add(current_id)
-
-        # Stop before root definitions — they provide the base schema
-        if current_id in _ROOT_DEFS and current_id != def_id:
-            unresolved_parent = current_id
-            break
-
-        path = _find(current_id)
-        if path is None:
-            # Parent not available locally — CuraEngine resolves it at runtime
-            unresolved_parent = current_id
-            break
-        with open(path) as f:
-            data = json.load(f)
-        chain.append(data)
-        parent = data.get("inherits")
-        current_id = parent if isinstance(parent, str) else None
-
-    if not chain:
-        searched = ", ".join(str(d) for d in dirs)
-        raise EstampoError(f"CuraEngine definition '{def_id}' not found in {searched}")
-
-    # Merge root-first so leaf overrides take precedence
-    merged_overrides: dict = {}
-    merged_metadata: dict = {}
-    for data in reversed(chain):
-        merged_overrides = _deep_merge_cura_overrides(merged_overrides, data.get("overrides", {}))
-        merged_metadata.update(data.get("metadata", {}))
-
-    _normalize_value_literals(merged_overrides)
-
-    # Build squashed result from the leaf definition
-    leaf = chain[0]
-    squashed: dict = {
-        "version": leaf.get("version", 2),
-        "name": leaf.get("name", def_id),
-        "metadata": merged_metadata,
-        "overrides": merged_overrides,
-    }
-    if unresolved_parent:
-        squashed["inherits"] = unresolved_parent
-    return squashed
 
 
 def pin_cura_definitions(
@@ -953,27 +852,25 @@ def _place_on_bed(
     staging_dir: Path,
     bed_width: float = DEFAULT_PLATE_SIZE[0],
     bed_depth: float = DEFAULT_PLATE_SIZE[1],
+    center_is_zero: bool = False,
 ) -> Path:
     """Copy STL into staging, ensuring the mesh sits on the bed (Z>=0)
     and is centered on the build plate.
 
-    CuraEngine only slices geometry above Z=0.  With
-    ``machine_center_is_zero = false`` (common default), the bed origin is at
-    the corner, so the center of the bed is (width/2, depth/2).  This
-    function:
-    1. Shifts Z so the lowest vertex is at Z=0.
-    2. Centers the mesh at (bed_width/2, bed_depth/2) so the print sits
-       in the middle of the build plate.
+    CuraEngine only slices geometry above Z=0.  Bed-origin convention is
+    selected by ``center_is_zero``: when ``False`` (CuraEngine default —
+    origin at the front-left corner) the mesh is centered at
+    ``(bed_width/2, bed_depth/2)``; when ``True`` it is centered at
+    ``(0, 0)``.
     """
     import trimesh
 
     mesh: trimesh.Trimesh = trimesh.load(str(stl_path), force="mesh")  # type: ignore[assignment]
 
-    # Center mesh on build plate (bed origin is at corner, not center)
     x_center = float((mesh.bounds[0][0] + mesh.bounds[1][0]) / 2)
     y_center = float((mesh.bounds[0][1] + mesh.bounds[1][1]) / 2)
-    target_x = bed_width / 2
-    target_y = bed_depth / 2
+    target_x = 0.0 if center_is_zero else bed_width / 2
+    target_y = 0.0 if center_is_zero else bed_depth / 2
     dx = target_x - x_center
     dy = target_y - y_center
     if abs(dx) > 0.01 or abs(dy) > 0.01:
@@ -981,7 +878,6 @@ def _place_on_bed(
         mesh.vertices[:, 1] += dy  # type: ignore[attr-defined]
         log.info("Centered mesh on bed (shifted by %.2f, %.2f)", dx, dy)
 
-    # Place on bed (Z >= 0)
     z_min = float(mesh.bounds[0][2])
     if z_min < 0:
         mesh.vertices[:, 2] -= z_min
@@ -1012,66 +908,6 @@ def _write_cura_settings(
     settings_path.write_text(json.dumps(settings, indent=2) + "\n")
     log.info("Wrote CuraEngine settings: %s", settings_path)
     return settings_path
-
-
-def _normalize_staging_value_literals(staging: Path) -> None:
-    """Apply :func:`_normalize_value_literals` to every staged ``.def.json``.
-
-    Runs before :func:`_strip_value_overrides` at slice time so that legacy
-    pinned defs — produced before the pin-time normalization in
-    :func:`_squash_cura_def` existed — still reach CuraEngine in well-formed
-    shape (see #587).
-    """
-    for def_path in staging.glob("*.def.json"):
-        try:
-            data = json.loads(def_path.read_text())
-        except (json.JSONDecodeError, OSError):
-            continue
-        overrides = data.get("overrides")
-        if not isinstance(overrides, dict):
-            continue
-        before = json.dumps(overrides, sort_keys=True)
-        _normalize_value_literals(overrides)
-        if json.dumps(overrides, sort_keys=True) != before:
-            def_path.write_text(json.dumps(data, indent=4))
-
-
-def _strip_value_overrides(staging: Path, setting_keys: set[str]) -> None:
-    """Strip ``value`` expressions from staged defs for settings we pass via ``-s``.
-
-    CuraEngine ``value`` expressions in ``.def.json`` take precedence over
-    ``-s`` command-line flags, silently dropping user overrides (see #584).
-    For any key we're about to pass via ``-s``, remove the ``value`` entry
-    from matching override blocks in every staged def so ``-s`` actually wins.
-    ``default_value`` is left intact.
-    """
-    for def_path in staging.glob("*.def.json"):
-        try:
-            data = json.loads(def_path.read_text())
-        except (json.JSONDecodeError, OSError):
-            continue
-        overrides = data.get("overrides", {})
-        if not isinstance(overrides, dict):
-            continue
-        changed = False
-        for key in setting_keys:
-            entry = overrides.get(key)
-            if isinstance(entry, dict) and "value" in entry:
-                del entry["value"]
-                changed = True
-        if changed:
-            def_path.write_text(json.dumps(data, indent=4))
-
-
-def _profile_setting_keys(
-    overrides: CuraOverrides,
-    per_extruder: CuraPerExtruder,
-) -> set[str]:
-    """Return every setting key we pass via ``-s`` for this slice."""
-    keys = set(_settings_dict(overrides).keys())
-    for ext_overrides in per_extruder:
-        keys.update(ext_overrides.keys())
-    return keys
 
 
 def _prepare_cura_staging(
@@ -1363,15 +1199,16 @@ def slice_stl(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     staging, machine_def = _prepare_cura_staging(printer, project_dir, profiles_dir, output_dir)
-    _normalize_staging_value_literals(staging)
-    _strip_value_overrides(staging, _profile_setting_keys(overrides, per_extruder))
 
     # Get machine dimensions for mesh centering and settings JSON
     machine_dims = resolve_cura_machine_dims(printer or "", project_dir, profiles_dir)
     bed_w, bed_d = machine_dims["machine_width"], machine_dims["machine_depth"]
+    center_is_zero = resolve_cura_center_is_zero(printer or "", project_dir, profiles_dir)
 
     # Place mesh on the build plate (Z>=0, centered) before slicing.
-    staged_stl = _place_on_bed(stl_path, staging, bed_width=bed_w, bed_depth=bed_d)
+    staged_stl = _place_on_bed(
+        stl_path, staging, bed_width=bed_w, bed_depth=bed_d, center_is_zero=center_is_zero
+    )
 
     settings = _settings_flags(overrides) + _machine_dims_flags(machine_dims)
 
@@ -1461,8 +1298,6 @@ def slice_stl_multi(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     staging, machine_def = _prepare_cura_staging(printer, project_dir, profiles_dir, output_dir)
-    _normalize_staging_value_literals(staging)
-    _strip_value_overrides(staging, _profile_setting_keys(overrides, per_extruder))
 
     # Get machine dimensions for settings JSON
     machine_dims = resolve_cura_machine_dims(printer or "", project_dir, profiles_dir)

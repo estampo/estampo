@@ -10,8 +10,6 @@ from urllib.request import urlopen
 
 from estampo import EstampoError
 from estampo.cura import (  # noqa: F401
-    _deep_merge_cura_overrides,
-    _squash_cura_def,
     extract_cura_docker_defs,
     load_cura_definition_map,
     pin_cura_definitions,

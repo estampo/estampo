@@ -1,0 +1,1 @@
+Remove dead inheritance-squashing helpers and value-literal workarounds now that CuraEngine definitions are copied verbatim (ADR-008 PR 3/3).
