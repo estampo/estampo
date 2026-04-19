@@ -290,13 +290,19 @@ def validate_config(path: Path) -> ValidationResult:
     Raises EstampoError for hard errors (via load_config).
     Returns a ValidationResult with passes and warnings.
     """
-    from estampo.config import load_config
+    import tomllib
+
+    from estampo.config import detect_unknown_keys, load_config
     from estampo.pipeline import STAGE_OUTPUTS
     from estampo.profiles import discover_profile_names, validate_override_keys
 
     cfg = load_config(path)
     passes: list[str] = []
     warnings: list[str] = []
+
+    with open(path, "rb") as f:
+        raw_toml = tomllib.load(f)
+    warnings.extend(detect_unknown_keys(raw_toml))
 
     # Check slicer version pinning
     if not cfg.slicer.version:
