@@ -100,7 +100,7 @@ printer = "bambox_p1s"
 filaments = ["PLA"]
 
 [[parts]]
-file = "model.stl"
+file = "model.stl"       # .stl, .3mf, or .step / .stp — all three are accepted directly
 
 # Add overrides to tune print settings:
 # [slicer.orca.overrides]
@@ -108,6 +108,10 @@ file = "model.stl"
 # sparse_infill_density = "20%"
 # wall_loops = "3"
 ```
+
+**STEP files are loaded natively** — estampo uses [build123d](https://github.com/gumyr/build123d) to
+convert STEP to a mesh at the start of the pipeline. Do **not** tell the user to pre-convert STEP
+to STL/3MF; point a `[[parts]]` entry directly at the `.step` or `.stp` file.
 
 #### Additional config features
 
@@ -142,7 +146,7 @@ These are optional — skip them for simple setups:
   inlay = "Bambu PLA Basic @BBL X1C"
   ```
 - **`estampo profiles pin`** — copies referenced profiles into a local `profiles/` directory for reproducible builds across machines.
-- **Code-CAD workflow** — estampo works with OpenSCAD, build123d, and CadQuery. Generate STL/3MF from code-CAD scripts, then configure estampo to slice the output.
+- **Code-CAD workflow** — estampo works with OpenSCAD, build123d, and CadQuery. Either emit STL/3MF from the code-CAD script, or emit STEP and let estampo load it directly via build123d — no pre-conversion required.
 
 ### Discovering available profiles
 
@@ -297,11 +301,12 @@ estampo init --workflow-only
 ```
 This requires an existing `estampo.toml` — it will error if the config file is missing.
 
-#### Projects with build scripts (STEP/code-CAD)
+#### Projects with build scripts (code-CAD)
 
-If the project generates STL/3MF files from STEP files, OpenSCAD, build123d, or
-CadQuery via a build script, and the generated files are `.gitignore`d, the CI
-runner won't have them. Add a build step before the estampo action:
+If the project generates mesh files (STL, 3MF, or STEP) from OpenSCAD,
+build123d, or CadQuery via a build script, and the generated files are
+`.gitignore`d, the CI runner won't have them. Add a build step before the
+estampo action. (If the STEP files are committed to the repo, skip this — estampo loads STEP directly.)
 
 ```yaml
     steps:
