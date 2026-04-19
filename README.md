@@ -110,7 +110,7 @@ OrcaSlicer CLI is great for slicing a prepared plate. estampo builds a reproduci
 - **Arrangement** — bin-packs multiple STLs onto the build plate (OrcaSlicer CLI has no arrange step)
 - **Multi-part filament mapping** — per-part filament slot assignment and paint color preservation, injected into the 3MF metadata
 - **Reproducible builds** — pin slicer profiles into your repo + lock OrcaSlicer version in Docker = identical gcode on any machine
-- **Partial execution** — `--until plate` to inspect layout, `--only slice` to re-slice, `--dry-run` to test everything
+- **Partial execution** — `--until plate` to inspect layout, `--only slice` to re-slice
 - **Command stages** — run external tools (e.g. `bambox pack`) as pipeline stages with variable substitution
 - **Headless Docker slicing** — no GUI, no display server, works in CI, uses a specific OrcaSlicer version
 
@@ -236,9 +236,8 @@ filament = "Generic PETG-CF @base"
 Run it (see [full CLI reference](https://github.com/estampo/estampo/blob/main/docs/cli.md)):
 
 ```bash
-estampo run                   # arrange, slice and send to printer
+estampo run                   # run every stage in pipeline.stages
 estampo run --until slice     # stop after slicing
-estampo run --dry-run         # full pipeline without sending to printer
 ```
 
 The arrangement (`plate`) stage generates a `plate_preview.3mf` — open it in any 3MF viewer to check placement:
@@ -284,7 +283,6 @@ estampo validate                    # check config for issues
 estampo run                         # full pipeline
 estampo run --until plate           # stop after plating
 estampo run --only slice            # run just one stage
-estampo run --dry-run               # everything except sending to printer
 estampo profiles list               # list available slicer profiles
 estampo profiles pin                # pin profiles for reproducible builds
 ```
