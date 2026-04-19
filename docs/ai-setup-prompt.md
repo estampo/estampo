@@ -494,8 +494,12 @@ estampo validate
 # 2. Pin profiles for reproducibility
 estampo profiles pin
 
-# 3. Test slice — catches profile and override issues
-estampo run --until slice
+# 3. Full run — executes every pipeline stage, including pack. Nothing is sent
+#    to a printer; the artifact is a file on disk. Use --until slice only when
+#    you want to skip pack deliberately (e.g. debugging the slicer step in
+#    isolation) — it will NOT catch misconfiguration of the pack stage that
+#    Bambu printers require.
+estampo run
 ```
 
 `estampo validate` exits non-zero if any override keys are invalid. Fix all

@@ -1,0 +1,1 @@
+AI setup prompt: verify with ``estampo run`` instead of ``estampo run --until slice`` so assistants exercise the mandatory ``pack`` stage for Bambu printers.
