@@ -812,105 +812,6 @@ def test_detect_category_cura_def():
     )
 
 
-def test_deep_merge_cura_overrides():
-    """Child setting values override parent at the sub-dict level."""
-    from estampo.profiles import _deep_merge_cura_overrides
-
-    base = {
-        "layer_height": {"value": 0.4, "default_value": 0.4},
-        "speed_print": {"value": 60},
-    }
-    child = {
-        "layer_height": {"value": 0.2},
-        "wall_count": {"value": 3},
-    }
-    merged = _deep_merge_cura_overrides(base, child)
-    # Child overrides value but preserves parent's default_value
-    assert merged["layer_height"] == {"value": 0.2, "default_value": 0.4}
-    # Parent-only key preserved
-    assert merged["speed_print"] == {"value": 60}
-    # Child-only key added
-    assert merged["wall_count"] == {"value": 3}
-
-
-def test_squash_cura_def(tmp_path):
-    """Squashing walks inheritance and deep-merges overrides."""
-    from estampo.profiles import _squash_cura_def
-
-    # Create a chain: child → parent
-    parent = {
-        "version": 2,
-        "name": "Parent",
-        "metadata": {"visible": False, "author": "test"},
-        "overrides": {
-            "machine_width": {"value": 200},
-            "speed_print": {"value": 60, "default_value": 60},
-        },
-    }
-    child = {
-        "version": 2,
-        "name": "Child Printer",
-        "inherits": "parent",
-        "metadata": {"visible": True},
-        "overrides": {
-            "machine_width": {"value": 256},
-            "machine_depth": {"value": 256},
-        },
-    }
-    (tmp_path / "parent.def.json").write_text(json.dumps(parent))
-    (tmp_path / "child.def.json").write_text(json.dumps(child))
-
-    squashed = _squash_cura_def("child", tmp_path)
-    # Both definitions are local — fully resolved, no inherits
-    assert "inherits" not in squashed
-    assert squashed["name"] == "Child Printer"
-    # Child overrides parent; literal ``value`` is promoted to ``default_value`` (#587)
-    assert squashed["overrides"]["machine_width"] == {"default_value": 256}
-    # Parent-only setting preserved — existing ``default_value`` blocks promotion
-    assert squashed["overrides"]["speed_print"] == {"value": 60, "default_value": 60}
-    # Child-only setting added (also promoted)
-    assert squashed["overrides"]["machine_depth"] == {"default_value": 256}
-    # Metadata merged (child visible overrides parent)
-    assert squashed["metadata"]["visible"] is True
-    assert squashed["metadata"]["author"] == "test"
-
-
-def test_squash_cura_def_keeps_unresolved_parent(tmp_path):
-    """Squashing preserves inherits when the root parent is not available locally."""
-    from estampo.profiles import _squash_cura_def
-
-    # child → base → fdmprinter (not available locally)
-    base = {
-        "version": 2,
-        "name": "Base",
-        "inherits": "fdmprinter",
-        "metadata": {"visible": False},
-        "overrides": {
-            "speed_print": {"value": 100},
-            "acceleration_infill": {"value": "acceleration_print"},
-        },
-    }
-    child = {
-        "version": 2,
-        "name": "My Printer",
-        "inherits": "base",
-        "metadata": {"visible": True},
-        "overrides": {"machine_width": {"value": 256}},
-    }
-    (tmp_path / "base.def.json").write_text(json.dumps(base))
-    (tmp_path / "child.def.json").write_text(json.dumps(child))
-
-    squashed = _squash_cura_def("child", tmp_path)
-    # fdmprinter is not local — keep inherits so CuraEngine resolves at runtime
-    assert squashed["inherits"] == "fdmprinter"
-    assert squashed["name"] == "My Printer"
-    # Literal ``value`` entries are promoted to ``default_value`` at pin-time (#587)
-    assert squashed["overrides"]["machine_width"] == {"default_value": 256}
-    assert squashed["overrides"]["speed_print"] == {"default_value": 100}
-    # Expression left intact — depends on another setting
-    assert squashed["overrides"]["acceleration_infill"] == {"value": "acceleration_print"}
-
-
 def test_add_profile_cura_def(tmp_path):
     """Adding a CuraEngine .def.json writes to profiles/cura/definitions/."""
     def_data = {
@@ -932,7 +833,7 @@ def test_add_profile_cura_def(tmp_path):
 
 
 def test_pin_cura_definitions_from_bundled(tmp_path):
-    """Pinning a bundled CuraEngine definition squashes it."""
+    """Pinning a bundled CuraEngine definition copies it verbatim (ADR-008)."""
     from estampo.profiles import pin_cura_definitions
 
     result = pin_cura_definitions(
@@ -944,12 +845,12 @@ def test_pin_cura_definitions_from_bundled(tmp_path):
     assert dest.name == "ultimaker2.def.json"
     assert dest.parent.name == "definitions"
 
-    squashed = json.loads(dest.read_text())
+    pinned = json.loads(dest.read_text())
     # fdmprinter is not bundled — kept so CuraEngine resolves at runtime
-    assert squashed.get("inherits") == "fdmprinter"
-    assert squashed["name"] == "Ultimaker 2"
-    assert "machine_width" in squashed["overrides"]
-    assert "machine_heated_bed" in squashed["overrides"]
+    assert pinned.get("inherits") == "fdmprinter"
+    assert pinned["name"] == "Ultimaker 2"
+    assert "machine_width" in pinned["overrides"]
+    assert "machine_heated_bed" in pinned["overrides"]
 
 
 def test_pin_cura_definitions_from_project_dir(tmp_path):

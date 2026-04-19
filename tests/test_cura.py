@@ -12,22 +12,18 @@ from estampo.cura import (
     _extruder_settings_str,
     _fetch_printer_def,
     _machine_dims_flags,
-    _normalize_staging_value_literals,
-    _normalize_value_literals,
     _patch_gcode_header,
     _place_on_bed,
-    _profile_setting_keys,
     _resolve_def_chain,
     _resolve_def_name,
     _settings_dict,
     _settings_flags,
-    _squash_cura_def,
-    _strip_value_overrides,
     _surface_cura_warnings,
     _write_cura_settings,
     build_cura_config,
     cura_docker_image,
     pin_cura_definitions,
+    resolve_cura_center_is_zero,
     resolve_cura_machine_dims,
     slice_stl,
     slice_stl_multi,
@@ -113,77 +109,6 @@ def test_check_local_def_passes_when_present(tmp_path):
     staging.mkdir()
     (staging / "bambox_p1s.def.json").write_text("{}")
     _check_local_def(staging, "bambox_p1s.def.json", "bambox_p1s")  # no raise
-
-
-# --- _squash_cura_def ---
-
-
-def test_squash_preserves_inherits_for_fdmprinter(tmp_path):
-    """Squash must preserve 'inherits': 'fdmprinter' — never merge the root."""
-    import json
-
-    # Create a fake fdmprinter (root definition with settings tree, not overrides)
-    (tmp_path / "fdmprinter.def.json").write_text(
-        json.dumps(
-            {
-                "name": "FDM Printer Base",
-                "version": 2,
-                "settings": {"machine_width": {"default_value": 200}},
-                "overrides": {},
-            }
-        )
-    )
-    # Create a machine definition that inherits from fdmprinter
-    (tmp_path / "my_printer.def.json").write_text(
-        json.dumps(
-            {
-                "name": "My Printer",
-                "version": 2,
-                "inherits": "fdmprinter",
-                "overrides": {"machine_width": {"value": 300}},
-            }
-        )
-    )
-    result = _squash_cura_def("my_printer", tmp_path)
-    # Must keep inherits so CuraEngine resolves fdmprinter at runtime
-    assert result["inherits"] == "fdmprinter"
-    # Literal ``value`` is promoted to ``default_value`` at pin-time (#587)
-    assert result["overrides"]["machine_width"]["default_value"] == 300
-
-
-def test_squash_merges_intermediate_definitions(tmp_path):
-    """Intermediate definitions (not fdmprinter) should be merged."""
-    import json
-
-    (tmp_path / "fdmprinter.def.json").write_text(
-        json.dumps({"name": "FDM Base", "version": 2, "settings": {}, "overrides": {}})
-    )
-    (tmp_path / "base_printer.def.json").write_text(
-        json.dumps(
-            {
-                "name": "Base Printer",
-                "version": 2,
-                "inherits": "fdmprinter",
-                "overrides": {"speed_print": {"value": 60}},
-            }
-        )
-    )
-    (tmp_path / "my_printer.def.json").write_text(
-        json.dumps(
-            {
-                "name": "My Printer",
-                "version": 2,
-                "inherits": "base_printer",
-                "overrides": {"machine_width": {"value": 300}},
-            }
-        )
-    )
-    result = _squash_cura_def("my_printer", tmp_path)
-    # fdmprinter preserved, intermediate merged
-    assert result["inherits"] == "fdmprinter"
-    # Literal ``value`` is promoted to ``default_value`` at pin-time (#587)
-    assert result["overrides"]["speed_print"]["default_value"] == 60
-    assert result["overrides"]["machine_width"]["default_value"] == 300
 
 
 # --- _copy_cura_def_chain (ADR-008) ---
@@ -544,167 +469,6 @@ def test_bundled_def_path_returns_path():
     assert "data" in str(path)
 
 
-# --- _strip_value_overrides (#584) ---
-
-
-def test_strip_value_overrides_removes_value_for_overridden_key(tmp_path):
-    """``value`` is removed for keys we pass via ``-s`` so the flag wins."""
-    import json
-
-    def_path = tmp_path / "printer.def.json"
-    def_path.write_text(
-        json.dumps(
-            {
-                "overrides": {
-                    "adhesion_type": {"value": "'skirt'"},
-                    "brim_width": {"default_value": 3, "value": "machine_width / 10"},
-                    "machine_width": {"value": 256},
-                }
-            }
-        )
-    )
-
-    _strip_value_overrides(tmp_path, {"adhesion_type", "brim_width"})
-
-    data = json.loads(def_path.read_text())
-    overrides = data["overrides"]
-    # `value` removed for overridden keys
-    assert "value" not in overrides["adhesion_type"]
-    assert "value" not in overrides["brim_width"]
-    # `default_value` preserved
-    assert overrides["brim_width"]["default_value"] == 3
-    # Non-overridden keys untouched
-    assert overrides["machine_width"]["value"] == 256
-
-
-def test_strip_value_overrides_ignores_missing_keys(tmp_path):
-    """Keys not present in the def are silently skipped."""
-    import json
-
-    def_path = tmp_path / "printer.def.json"
-    original = {"overrides": {"machine_width": {"value": 256}}}
-    def_path.write_text(json.dumps(original))
-
-    _strip_value_overrides(tmp_path, {"adhesion_type"})
-
-    assert json.loads(def_path.read_text()) == original
-
-
-# --- _normalize_value_literals (#587) ---
-
-
-def test_normalize_value_literals_promotes_native_literals():
-    """Native bool/int/float ``value`` entries become ``default_value``."""
-    overrides = {
-        "machine_width": {"value": 256},
-        "retraction_amount": {"value": 0.8},
-        "relative_extrusion": {"value": True},
-    }
-    _normalize_value_literals(overrides)
-    assert overrides == {
-        "machine_width": {"default_value": 256},
-        "retraction_amount": {"default_value": 0.8},
-        "relative_extrusion": {"default_value": True},
-    }
-
-
-def test_normalize_value_literals_evaluates_quoted_string_literals():
-    """Python-literal strings (e.g., ``"'skirt'"``) evaluate and promote."""
-    overrides = {
-        "adhesion_type": {"value": "'skirt'"},
-        "retraction_hop_enabled": {"value": "True"},
-    }
-    _normalize_value_literals(overrides)
-    assert overrides == {
-        "adhesion_type": {"default_value": "skirt"},
-        "retraction_hop_enabled": {"default_value": True},
-    }
-
-
-def test_normalize_value_literals_leaves_expressions_alone():
-    """Expressions referencing other settings are not touched."""
-    overrides = {
-        "infill_pattern": {"value": "'zigzag' if infill_sparse_density > 80 else 'gyroid'"},
-        "brim_width": {"value": "machine_width / 10"},
-    }
-    before = {k: dict(v) for k, v in overrides.items()}
-    _normalize_value_literals(overrides)
-    assert overrides == before
-
-
-def test_normalize_value_literals_preserves_existing_default_value():
-    """Entries already carrying ``default_value`` are left untouched."""
-    overrides = {
-        "brim_width": {"default_value": 3, "value": "machine_width / 10"},
-    }
-    _normalize_value_literals(overrides)
-    assert overrides == {
-        "brim_width": {"default_value": 3, "value": "machine_width / 10"},
-    }
-
-
-def test_normalize_value_literals_skips_entries_without_value():
-    """Entries with only ``default_value`` or unrelated keys are unchanged."""
-    overrides = {
-        "speed_print": {"default_value": 60},
-        "metadata_only": {"label": "Hello"},
-    }
-    _normalize_value_literals(overrides)
-    assert overrides == {
-        "speed_print": {"default_value": 60},
-        "metadata_only": {"label": "Hello"},
-    }
-
-
-def test_normalize_staging_value_literals_rewrites_files(tmp_path):
-    """Staging normalization rewrites defs on disk, in place."""
-    import json
-
-    def_path = tmp_path / "bambox_p1s.def.json"
-    def_path.write_text(
-        json.dumps(
-            {
-                "overrides": {
-                    "machine_width": {"value": 256},
-                    "relative_extrusion": {"value": True},
-                    "adhesion_type": {"value": "'skirt'"},
-                    "infill_pattern": {
-                        "value": "'zigzag' if infill_sparse_density > 80 else 'gyroid'"
-                    },
-                }
-            }
-        )
-    )
-    _normalize_staging_value_literals(tmp_path)
-
-    data = json.loads(def_path.read_text())
-    overrides = data["overrides"]
-    assert overrides["machine_width"] == {"default_value": 256}
-    assert overrides["relative_extrusion"] == {"default_value": True}
-    assert overrides["adhesion_type"] == {"default_value": "skirt"}
-    # Expression untouched
-    assert overrides["infill_pattern"] == {
-        "value": "'zigzag' if infill_sparse_density > 80 else 'gyroid'"
-    }
-
-
-def test_normalize_staging_value_literals_skips_when_no_changes(tmp_path):
-    """Files whose overrides are already normalized are not rewritten."""
-    import json
-
-    def_path = tmp_path / "already_ok.def.json"
-    payload = {"overrides": {"speed_print": {"default_value": 60}}}
-    def_path.write_text(json.dumps(payload))
-    mtime_before = def_path.stat().st_mtime_ns
-
-    _normalize_staging_value_literals(tmp_path)
-
-    # Content is unchanged
-    assert json.loads(def_path.read_text()) == payload
-    # And we didn't rewrite the file (mtime preserved)
-    assert def_path.stat().st_mtime_ns == mtime_before
-
-
 # --- _surface_cura_warnings (#590) ---
 
 
@@ -804,17 +568,6 @@ def test_machine_dims_flags_skips_missing_keys():
     """Missing dim keys are omitted from the flag list."""
     flags = _machine_dims_flags({"machine_width": 256.0})
     assert flags == ["-s", "machine_width=256.0"]
-
-
-def test_profile_setting_keys_includes_per_extruder():
-    """Per-extruder override keys show up alongside global settings."""
-    overrides = {"adhesion_type": "brim"}
-    per_extruder = [{"material_type": "PLA"}, {"material_type": "PETG"}]
-
-    keys = _profile_setting_keys(overrides, per_extruder)
-    assert "adhesion_type" in keys
-    assert "material_type" in keys
-    assert "roofing_layer_count" in keys  # from baseline
 
 
 # --- slice_stl Docker execution ---
@@ -1251,6 +1004,70 @@ def test_place_on_bed_already_on_bed(tmp_path):
     placed = trimesh.load(str(result), force="mesh")
     assert placed.bounds[0][2] == pytest.approx(0.0)
     assert placed.bounds[1][2] == pytest.approx(10.0)
+
+
+def test_place_on_bed_corner_origin_centers_on_bed(tmp_path):
+    """center_is_zero=False → mesh centered at (bed_width/2, bed_depth/2)."""
+    import trimesh
+
+    mesh = trimesh.creation.box(extents=[10, 10, 10])  # centered at origin
+    stl = tmp_path / "part.stl"
+    mesh.export(str(stl))
+
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    result = _place_on_bed(stl, staging, bed_width=200, bed_depth=200, center_is_zero=False)
+
+    placed = trimesh.load(str(result), force="mesh")
+    assert ((placed.bounds[0][0] + placed.bounds[1][0]) / 2) == pytest.approx(100.0)
+    assert ((placed.bounds[0][1] + placed.bounds[1][1]) / 2) == pytest.approx(100.0)
+
+
+def test_place_on_bed_center_origin_keeps_mesh_at_zero(tmp_path):
+    """center_is_zero=True → mesh centered at (0, 0)."""
+    import trimesh
+
+    mesh = trimesh.creation.box(extents=[10, 10, 10])
+    mesh.vertices[:, 0] += 50  # shift off-center so we can verify re-centering
+    mesh.vertices[:, 1] += 30
+
+    stl = tmp_path / "part.stl"
+    mesh.export(str(stl))
+
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    result = _place_on_bed(stl, staging, bed_width=200, bed_depth=200, center_is_zero=True)
+
+    placed = trimesh.load(str(result), force="mesh")
+    assert ((placed.bounds[0][0] + placed.bounds[1][0]) / 2) == pytest.approx(0.0)
+    assert ((placed.bounds[0][1] + placed.bounds[1][1]) / 2) == pytest.approx(0.0)
+
+
+# --- resolve_cura_center_is_zero ---
+
+
+def test_resolve_center_is_zero_true_from_def(tmp_path):
+    """Reads machine_center_is_zero=True from the def chain."""
+    import json
+
+    defs = tmp_path / "profiles" / "cura" / "definitions"
+    defs.mkdir(parents=True)
+    (defs / "delta.def.json").write_text(
+        json.dumps({"overrides": {"machine_center_is_zero": {"default_value": True}}})
+    )
+
+    assert resolve_cura_center_is_zero("delta", project_dir=tmp_path) is True
+
+
+def test_resolve_center_is_zero_false_default(tmp_path):
+    """Missing setting defaults to False (CuraEngine's default)."""
+    import json
+
+    defs = tmp_path / "profiles" / "cura" / "definitions"
+    defs.mkdir(parents=True)
+    (defs / "cartesian.def.json").write_text(json.dumps({"overrides": {}}))
+
+    assert resolve_cura_center_is_zero("cartesian", project_dir=tmp_path) is False
 
 
 # --- _write_cura_settings / _settings_dict ---
