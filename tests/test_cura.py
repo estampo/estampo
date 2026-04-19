@@ -11,6 +11,7 @@ from estampo.cura import (
     _check_local_def,
     _extruder_settings_str,
     _fetch_printer_def,
+    _machine_dims_flags,
     _patch_gcode_header,
     _place_on_bed,
     _profile_setting_keys,
@@ -393,6 +394,27 @@ def test_strip_value_overrides_ignores_missing_keys(tmp_path):
     assert json.loads(def_path.read_text()) == original
 
 
+def test_machine_dims_flags_emits_s_flags():
+    """All three bed dims are emitted as -s flags."""
+    flags = _machine_dims_flags(
+        {"machine_width": 256.0, "machine_depth": 200.0, "machine_height": 250.0}
+    )
+    assert flags == [
+        "-s",
+        "machine_width=256.0",
+        "-s",
+        "machine_depth=200.0",
+        "-s",
+        "machine_height=250.0",
+    ]
+
+
+def test_machine_dims_flags_skips_missing_keys():
+    """Missing dim keys are omitted from the flag list."""
+    flags = _machine_dims_flags({"machine_width": 256.0})
+    assert flags == ["-s", "machine_width=256.0"]
+
+
 def test_profile_setting_keys_includes_per_extruder():
     """Per-extruder override keys show up alongside global settings."""
     profile = CuraProfile()
@@ -474,6 +496,10 @@ def test_slice_stl_docker_command(tmp_path):
     inner_cmd = cmd[-1]
     assert "test_printer.def.json" in inner_cmd
     assert "-g -e0" in inner_cmd
+    # #586: machine dims must be passed as -s flags so CuraEngine's bed size
+    # agrees with _place_on_bed; otherwise brim/skirt is silently dropped.
+    assert "machine_width=256" in inner_cmd
+    assert "machine_depth=256" in inner_cmd
 
 
 def test_slice_stl_docker_failure(tmp_path):

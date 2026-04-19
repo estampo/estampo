@@ -811,6 +811,26 @@ def _settings_flags(profile: CuraProfile) -> list[str]:
     return flags
 
 
+def _machine_dims_flags(machine_dims: dict[str, float]) -> list[str]:
+    """Build -s flags for machine bed dimensions.
+
+    Pinned definitions commonly declare bed size with ``value`` only and
+    no ``default_value``.  CuraEngine logs "has no [default_]value!" for
+    these fields and silently falls back to the fdmprinter defaults
+    (100×100).  ``_place_on_bed`` reads the ``value`` directly, so the
+    mesh gets centred for the real bed and ends up off the bed CuraEngine
+    thinks it has — which silently drops brim/skirt generation (see #586).
+
+    Passing the dims as ``-s`` flags keeps CuraEngine in sync with mesh
+    placement regardless of how the def declares them.
+    """
+    flags: list[str] = []
+    for key in ("machine_width", "machine_depth", "machine_height"):
+        if key in machine_dims:
+            flags.extend(["-s", f"{key}={machine_dims[key]}"])
+    return flags
+
+
 def _extruder_settings_list(profile: CuraProfile, ext_idx: int) -> list[str]:
     """Build ``-s key=value`` args list for one extruder's ``-g -eN`` block.
 
@@ -1206,7 +1226,7 @@ def slice_stl(
     # Place mesh on the build plate (Z>=0, centered) before slicing.
     staged_stl = _place_on_bed(stl_path, staging, bed_width=bed_w, bed_depth=bed_d)
 
-    settings = _settings_flags(profile)
+    settings = _settings_flags(profile) + _machine_dims_flags(machine_dims)
 
     if local:
         _check_local_def(staging, machine_def, printer)
@@ -1300,6 +1320,8 @@ def slice_stl_multi(
         if not dest.exists():
             shutil.copy2(stl_path, dest)
 
+    global_flags = _settings_flags(profile) + _machine_dims_flags(machine_dims)
+
     if local:
         _check_local_def(staging, machine_def, printer)
         cura_args: list[str] = [
@@ -1309,7 +1331,7 @@ def slice_stl_multi(
             str(staging / machine_def),
             "-o",
             str(output_dir / "plate.gcode"),
-            *_settings_flags(profile),
+            *global_flags,
         ]
         for ext_idx, stl_path in stl_meshes:
             cura_args.extend(["-g", f"-e{ext_idx}"])
@@ -1320,7 +1342,7 @@ def slice_stl_multi(
     c_staging = "/work/output/.cura-staging"
     c_output = "/work/output/plate.gcode"
 
-    global_settings_str = " ".join(f'"{s}"' for s in _settings_flags(profile))
+    global_settings_str = " ".join(f'"{s}"' for s in global_flags)
 
     mesh_groups = ""
     for ext_idx, stl_path in stl_meshes:
