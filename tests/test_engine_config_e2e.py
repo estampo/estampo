@@ -259,9 +259,9 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
             "layer_height": 0.12,
         }
 
-    def test_cura_profile_from_config_integration(self, tmp_path):
-        """Config → cura_profile_from_config → CuraProfile fields."""
-        from estampo.cura import cura_profile_from_config
+    def test_build_cura_config_integration(self, tmp_path):
+        """Config → build_cura_config → raw overrides dict passthrough."""
+        from estampo.cura import build_cura_config
 
         path = _write_toml(
             tmp_path,
@@ -273,8 +273,8 @@ bed_type = "Engineering Plate"
 
 [slicer.cura.overrides]
 layer_height = 0.12
-wall_loops = 5
-sparse_infill_density = 30
+wall_line_count = 5
+infill_sparse_density = 30
 
 [[parts]]
 file = "{_posix(FIXTURES / "cube_10mm.stl")}"
@@ -282,15 +282,15 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
         )
         cfg = load_config(path)
 
-        # Build CuraProfile from cura sub-config
-        profile = cura_profile_from_config(
+        overrides, per_extruder = build_cura_config(
             overrides=cfg.slicer.cura.overrides,
             bed_type=cfg.slicer.bed_type,
         )
-        assert profile.layer_height == 0.12
-        assert profile.wall_line_count == 5
-        assert profile.infill_sparse_density == 30
-        assert profile.bed_type == "Engineering Plate"
+        assert overrides["layer_height"] == 0.12
+        assert overrides["wall_line_count"] == 5
+        assert overrides["infill_sparse_density"] == 30
+        assert overrides["machine_buildplate_type"] == "engineering_plate"
+        assert per_extruder == []
 
     def test_cura_slice_dispatch(self, tmp_path):
         """Config with engine=cura dispatches to cura.slice_stl."""
@@ -333,14 +333,14 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
 
         assert result == output_dir
         mock_slice.assert_called_once()
-        call_args = mock_slice.call_args
-        profile = call_args.args[2] if len(call_args.args) > 2 else call_args.kwargs["profile"]
-        assert profile.infill_sparse_density == 30
-        assert profile.bed_type == "Textured PEI Plate"
+        call_kwargs = mock_slice.call_args.kwargs
+        overrides = call_kwargs["overrides"]
+        assert overrides["infill_sparse_density"] == 30
+        assert overrides["machine_buildplate_type"] == "textured_pei_plate"
 
     def test_cura_settings_flags_from_config(self, tmp_path):
         """Config overrides flow through to CuraEngine -s flags."""
-        from estampo.cura import _settings_flags, cura_profile_from_config
+        from estampo.cura import _settings_flags, build_cura_config
 
         path = _write_toml(
             tmp_path,
@@ -351,17 +351,16 @@ version = "5.12.0"
 
 [slicer.cura.overrides]
 layer_height = 0.28
-support_enable = "true"
+support_enable = true
 
 [[parts]]
 file = "{_posix(FIXTURES / "cube_10mm.stl")}"
 """,
         )
         cfg = load_config(path)
-        profile = cura_profile_from_config(overrides=cfg.slicer.cura.overrides)
-        flags = _settings_flags(profile)
+        overrides, _ = build_cura_config(overrides=cfg.slicer.cura.overrides)
+        flags = _settings_flags(overrides)
 
-        # Convert to dict
         values = flags[1::2]
         flag_dict = {}
         for v in values:
@@ -369,7 +368,7 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
             flag_dict[k] = val
 
         assert flag_dict["layer_height"] == "0.28"
-        assert flag_dict["support_enable"] == "true"
+        assert flag_dict["support_enable"] == "True"
 
 
 class TestDualEngineConfig:

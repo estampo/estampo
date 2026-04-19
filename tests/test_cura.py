@@ -7,7 +7,6 @@ import pytest
 from estampo import EstampoError
 from estampo.cura import (
     _FILAMENT_TEMPS,
-    CuraProfile,
     _check_local_def,
     _copy_cura_def_chain,
     _extruder_settings_str,
@@ -26,12 +25,13 @@ from estampo.cura import (
     _strip_value_overrides,
     _surface_cura_warnings,
     _write_cura_settings,
+    build_cura_config,
     cura_docker_image,
-    cura_profile_from_config,
     pin_cura_definitions,
     resolve_cura_machine_dims,
     slice_stl,
     slice_stl_multi,
+    validate_cura_settings,
 )
 
 # --- _resolve_def_name ---
@@ -365,127 +365,112 @@ def test_cura_docker_image_custom_version():
     assert cura_docker_image("5.13.0") == "estampo/estampo:cura-5.13.0"
 
 
-# --- CuraProfile defaults ---
+# --- build_cura_config (raw TOML passthrough) ---
 
 
-def test_cura_profile_defaults():
-    profile = CuraProfile()
-    assert profile.nozzle_diameter == 0.4
-    assert profile.material_print_temperature == 220
-    assert profile.material_bed_temperature == 55
-    assert profile.layer_height == 0.20
-    assert profile.wall_line_count == 3
-    assert profile.infill_sparse_density == 25
-    assert profile.bed_type == "Textured PEI Plate"
-    assert profile.filament_type == "PLA"
-    assert profile.overrides == {}
+def test_build_cura_config_empty():
+    """No overrides → empty dict and no per-extruder entries."""
+    overrides, per_extruder = build_cura_config()
+    assert overrides == {}
+    assert per_extruder == []
 
 
-# --- cura_profile_from_config ---
+def test_build_cura_config_bed_type_seeds_buildplate():
+    """bed_type populates machine_buildplate_type with normalized casing."""
+    overrides, _ = build_cura_config(bed_type="Engineering Plate")
+    assert overrides["machine_buildplate_type"] == "engineering_plate"
 
 
-def test_profile_from_config_bed_type():
-    profile = cura_profile_from_config(bed_type="Engineering Plate")
-    assert profile.bed_type == "Engineering Plate"
+def test_build_cura_config_filament_type_seeds_material():
+    """filament_type populates material_type."""
+    overrides, _ = build_cura_config(filament_type="PLA")
+    assert overrides["material_type"] == "PLA"
 
 
-def test_profile_from_config_filament_type():
-    profile = cura_profile_from_config(filament_type="PLA")
-    assert profile.filament_type == "PLA"
-
-
-def test_profile_from_config_orca_overrides():
-    """OrcaSlicer-style override keys are mapped to CuraProfile fields."""
+def test_build_cura_config_raw_passthrough_preserves_types():
+    """TOML overrides pass through verbatim — ints, floats, bools, strings untouched."""
     overrides = {
         "layer_height": 0.12,
+        "wall_line_count": 5,
+        "support_enable": True,
+        "infill_pattern": "gyroid",
+    }
+    result, _ = build_cura_config(overrides=overrides)
+    assert result["layer_height"] == 0.12
+    assert isinstance(result["layer_height"], float)
+    assert result["wall_line_count"] == 5
+    assert isinstance(result["wall_line_count"], int)
+    assert result["support_enable"] is True
+    assert result["infill_pattern"] == "gyroid"
+
+
+def test_build_cura_config_no_orca_key_translation():
+    """Post-ADR-008: OrcaSlicer key names are NOT translated to CuraEngine names."""
+    overrides = {
         "wall_loops": 5,
         "sparse_infill_density": 30,
-        "top_shell_layers": 7,
-        "bottom_shell_layers": 6,
-        "initial_layer_print_height": 0.28,
         "nozzle_temperature": 250,
-        "bed_temperature": 65,
     }
-    profile = cura_profile_from_config(overrides=overrides)
-    assert profile.layer_height == 0.12
-    assert profile.wall_line_count == 5
-    assert profile.infill_sparse_density == 30
-    assert profile.top_layers == 7
-    assert profile.bottom_layers == 6
-    assert profile.layer_height_0 == 0.28
-    assert profile.material_print_temperature == 250
-    assert profile.material_bed_temperature == 65
-    # No passthrough overrides — all keys were mapped
-    assert profile.overrides == {}
+    result, _ = build_cura_config(overrides=overrides)
+    assert result["wall_loops"] == 5
+    assert result["sparse_infill_density"] == 30
+    assert result["nozzle_temperature"] == 250
+    assert "wall_line_count" not in result
+    assert "infill_sparse_density" not in result
+    assert "material_print_temperature" not in result
 
 
-def test_profile_from_config_passthrough_overrides():
-    """Unknown keys are passed through as raw CuraEngine -s overrides."""
-    overrides = {
-        "retraction_amount": "0.8",
-        "support_enable": "true",
-    }
-    profile = cura_profile_from_config(overrides=overrides)
-    assert profile.overrides == {"retraction_amount": "0.8", "support_enable": "true"}
-
-
-def test_profile_from_config_native_cura_keys():
-    """Native CuraEngine key names set CuraProfile attributes directly."""
-    overrides = {
-        "infill_sparse_density": 30,
-        "wall_line_count": 5,
-        "material_print_temperature": 250,
-        "layer_height_0": 0.28,
-    }
-    profile = cura_profile_from_config(overrides=overrides)
-    assert profile.infill_sparse_density == 30
-    assert profile.wall_line_count == 5
-    assert profile.material_print_temperature == 250
-    assert profile.layer_height_0 == 0.28
-    # All mapped to attributes — no passthrough overrides
-    assert profile.overrides == {}
+def test_build_cura_config_user_override_wins_over_seed():
+    """User overrides take precedence over derived bed_type/filament_type seeds."""
+    overrides = {"machine_buildplate_type": "custom"}
+    result, _ = build_cura_config(
+        overrides=overrides, bed_type="Engineering Plate", filament_type="PLA"
+    )
+    assert result["machine_buildplate_type"] == "custom"
+    assert result["material_type"] == "PLA"
 
 
 # --- _settings_flags ---
 
 
-def test_settings_flags_defaults():
-    """Default profile produces expected flags."""
-    profile = CuraProfile()
-    flags = _settings_flags(profile)
-    # Flags are -s key=value pairs
+def test_settings_flags_empty_overrides_emits_baseline():
+    """Empty overrides still emit the CuraEngine 5.12 quirk baseline."""
+    flags = _settings_flags({})
     assert len(flags) % 2 == 0
-    # Convert to dict for easy inspection
     values = flags[1::2]
-    value_dict = {}
-    for v in values:
-        k, val = v.split("=", 1)
-        value_dict[k] = val
-    assert value_dict["layer_height"] == "0.2"
-    assert value_dict["material_print_temperature"] == "220"
-    assert value_dict["material_bed_temperature"] == "55"
-    assert value_dict["wall_line_count"] == "3"
-
-
-def test_settings_flags_includes_required():
-    """Flags include CuraEngine 5.12-specific required settings."""
-    profile = CuraProfile()
-    flags = _settings_flags(profile)
-    values = flags[1::2]
-    value_dict = {}
-    for v in values:
-        k, val = v.split("=", 1)
-        value_dict[k] = val
+    value_dict = dict(v.split("=", 1) for v in values)
     assert value_dict["roofing_layer_count"] == "0"
     assert value_dict["flooring_layer_count"] == "0"
     assert value_dict["material_print_temp_prepend"] == "false"
     assert value_dict["material_bed_temp_prepend"] == "false"
 
 
+def test_settings_flags_no_hardcoded_adhesion_type():
+    """ADR-008: estampo no longer forces adhesion_type=none."""
+    flags = _settings_flags({})
+    values = flags[1::2]
+    keys = {v.split("=", 1)[0] for v in values}
+    assert "adhesion_type" not in keys
+
+
+def test_settings_flags_no_manual_infill_line_distance():
+    """ADR-008: CuraEngine computes infill_line_distance from density/width."""
+    flags = _settings_flags({"infill_sparse_density": 25})
+    values = flags[1::2]
+    keys = {v.split("=", 1)[0] for v in values}
+    assert "infill_line_distance" not in keys
+
+
+def test_settings_flags_adhesion_type_brim_passes_through():
+    """Regression (#586): user-set adhesion_type reaches the -s args."""
+    flags = _settings_flags({"adhesion_type": "brim"})
+    pairs = dict(v.split("=", 1) for v in flags[1::2])
+    assert pairs["adhesion_type"] == "brim"
+
+
 def test_settings_flags_no_machine_settings():
     """Machine settings (bed size, etc.) are NOT in flags — they come from the definition."""
-    profile = CuraProfile()
-    flags = _settings_flags(profile)
+    flags = _settings_flags({})
     values = flags[1::2]
     keys = {v.split("=", 1)[0] for v in values}
     assert "machine_width" not in keys
@@ -495,16 +480,56 @@ def test_settings_flags_no_machine_settings():
 
 
 def test_settings_flags_custom_overrides():
-    """Profile overrides are appended to the flags."""
-    profile = CuraProfile(overrides={"support_enable": "true", "retraction_amount": "0.8"})
-    flags = _settings_flags(profile)
+    """Overrides are appended to the flags."""
+    flags = _settings_flags({"support_enable": "true", "retraction_amount": "0.8"})
     values = flags[1::2]
-    value_dict = {}
-    for v in values:
-        k, val = v.split("=", 1)
-        value_dict[k] = val
+    value_dict = dict(v.split("=", 1) for v in values)
     assert value_dict["support_enable"] == "true"
     assert value_dict["retraction_amount"] == "0.8"
+
+
+def test_settings_flags_preserves_numeric_types():
+    """int/float overrides are stringified via normal __str__ — not stringified at build time."""
+    flags = _settings_flags({"layer_height": 0.12, "wall_line_count": 5, "support_enable": True})
+    pairs = dict(v.split("=", 1) for v in flags[1::2])
+    assert pairs["layer_height"] == "0.12"
+    assert pairs["wall_line_count"] == "5"
+    assert pairs["support_enable"] == "True"
+
+
+# --- validate_cura_settings ---
+
+
+def test_validate_cura_settings_known_keys_no_warnings():
+    """Valid CuraEngine keys produce no warnings."""
+    overrides = {
+        "layer_height": 0.12,
+        "wall_line_count": 5,
+        "infill_sparse_density": 30,
+        "adhesion_type": "brim",
+    }
+    warnings = validate_cura_settings(overrides)
+    assert warnings == []
+
+
+def test_validate_cura_settings_orca_key_warns_with_suggestion():
+    """OrcaSlicer key 'wall_loops' warns with a 'wall_line_count' suggestion."""
+    warnings = validate_cura_settings({"wall_loops": 5})
+    assert len(warnings) == 1
+    assert "wall_loops" in warnings[0]
+    assert "wall_line_count" in warnings[0]
+
+
+def test_validate_cura_settings_unknown_key_warns():
+    """Wholly unknown keys produce an 'invalid override' warning."""
+    warnings = validate_cura_settings({"totally_made_up_setting": 1})
+    assert len(warnings) == 1
+    assert "totally_made_up_setting" in warnings[0]
+
+
+def test_validate_cura_settings_empty_input_empty_output():
+    """Empty overrides → no warnings."""
+    assert validate_cura_settings({}) == []
 
 
 # --- bundled definition files ---
@@ -783,14 +808,13 @@ def test_machine_dims_flags_skips_missing_keys():
 
 def test_profile_setting_keys_includes_per_extruder():
     """Per-extruder override keys show up alongside global settings."""
-    profile = CuraProfile()
-    profile.overrides = {"adhesion_type": "brim"}
-    profile.per_extruder = [{"material_type": "PLA"}, {"material_type": "PETG"}]
+    overrides = {"adhesion_type": "brim"}
+    per_extruder = [{"material_type": "PLA"}, {"material_type": "PETG"}]
 
-    keys = _profile_setting_keys(profile)
+    keys = _profile_setting_keys(overrides, per_extruder)
     assert "adhesion_type" in keys
     assert "material_type" in keys
-    assert "layer_height" in keys  # from base settings dict
+    assert "roofing_layer_count" in keys  # from baseline
 
 
 # --- slice_stl Docker execution ---
@@ -831,7 +855,6 @@ def test_slice_stl_docker_command(tmp_path):
         )
     )
 
-    profile = CuraProfile()
     mock_result = MagicMock(returncode=0, stdout="", stderr="")
 
     with (
@@ -841,7 +864,7 @@ def test_slice_stl_docker_command(tmp_path):
         slice_stl(
             stl,
             output_dir,
-            profile,
+            overrides={},
             image="estampo/estampo:cura-5.12.0",
             printer="test_printer",
             project_dir=tmp_path,
@@ -885,7 +908,7 @@ def test_slice_stl_docker_failure(tmp_path):
         patch("estampo.ui.status"),
         pytest.raises(EstampoError, match="CuraEngine failed"),
     ):
-        slice_stl(stl, output_dir, CuraProfile(), image="estampo/estampo:cura-5.12.0")
+        slice_stl(stl, output_dir, overrides={}, image="estampo/estampo:cura-5.12.0")
 
 
 def test_slice_stl_no_output(tmp_path):
@@ -905,7 +928,7 @@ def test_slice_stl_no_output(tmp_path):
         patch("estampo.ui.status"),
         pytest.raises(EstampoError, match="produced no output"),
     ):
-        slice_stl(stl, output_dir, CuraProfile(), image="estampo/estampo:cura-5.12.0")
+        slice_stl(stl, output_dir, overrides={}, image="estampo/estampo:cura-5.12.0")
 
 
 # --- slice_plate cura dispatch ---
@@ -938,14 +961,11 @@ def test_slice_plate_cura_dispatch(tmp_path):
 
     assert result == output_dir
     mock_slice.assert_called_once()
-    call_kwargs = mock_slice.call_args
-    # Verify the profile was built with the right settings
-    profile = call_kwargs[0][2] if len(call_kwargs[0]) > 2 else call_kwargs[1].get("profile")
-    if profile is None:
-        profile = call_kwargs.args[2]
-    assert profile.layer_height == 0.12
-    assert profile.filament_type == "PLA"
-    assert "estampo/estampo:cura-5.12.0" in str(call_kwargs)
+    call_kwargs = mock_slice.call_args.kwargs
+    overrides_arg = call_kwargs["overrides"]
+    assert overrides_arg["layer_height"] == 0.12
+    assert overrides_arg["material_type"] == "PLA"
+    assert call_kwargs["image"] == "estampo/estampo:cura-5.12.0"
 
 
 # --- slice_stl_multi ---
@@ -972,7 +992,7 @@ def test_slice_stl_multi_docker_command(tmp_path):
         slice_stl_multi(
             [(0, stl_a), (1, stl_b)],
             output_dir,
-            CuraProfile(),
+            overrides={},
             image="estampo/estampo:cura-5.12.0",
         )
 
@@ -988,7 +1008,7 @@ def test_slice_stl_multi_docker_command(tmp_path):
 def test_slice_stl_multi_empty_raises(tmp_path):
     """slice_stl_multi with an empty list raises ValueError."""
     with pytest.raises(ValueError, match="must not be empty"):
-        slice_stl_multi([], tmp_path / "output", CuraProfile())
+        slice_stl_multi([], tmp_path / "output", overrides={})
 
 
 def test_slice_plate_cura_multi_dispatch(tmp_path):
@@ -1035,52 +1055,48 @@ def test_slice_plate_cura_multi_dispatch(tmp_path):
 
 def test_extruder_settings_str_no_per_extruder():
     """Without per_extruder data, _extruder_settings_str returns global settings."""
-    profile = CuraProfile(material_print_temperature=230)
-    s = _extruder_settings_str(profile, 0)
+    overrides = {"material_print_temperature": 230}
+    s = _extruder_settings_str(overrides, [], 0)
     assert "material_print_temperature=230" in s
     # Same for extruder 1 (no per_extruder entry)
-    assert _extruder_settings_str(profile, 1) == s
+    assert _extruder_settings_str(overrides, [], 1) == s
 
 
 def test_extruder_settings_str_with_per_extruder():
     """Per-extruder overrides are appended after the global settings."""
-    profile = CuraProfile(
-        material_print_temperature=260,
-        per_extruder=[
-            {"material_print_temperature": 220, "material_type": "PLA"},
-            {"material_print_temperature": 240, "material_type": "PETG"},
-        ],
-    )
-    s0 = _extruder_settings_str(profile, 0)
-    s1 = _extruder_settings_str(profile, 1)
+    overrides = {"material_print_temperature": 260}
+    per_extruder = [
+        {"material_print_temperature": 220, "material_type": "PLA"},
+        {"material_print_temperature": 240, "material_type": "PETG"},
+    ]
+    s0 = _extruder_settings_str(overrides, per_extruder, 0)
+    s1 = _extruder_settings_str(overrides, per_extruder, 1)
 
-    # Per-extruder override appears in the string
     assert "material_print_temperature=220" in s0
     assert "material_type=PLA" in s0
     assert "material_print_temperature=240" in s1
     assert "material_type=PETG" in s1
 
-    # The per-extruder value comes AFTER the global one (CuraEngine uses last wins)
+    # Per-extruder value comes AFTER the global one (CuraEngine uses last wins)
     assert s0.index("material_print_temperature=220") > s0.index("material_print_temperature=260")
 
 
-def test_cura_profile_from_config_per_extruder_populated():
-    """cura_profile_from_config builds per_extruder from the filaments list."""
-    profile = cura_profile_from_config(filaments=["PLA", "PETG-CF"])
+def test_build_cura_config_per_extruder_from_filaments():
+    """build_cura_config populates per_extruder from the filaments list."""
+    _, per_extruder = build_cura_config(filaments=["PLA", "PETG-CF"])
 
-    assert len(profile.per_extruder) == 2
-    assert profile.per_extruder[0]["material_type"] == "PLA"
-    assert profile.per_extruder[1]["material_type"] == "PETG-CF"
-    # Known filament types get temperature overrides
-    assert profile.per_extruder[0]["material_print_temperature"] == _FILAMENT_TEMPS["PLA"][0]
-    assert profile.per_extruder[1]["material_print_temperature"] == _FILAMENT_TEMPS["PETG-CF"][0]
+    assert len(per_extruder) == 2
+    assert per_extruder[0]["material_type"] == "PLA"
+    assert per_extruder[1]["material_type"] == "PETG-CF"
+    assert per_extruder[0]["material_print_temperature"] == _FILAMENT_TEMPS["PLA"][0]
+    assert per_extruder[1]["material_print_temperature"] == _FILAMENT_TEMPS["PETG-CF"][0]
 
 
-def test_cura_profile_from_config_unknown_filament_no_temps():
+def test_build_cura_config_unknown_filament_no_temps():
     """Unknown filament type gets material_type only — no temperature guess."""
-    profile = cura_profile_from_config(filaments=["SuperCustom"])
-    assert profile.per_extruder[0]["material_type"] == "SuperCustom"
-    assert "material_print_temperature" not in profile.per_extruder[0]
+    _, per_extruder = build_cura_config(filaments=["SuperCustom"])
+    assert per_extruder[0]["material_type"] == "SuperCustom"
+    assert "material_print_temperature" not in per_extruder[0]
 
 
 def test_slice_stl_multi_per_extruder_in_command(tmp_path):
@@ -1096,12 +1112,10 @@ def test_slice_stl_multi_per_extruder_in_command(tmp_path):
     output_dir.mkdir()
     (output_dir / "plate.gcode").write_text("G28\n" * 100)
 
-    profile = CuraProfile(
-        per_extruder=[
-            {"material_type": "PLA", "material_print_temperature": 220},
-            {"material_type": "PETG-CF", "material_print_temperature": 260},
-        ]
-    )
+    per_extruder = [
+        {"material_type": "PLA", "material_print_temperature": 220},
+        {"material_type": "PETG-CF", "material_print_temperature": 260},
+    ]
     mock_result = MagicMock(returncode=0, stdout="", stderr="")
     with (
         patch("estampo.cura.subprocess.run", return_value=mock_result) as mock_run,
@@ -1110,7 +1124,8 @@ def test_slice_stl_multi_per_extruder_in_command(tmp_path):
         slice_stl_multi(
             [(0, stl_a), (1, stl_b)],
             output_dir,
-            profile,
+            overrides={},
+            per_extruder=per_extruder,
             image="estampo/estampo:cura-5.12.0",
         )
 
@@ -1241,61 +1256,62 @@ def test_place_on_bed_already_on_bed(tmp_path):
 # --- _write_cura_settings / _settings_dict ---
 
 
-def test_settings_dict_includes_machine_and_material(tmp_path):
-    """_settings_dict includes machine/material keys for template resolution."""
-    profile = CuraProfile(
-        nozzle_diameter=0.4,
-        bed_type="Textured PEI Plate",
-        filament_type="PLA",
-        material_print_temperature=260,
-        material_bed_temperature=70,
-    )
-    d = _settings_dict(profile)
+def test_settings_dict_overrides_passthrough():
+    """_settings_dict passes user overrides through verbatim, on top of the baseline."""
+    overrides = {
+        "machine_nozzle_size": 0.4,
+        "machine_buildplate_type": "textured_pei_plate",
+        "material_type": "PLA",
+        "material_print_temperature_layer_0": 260,
+        "material_bed_temperature_layer_0": 70,
+    }
+    d = _settings_dict(overrides)
     assert d["machine_nozzle_size"] == 0.4
     assert d["machine_buildplate_type"] == "textured_pei_plate"
     assert d["material_type"] == "PLA"
     assert d["material_print_temperature_layer_0"] == 260
     assert d["material_bed_temperature_layer_0"] == 70
+    # Baseline preserved alongside user overrides
+    assert d["roofing_layer_count"] == 0
 
 
 def test_write_cura_settings(tmp_path):
-    """_write_cura_settings writes valid JSON with all profile settings."""
+    """_write_cura_settings writes valid JSON with all overrides plus baseline."""
     import json
 
-    profile = CuraProfile(
-        material_print_temperature=260,
-        material_bed_temperature=70,
-        filament_type="PETG",
-        bed_type="Textured PEI Plate",
-    )
-    path = _write_cura_settings(tmp_path, profile)
+    overrides = {
+        "material_print_temperature": 260,
+        "material_bed_temperature_layer_0": 70,
+        "material_type": "PETG",
+        "machine_buildplate_type": "textured_pei_plate",
+    }
+    path = _write_cura_settings(tmp_path, overrides)
     assert path == tmp_path / "cura_settings.json"
     assert path.exists()
     data = json.loads(path.read_text())
-    assert data["material_print_temperature_layer_0"] == 260
+    assert data["material_print_temperature"] == 260
     assert data["material_bed_temperature_layer_0"] == 70
     assert data["material_type"] == "PETG"
     assert data["machine_buildplate_type"] == "textured_pei_plate"
 
 
 def test_write_cura_settings_includes_overrides(tmp_path):
-    """Profile overrides are included in the settings JSON."""
+    """User overrides are included in the settings JSON."""
     import json
 
-    profile = CuraProfile(overrides={"infill_pattern": "gyroid", "wall_line_count": "4"})
-    path = _write_cura_settings(tmp_path, profile)
+    overrides = {"infill_pattern": "gyroid", "wall_line_count": 4}
+    path = _write_cura_settings(tmp_path, overrides)
     data = json.loads(path.read_text())
     assert data["infill_pattern"] == "gyroid"
-    assert data["wall_line_count"] == "4"
+    assert data["wall_line_count"] == 4
 
 
 def test_write_cura_settings_includes_machine_dims(tmp_path):
     """Machine dimensions are included in the settings JSON for template resolution."""
     import json
 
-    profile = CuraProfile()
     dims = {"machine_width": 256.0, "machine_depth": 256.0, "machine_height": 250.0}
-    path = _write_cura_settings(tmp_path, profile, machine_dims=dims)
+    path = _write_cura_settings(tmp_path, {}, machine_dims=dims)
     data = json.loads(path.read_text())
     assert data["machine_width"] == 256.0
     assert data["machine_depth"] == 256.0
