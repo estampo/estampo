@@ -18,24 +18,27 @@ jobs:
       is_release: ${{ steps.check.outputs.is_release }}
       version: ${{ steps.check.outputs.version }}
     steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
       - name: Check if this is a release PR merge
         id: check
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           SHA="${{ github.sha }}"
-          echo "Checking commit $SHA for associated release PR..."
+          SUBJECT=$(git log -1 --format=%s "$SHA")
+          echo "Commit subject: ${SUBJECT}"
 
-          # Find merged PRs associated with this commit whose head branch
-          # matches the release/vX.Y.Z pattern created by prepare-release.
-          # This API call must succeed — if it fails, the job fails rather
-          # than silently skipping a release.
-          BRANCHES=$(gh api "repos/${{ github.repository }}/commits/${SHA}/pulls" \
-            --jq '.[].head.ref')
-          echo "Associated PR branches: ${BRANCHES:-<none>}"
-
-          VERSION=$(echo "$BRANCHES" \
-            | grep -oP '^release/v\K\d+\.\d+\.\d+((a|b|rc)\d+)?$' \
+          # Parse the merge-commit subject rather than querying the
+          # commits→PRs API. GitHub's PR-association endpoint is
+          # eventually consistent and can return [] immediately after a
+          # merge, silently skipping the release (see #616). Merge commits
+          # from the "Merge pull request" button are deterministic:
+          #   "Merge pull request #613 from estampo/release/v0.4.0b4"
+          VERSION=$(echo "$SUBJECT" \
+            | grep -oP '^Merge pull request #\d+ from [^/]+/release/v\K\d+\.\d+\.\d+((a|b|rc)\d+)?$' \
             | head -1 || true)
 
           if [[ -n "$VERSION" ]]; then
@@ -48,6 +51,11 @@ jobs:
               echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
               echo "::notice::Detected release PR merge for v${VERSION}"
             fi
+          elif [[ "$SUBJECT" =~ ^Merge\ pull\ request\ #[0-9]+\ from\ [^/]+/release/ ]]; then
+            # Commit looks like a release PR merge but the version
+            # doesn't parse — fail loud rather than silently skip.
+            echo "::error::Commit subject looks like a release PR merge but the branch does not match 'release/vX.Y.Z[abrc]N?': ${SUBJECT}"
+            exit 1
           else
             echo "is_release=false" >> "$GITHUB_OUTPUT"
           fi
