@@ -139,7 +139,7 @@ All notable changes to this project are documented here.
 ### Features
 
 - Multi-mesh CuraEngine slicing: parts on different filament slots are passed as separate ``-g -eN`` groups, preserving plate arrangement and extruder assignments ([#405](https://github.com/estampo/estampo/pull/405))
-- Per-extruder filament profiles for CuraEngine: filament type and temperatures are set independently per AMS slot via ``CuraProfile.per_extruder`` ([#406](https://github.com/estampo/estampo/pull/406))
+- Per-extruder filament profiles for CuraEngine: filament type and temperatures are set independently per AMS slot via ``CuraProfile.per_extruder`` ([#406](https://github.com/estampo/estampo/pull/406)) *(API superseded in v0.4.0 — ``CuraProfile`` removed, see ADR-008)*
 - Pipeline stages can now run external CLI commands defined in TOML (e.g. ``bambox pack``), enabling tool integration without Python dependencies.
 
 ### Bugfixes
