@@ -1,0 +1,1 @@
+Drop the single-mesh CuraEngine fallback: ``slice_plate`` with ``engine="cura"`` now always exports per-part STLs and slices through the multi-mesh path, group-centered on the bed.

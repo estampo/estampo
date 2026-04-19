@@ -86,8 +86,8 @@ Tool change count should be identical (both use 2 filaments on separate objects)
 
 ## Notes
 
-- `plate.gcode` in `{sliced_dir}` is the fixed output name for both single-mesh
-  and multi-mesh CuraEngine slices (from `slice_stl`/`slice_stl_multi`).
+- `plate.gcode` in `{sliced_dir}` is the fixed output name for CuraEngine
+  slices (produced by `slice_stl_multi`).
 - The `bambox_p1s_ams` printer definition must be available to CuraEngine via
   the bambox package or a local `profiles/` directory.
 - To send to the printer, add a `[print]` command stage:

@@ -13,7 +13,6 @@ from estampo.cura import (
     _fetch_printer_def,
     _machine_dims_flags,
     _patch_gcode_header,
-    _place_on_bed,
     _resolve_def_chain,
     _resolve_def_name,
     _settings_dict,
@@ -25,7 +24,6 @@ from estampo.cura import (
     pin_cura_definitions,
     resolve_cura_center_is_zero,
     resolve_cura_machine_dims,
-    slice_stl,
     slice_stl_multi,
     validate_cura_settings,
 )
@@ -570,125 +568,11 @@ def test_machine_dims_flags_skips_missing_keys():
     assert flags == ["-s", "machine_width=256.0"]
 
 
-# --- slice_stl Docker execution ---
-
-
-def test_slice_stl_docker_command(tmp_path):
-    """Verify Docker command is built correctly."""
-    import json
-
-    import trimesh
-
-    mesh = trimesh.creation.box(extents=[10, 10, 10])
-    stl = tmp_path / "model.stl"
-    mesh.export(str(stl))
-    output_dir = tmp_path / "output"
-    output_dir.mkdir()
-
-    # Create a fake gcode output file so the size check passes
-    gcode_out = output_dir / "model.gcode"
-    gcode_out.write_text("G28\n" * 100)
-
-    # Create a minimal printer definition so _prepare_cura_staging resolves
-    defs_dir = tmp_path / "profiles" / "cura" / "definitions"
-    defs_dir.mkdir(parents=True)
-    (defs_dir / "test_printer.def.json").write_text(
-        json.dumps(
-            {
-                "name": "Test Printer",
-                "inherits": "fdmprinter",
-                "overrides": {
-                    "machine_width": {"default_value": 256},
-                    "machine_depth": {"default_value": 256},
-                    "machine_height": {"default_value": 256},
-                    "machine_start_gcode": {"default_value": "G28"},
-                    "machine_end_gcode": {"default_value": "M84"},
-                },
-            }
-        )
-    )
-
-    mock_result = MagicMock(returncode=0, stdout="", stderr="")
-
-    with (
-        patch("estampo.cura.subprocess.run", return_value=mock_result) as mock_run,
-        patch("estampo.ui.status"),
-    ):
-        slice_stl(
-            stl,
-            output_dir,
-            overrides={},
-            image="estampo/estampo:cura-5.12.0",
-            printer="test_printer",
-            project_dir=tmp_path,
-        )
-
-    cmd = mock_run.call_args[0][0]
-    assert cmd[0] == "docker"
-    assert "run" in cmd
-    assert "--entrypoint" in cmd
-    assert "/bin/bash" in cmd
-    assert "estampo/estampo:cura-5.12.0" in cmd
-    assert "--platform" in cmd
-    assert "linux/amd64" in cmd
-    # Volume mount for output directory
-    vol_idx = cmd.index("-v") + 1
-    assert ":/work/output" in cmd[vol_idx]
-    # Inner command uses the test definition
-    inner_cmd = cmd[-1]
-    assert "test_printer.def.json" in inner_cmd
-    assert "-g -e0" in inner_cmd
-    # #586: machine dims must be passed as -s flags so CuraEngine's bed size
-    # agrees with _place_on_bed; otherwise brim/skirt is silently dropped.
-    assert "machine_width=256" in inner_cmd
-    assert "machine_depth=256" in inner_cmd
-
-
-def test_slice_stl_docker_failure(tmp_path):
-    """Docker failure raises EstampoError."""
-    import trimesh
-
-    mesh = trimesh.creation.box(extents=[10, 10, 10])
-    stl = tmp_path / "model.stl"
-    mesh.export(str(stl))
-    output_dir = tmp_path / "output"
-    output_dir.mkdir()
-
-    mock_result = MagicMock(returncode=1, stdout="", stderr="CuraEngine error")
-
-    with (
-        patch("estampo.cura.subprocess.run", return_value=mock_result),
-        patch("estampo.ui.status"),
-        pytest.raises(EstampoError, match="CuraEngine failed"),
-    ):
-        slice_stl(stl, output_dir, overrides={}, image="estampo/estampo:cura-5.12.0")
-
-
-def test_slice_stl_no_output(tmp_path):
-    """Success but empty/missing gcode file raises EstampoError."""
-    import trimesh
-
-    mesh = trimesh.creation.box(extents=[10, 10, 10])
-    stl = tmp_path / "model.stl"
-    mesh.export(str(stl))
-    output_dir = tmp_path / "output"
-    output_dir.mkdir()
-
-    mock_result = MagicMock(returncode=0, stdout="", stderr="")
-
-    with (
-        patch("estampo.cura.subprocess.run", return_value=mock_result),
-        patch("estampo.ui.status"),
-        pytest.raises(EstampoError, match="produced no output"),
-    ):
-        slice_stl(stl, output_dir, overrides={}, image="estampo/estampo:cura-5.12.0")
-
-
 # --- slice_plate cura dispatch ---
 
 
 def test_slice_plate_cura_dispatch(tmp_path):
-    """slice_plate with engine='cura' dispatches to cura.slice_stl."""
+    """slice_plate with engine='cura' dispatches to cura.slice_stl_multi."""
     import trimesh
 
     from estampo.slicer import slice_plate
@@ -701,7 +585,7 @@ def test_slice_plate_cura_dispatch(tmp_path):
 
     output_dir = tmp_path / "output"
 
-    with patch("estampo.cura.slice_stl", return_value=output_dir) as mock_slice:
+    with patch("estampo.cura.slice_stl_multi", return_value=output_dir) as mock_slice:
         result = slice_plate(
             input_3mf,
             engine="cura",
@@ -719,6 +603,10 @@ def test_slice_plate_cura_dispatch(tmp_path):
     assert overrides_arg["layer_height"] == 0.12
     assert overrides_arg["material_type"] == "PLA"
     assert call_kwargs["image"] == "estampo/estampo:cura-5.12.0"
+    # Single-mesh scenes still use the multi path with one (ext=0, stl) entry.
+    stl_meshes_arg = mock_slice.call_args.args[0]
+    assert len(stl_meshes_arg) == 1
+    assert stl_meshes_arg[0][0] == 0
 
 
 # --- slice_stl_multi ---
@@ -782,10 +670,7 @@ def test_slice_plate_cura_multi_dispatch(tmp_path):
 
     output_dir = tmp_path / "output"
 
-    with (
-        patch("estampo.cura.slice_stl_multi", return_value=output_dir) as mock_multi,
-        patch("estampo.cura.slice_stl") as mock_single,
-    ):
+    with patch("estampo.cura.slice_stl_multi", return_value=output_dir) as mock_multi:
         result = slice_plate(
             input_3mf,
             engine="cura",
@@ -796,7 +681,6 @@ def test_slice_plate_cura_multi_dispatch(tmp_path):
 
     assert result == output_dir
     mock_multi.assert_called_once()
-    mock_single.assert_not_called()
 
     # Verify extruder indices are 0-based (filament_ids [1,2] → extruders [0,1])
     stl_meshes_arg = mock_multi.call_args[0][0]
@@ -894,32 +778,149 @@ def test_slice_stl_multi_per_extruder_in_command(tmp_path):
     assert "material_print_temperature=260" in e1_block
 
 
-def test_slice_plate_cura_single_filament_uses_slice_stl(tmp_path):
-    """slice_plate with a single filament slot falls back to slice_stl."""
+def test_slice_plate_cura_single_filament_uses_extruder_zero(tmp_path):
+    """Single-slot dispatch uses slice_stl_multi with all meshes on extruder 0."""
     import trimesh
 
     from estampo.slicer import slice_plate
 
     input_3mf = tmp_path / "plate.3mf"
-    scene = trimesh.Scene(trimesh.creation.box(extents=[10, 10, 10]))
+    mesh_a = trimesh.creation.box(extents=[10, 10, 10])
+    mesh_b = trimesh.creation.box(extents=[5, 5, 5])
+    mesh_b.vertices += [30, 0, 0]
+    scene = trimesh.Scene()
+    scene.add_geometry(mesh_a, geom_name="body")
+    scene.add_geometry(mesh_b, geom_name="cap")
     scene.export(str(input_3mf))
 
     output_dir = tmp_path / "output"
 
-    with (
-        patch("estampo.cura.slice_stl", return_value=output_dir) as mock_single,
-        patch("estampo.cura.slice_stl_multi") as mock_multi,
-    ):
+    with patch("estampo.cura.slice_stl_multi", return_value=output_dir) as mock_multi:
         slice_plate(
             input_3mf,
             engine="cura",
             output_dir=output_dir,
-            filament_ids=[1, 1],  # same slot — should not use multi path
+            filament_ids=[1, 1],
             docker_version="5.12.0",
         )
 
-    mock_single.assert_called_once()
-    mock_multi.assert_not_called()
+    mock_multi.assert_called_once()
+    stl_meshes_arg = mock_multi.call_args.args[0]
+    assert [ext for ext, _ in stl_meshes_arg] == [0, 0]
+
+
+def test_slice_plate_cura_positions_meshes_on_bed(tmp_path):
+    """slice_plate lifts meshes to Z≥0 and group-centers on the printer bed."""
+    import json
+
+    import trimesh
+
+    from estampo.slicer import slice_plate
+
+    # Minimal corner-origin printer definition with a known bed size.
+    defs = tmp_path / "profiles" / "cura" / "definitions"
+    defs.mkdir(parents=True)
+    (defs / "test_printer.def.json").write_text(
+        json.dumps(
+            {
+                "name": "Test Printer",
+                "inherits": "fdmprinter",
+                "overrides": {
+                    "machine_width": {"default_value": 200},
+                    "machine_depth": {"default_value": 200},
+                },
+            }
+        )
+    )
+
+    mesh_a = trimesh.creation.box(extents=[10, 10, 10])
+    mesh_b = trimesh.creation.box(extents=[5, 5, 5])
+    mesh_b.vertices += [30, 0, 0]
+    scene = trimesh.Scene()
+    scene.add_geometry(mesh_a, geom_name="body")
+    scene.add_geometry(mesh_b, geom_name="cap")
+    input_3mf = tmp_path / "plate.3mf"
+    scene.export(str(input_3mf))
+
+    output_dir = tmp_path / "output"
+
+    with patch("estampo.cura.slice_stl_multi", return_value=output_dir) as mock_multi:
+        slice_plate(
+            input_3mf,
+            engine="cura",
+            output_dir=output_dir,
+            printer="test_printer",
+            project_dir=tmp_path,
+            filament_ids=[1, 2],
+            docker_version="5.12.0",
+        )
+
+    stl_meshes_arg = mock_multi.call_args.args[0]
+    all_bounds = [trimesh.load(str(p), force="mesh").bounds for _, p in stl_meshes_arg]
+
+    # Group min Z is lifted to 0 (individual meshes can sit above 0 if the
+    # original scene spans Z, preserving their relative vertical offsets).
+    min_z = min(b[0][2] for b in all_bounds)
+    assert min_z == pytest.approx(0.0, abs=0.01)
+
+    # Group centroid is at bed center (corner-origin 200×200 printer)
+    min_x = min(b[0][0] for b in all_bounds)
+    max_x = max(b[1][0] for b in all_bounds)
+    min_y = min(b[0][1] for b in all_bounds)
+    max_y = max(b[1][1] for b in all_bounds)
+    assert (min_x + max_x) / 2 == pytest.approx(100.0, abs=0.1)
+    assert (min_y + max_y) / 2 == pytest.approx(100.0, abs=0.1)
+
+
+def test_slice_plate_cura_center_is_zero_printer(tmp_path):
+    """A center_is_zero printer centers meshes at (0,0), not (bed/2, bed/2)."""
+    import json
+
+    import trimesh
+
+    from estampo.slicer import slice_plate
+
+    # Printer definition with machine_center_is_zero=True
+    defs = tmp_path / "profiles" / "cura" / "definitions"
+    defs.mkdir(parents=True)
+    (defs / "center_origin_printer.def.json").write_text(
+        json.dumps(
+            {
+                "name": "Center Origin Printer",
+                "inherits": "fdmprinter",
+                "overrides": {
+                    "machine_width": {"default_value": 200},
+                    "machine_depth": {"default_value": 200},
+                    "machine_center_is_zero": {"default_value": True},
+                },
+            }
+        )
+    )
+
+    mesh = trimesh.creation.box(extents=[10, 10, 10])
+    mesh.vertices += [50, 30, 0]  # off-center
+    scene = trimesh.Scene(mesh)
+    input_3mf = tmp_path / "plate.3mf"
+    scene.export(str(input_3mf))
+
+    output_dir = tmp_path / "output"
+
+    with patch("estampo.cura.slice_stl_multi", return_value=output_dir) as mock_multi:
+        slice_plate(
+            input_3mf,
+            engine="cura",
+            output_dir=output_dir,
+            printer="center_origin_printer",
+            project_dir=tmp_path,
+            docker_version="5.12.0",
+        )
+
+    stl_meshes_arg = mock_multi.call_args.args[0]
+    placed = trimesh.load(str(stl_meshes_arg[0][1]), force="mesh")
+    cx = (placed.bounds[0][0] + placed.bounds[1][0]) / 2
+    cy = (placed.bounds[0][1] + placed.bounds[1][1]) / 2
+    assert cx == pytest.approx(0.0, abs=0.01)
+    assert cy == pytest.approx(0.0, abs=0.01)
 
 
 # --- _patch_gcode_header ---
@@ -963,84 +964,6 @@ def test_patch_gcode_header_no_match(tmp_path):
     gcode.write_text(original)
     _patch_gcode_header(gcode, "some random stderr output")
     assert gcode.read_text() == original
-
-
-# --- _place_on_bed ---
-
-
-def test_place_on_bed_shifts_negative_z(tmp_path):
-    """Mesh centered at origin (Z from -5 to +5) is shifted to Z≥0."""
-    import trimesh
-
-    mesh = trimesh.creation.box(extents=[10, 10, 10])
-    assert mesh.bounds[0][2] == pytest.approx(-5.0)
-
-    stl = tmp_path / "centered.stl"
-    mesh.export(str(stl))
-
-    staging = tmp_path / "staging"
-    staging.mkdir()
-    result = _place_on_bed(stl, staging)
-
-    placed = trimesh.load(str(result), force="mesh")
-    assert placed.bounds[0][2] == pytest.approx(0.0)
-    assert placed.bounds[1][2] == pytest.approx(10.0)
-
-
-def test_place_on_bed_already_on_bed(tmp_path):
-    """Mesh already on the bed (Z≥0) is not shifted."""
-    import trimesh
-
-    mesh = trimesh.creation.box(extents=[10, 10, 10])
-    mesh.vertices[:, 2] += 5  # shift so Z goes from 0 to 10
-
-    stl = tmp_path / "on_bed.stl"
-    mesh.export(str(stl))
-
-    staging = tmp_path / "staging"
-    staging.mkdir()
-    result = _place_on_bed(stl, staging)
-
-    placed = trimesh.load(str(result), force="mesh")
-    assert placed.bounds[0][2] == pytest.approx(0.0)
-    assert placed.bounds[1][2] == pytest.approx(10.0)
-
-
-def test_place_on_bed_corner_origin_centers_on_bed(tmp_path):
-    """center_is_zero=False → mesh centered at (bed_width/2, bed_depth/2)."""
-    import trimesh
-
-    mesh = trimesh.creation.box(extents=[10, 10, 10])  # centered at origin
-    stl = tmp_path / "part.stl"
-    mesh.export(str(stl))
-
-    staging = tmp_path / "staging"
-    staging.mkdir()
-    result = _place_on_bed(stl, staging, bed_width=200, bed_depth=200, center_is_zero=False)
-
-    placed = trimesh.load(str(result), force="mesh")
-    assert ((placed.bounds[0][0] + placed.bounds[1][0]) / 2) == pytest.approx(100.0)
-    assert ((placed.bounds[0][1] + placed.bounds[1][1]) / 2) == pytest.approx(100.0)
-
-
-def test_place_on_bed_center_origin_keeps_mesh_at_zero(tmp_path):
-    """center_is_zero=True → mesh centered at (0, 0)."""
-    import trimesh
-
-    mesh = trimesh.creation.box(extents=[10, 10, 10])
-    mesh.vertices[:, 0] += 50  # shift off-center so we can verify re-centering
-    mesh.vertices[:, 1] += 30
-
-    stl = tmp_path / "part.stl"
-    mesh.export(str(stl))
-
-    staging = tmp_path / "staging"
-    staging.mkdir()
-    result = _place_on_bed(stl, staging, bed_width=200, bed_depth=200, center_is_zero=True)
-
-    placed = trimesh.load(str(result), force="mesh")
-    assert ((placed.bounds[0][0] + placed.bounds[1][0]) / 2) == pytest.approx(0.0)
-    assert ((placed.bounds[0][1] + placed.bounds[1][1]) / 2) == pytest.approx(0.0)
 
 
 # --- resolve_cura_center_is_zero ---
