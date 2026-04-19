@@ -446,6 +446,29 @@ def test_slice_via_docker_failure(tmp_path):
             )
 
 
+def test_slice_via_docker_surfaces_stdout_on_failure(tmp_path):
+    """OrcaSlicer writes errors to stdout (e.g. 'run found error, return -17').
+
+    The failure message must include stdout so users can diagnose issues like
+    incompatible process/printer pairings (surfaces as silent exit 239).
+    """
+    input_3mf = tmp_path / "plate.3mf"
+    input_3mf.write_text("fake")
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    profile_dir = output_dir / ".profiles"
+    profile_dir.mkdir()
+
+    stdout = (
+        "[2026-04-19 19:18:01.332] [error]   run 2310: process not compatible with printer.\n"
+        "run found error, return -17, exit..."
+    )
+    mock_result = MagicMock(returncode=239, stdout=stdout, stderr="")
+    with patch("estampo.orca.subprocess.run", return_value=mock_result):
+        with pytest.raises(RuntimeError, match="process not compatible with printer"):
+            _slice_via_docker(input_3mf, output_dir, profile_dir, None, None, "estampo:latest")
+
+
 # --- slice_plate integration ---
 
 
