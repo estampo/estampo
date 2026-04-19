@@ -250,9 +250,13 @@ def _slice_via_docker(
     staged_input.unlink(missing_ok=True)
 
     if result.returncode != 0:
-        log.error("Docker slicer stderr:\n%s", result.stderr)
+        # OrcaSlicer writes its `[error] ... run found error, return -N, exit...`
+        # diagnostics to stdout, not stderr. Surface both so the user can see
+        # the real cause (e.g. incompatible process/printer → exit 239).
+        combined = (result.stdout + "\n" + result.stderr).strip()
+        log.error("Docker slicer output:\n%s", combined)
         raise RuntimeError(
-            f"Docker slicer failed (exit code {result.returncode}):\n{result.stderr[:500]}"
+            f"Docker slicer failed (exit code {result.returncode}):\n{combined[-500:]}"
         )
 
     log.info("Docker slicer stdout:\n%s", result.stdout)
@@ -480,8 +484,9 @@ def _slice_local(
         )
 
     if result.returncode != 0:
-        log.error("Slicer stderr:\n%s", result.stderr)
-        raise RuntimeError(f"Slicer failed (exit code {result.returncode}):\n{result.stderr[:500]}")
+        combined = (result.stdout + "\n" + result.stderr).strip()
+        log.error("Slicer output:\n%s", combined)
+        raise RuntimeError(f"Slicer failed (exit code {result.returncode}):\n{combined[-500:]}")
 
     log.info("Slicer stdout:\n%s", result.stdout)
     log.info("Slicing complete. Output in %s", output_dir)
