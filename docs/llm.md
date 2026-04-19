@@ -70,7 +70,15 @@ process = "0.20mm Standard @BBL X1C"   # quality preset
 filaments = ["Generic PLA @base"]      # one per AMS slot
 ```
 
-Run `estampo profiles list --engine orca` to discover available profiles.
+Run `estampo profiles list --engine orca` to discover available profiles. To
+avoid picking a process/filament that OrcaSlicer will silently reject (exit
+239), pass `--printer NAME` — it filters to profiles whose resolved
+`compatible_printers` list includes the chosen printer:
+
+```bash
+estampo profiles list --engine orca --category process \
+  --printer "Bambu Lab P1S 0.4 nozzle"
+```
 
 Common override keys (OrcaSlicer names) — for all 113 process settings, see
 [`orca-settings.json`](orca-settings.json):
@@ -407,6 +415,10 @@ estampo validate config.toml      # check config for errors
 
 estampo profiles list --engine orca              # list available profiles
 estampo profiles list --engine orca --category machine  # just printers
+estampo profiles list --engine orca --category process \
+  --printer "Bambu Lab P1S 0.4 nozzle"           # only processes compatible with the printer
+estampo profiles list --engine orca --category filament \
+  --printer "Bambu Lab P1S 0.4 nozzle"           # only filaments compatible with the printer
 estampo profiles pin config.toml                 # pin profiles for reproducibility
 ```
 

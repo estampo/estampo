@@ -38,9 +38,18 @@ the repo context):
    `bambox_p1s` (CuraEngine). Run `estampo profiles list --engine orca --category machine`
    to see available profiles.
 3. **Which quality preset?** — OrcaSlicer only, e.g. `0.20mm Standard @BBL X1C`.
-   Run `estampo profiles list --engine orca --category process` to see options.
+   **Always pass `--printer` to narrow the list** to processes that actually work
+   with the chosen printer — OrcaSlicer silently fails at slice time (exit 239)
+   if the process and printer are incompatible:
+   ```bash
+   estampo profiles list --engine orca --category process --printer "Bambu Lab P1S 0.4 nozzle"
+   ```
 4. **Which filament(s)?** — e.g. `Generic PLA @base`, `Generic PETG @base`.
-   Run `estampo profiles list --engine orca --category filament` to see options.
+   Same guidance: pass `--printer` to filter filaments to ones compatible with
+   the printer:
+   ```bash
+   estampo profiles list --engine orca --category filament --printer "Bambu Lab P1S 0.4 nozzle"
+   ```
 5. **Print goals?** — e.g. "strong functional part", "fast draft", "smooth
    surface", "dimensional accuracy". This determines which override recipe to
    apply.
@@ -163,12 +172,25 @@ These are optional — skip them for simple setups:
 # List all printer profiles
 estampo profiles list --engine orca --category machine
 
-# List quality presets
-estampo profiles list --engine orca --category process
+# List only the quality presets compatible with a specific printer.
+# IMPORTANT: prefer this over listing all processes — picking an
+# incompatible process/printer combo fails silently at slice time with
+# exit 239. The --printer flag filters by the resolved compatible_printers
+# field so the result is correctness-preserving.
+estampo profiles list --engine orca --category process \
+  --printer "Bambu Lab P1S 0.4 nozzle"
 
-# List filament profiles
-estampo profiles list --engine orca --category filament
+# Same pattern for filament — compatible_printers applies there too.
+estampo profiles list --engine orca --category filament \
+  --printer "Bambu Lab P1S 0.4 nozzle"
+
+# --printer works with --json for parsable output.
+estampo profiles list --engine orca --category process \
+  --printer "Bambu Lab P1S 0.4 nozzle" --json
 ```
+
+`--printer` is OrcaSlicer only. CuraEngine uses inline settings with no
+process/filament concept, so the flag errors for `--engine cura`.
 
 ### Validating the config
 
