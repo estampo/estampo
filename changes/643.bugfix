@@ -1,0 +1,1 @@
+Docker (OrcaSlicer image): make the uv-managed Python tree readable by the runtime ``estampo`` user so command stages with ``docker = true`` (e.g. ``bambox repack``) no longer fail with ``ModuleNotFoundError: No module named 'encodings'``.

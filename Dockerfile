@@ -78,12 +78,21 @@ COPY pyproject.toml uv.lock README.md LICENSE ./
 RUN mkdir -p src/estampo && touch src/estampo/__init__.py
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv python install 3.12 \
-    && uv sync --frozen --no-dev --no-editable --python 3.12
+    && uv sync --frozen --no-dev --no-editable --python 3.12 \
+    && chmod -R a+rX /home/estampo/.local/share/uv/python
 
 # Copy source and re-link (fast — deps already installed)
 COPY src/ ./src/
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-editable --python 3.12
+
+# orca-base sets HOME=/home/estampo, so uv (running as root) installs the
+# managed Python under /home/estampo/.local/... Without these chmods the
+# estampo runtime user can't read python-build-standalone's relocation
+# data and Python falls back to its hardcoded /install prefix, breaking
+# any command stage that invokes Python (e.g. bambox repack). See #641.
+RUN chmod a+rx /home/estampo/.local /home/estampo/.local/share \
+    /home/estampo/.local/share/uv /home/estampo/.local/share/uv/python
 
 # Install bambox (CLI-only tool for Bambu Lab printers — not an estampo
 # dependency, but bundled so command stages like `bambox repack` work
