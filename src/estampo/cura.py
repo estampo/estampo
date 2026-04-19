@@ -770,9 +770,9 @@ def _machine_dims_flags(machine_dims: dict[str, float]) -> list[str]:
     Pinned definitions commonly declare bed size with ``value`` only and
     no ``default_value``.  CuraEngine logs "has no [default_]value!" for
     these fields and silently falls back to the fdmprinter defaults
-    (100×100).  ``_place_on_bed`` reads the ``value`` directly, so the
-    mesh gets centred for the real bed and ends up off the bed CuraEngine
-    thinks it has — which silently drops brim/skirt generation (see #586).
+    (100×100).  Slicer-side mesh placement reads the ``value`` directly,
+    so the mesh gets centred for the real bed and ends up off the bed
+    CuraEngine thinks it has — which silently drops brim/skirt (see #586).
 
     Passing the dims as ``-s`` flags keeps CuraEngine in sync with mesh
     placement regardless of how the def declares them.
@@ -845,47 +845,6 @@ def _patch_gcode_header(gcode_path: Path, stderr: str) -> None:
         log.info("Patched G-code header with real values from CuraEngine stderr")
     else:
         log.debug("G-code header patch had no effect")
-
-
-def _place_on_bed(
-    stl_path: Path,
-    staging_dir: Path,
-    bed_width: float = DEFAULT_PLATE_SIZE[0],
-    bed_depth: float = DEFAULT_PLATE_SIZE[1],
-    center_is_zero: bool = False,
-) -> Path:
-    """Copy STL into staging, ensuring the mesh sits on the bed (Z>=0)
-    and is centered on the build plate.
-
-    CuraEngine only slices geometry above Z=0.  Bed-origin convention is
-    selected by ``center_is_zero``: when ``False`` (CuraEngine default —
-    origin at the front-left corner) the mesh is centered at
-    ``(bed_width/2, bed_depth/2)``; when ``True`` it is centered at
-    ``(0, 0)``.
-    """
-    import trimesh
-
-    mesh: trimesh.Trimesh = trimesh.load(str(stl_path), force="mesh")  # type: ignore[assignment]
-
-    x_center = float((mesh.bounds[0][0] + mesh.bounds[1][0]) / 2)
-    y_center = float((mesh.bounds[0][1] + mesh.bounds[1][1]) / 2)
-    target_x = 0.0 if center_is_zero else bed_width / 2
-    target_y = 0.0 if center_is_zero else bed_depth / 2
-    dx = target_x - x_center
-    dy = target_y - y_center
-    if abs(dx) > 0.01 or abs(dy) > 0.01:
-        mesh.vertices[:, 0] += dx  # type: ignore[attr-defined]
-        mesh.vertices[:, 1] += dy  # type: ignore[attr-defined]
-        log.info("Centered mesh on bed (shifted by %.2f, %.2f)", dx, dy)
-
-    z_min = float(mesh.bounds[0][2])
-    if z_min < 0:
-        mesh.vertices[:, 2] -= z_min
-        log.info("Shifted mesh up by %.2fmm to place on bed", -z_min)
-
-    out = staging_dir / stl_path.name
-    mesh.export(str(out), file_type="stl")
-    return out
 
 
 def _write_cura_settings(
@@ -1153,110 +1112,6 @@ def _run_local_slice(
 
     log.info("CuraEngine output: %s (%d bytes)", output_gcode, output_gcode.stat().st_size)
     return output_dir
-
-
-def slice_stl(
-    stl_path: Path,
-    output_dir: Path,
-    overrides: CuraOverrides | None = None,
-    per_extruder: CuraPerExtruder | None = None,
-    image: str | None = None,
-    printer: str | None = None,
-    project_dir: Path | None = None,
-    profiles_dir: str = "profiles",
-    local: bool = False,
-) -> Path:
-    """Slice a single STL file with CuraEngine and return the output directory.
-
-    Uses Docker with the estampo/estampo:cura-X.Y.Z image.  The machine
-    definition (resolved from *printer* name) provides machine geometry
-    and start/end G-code; process settings come from *overrides*.
-
-    Args:
-        stl_path: Path to the input STL file.
-        output_dir: Directory for output G-code.
-        overrides: Raw CuraEngine setting overrides (TOML passthrough).
-        per_extruder: Per-extruder overrides, one dict per extruder slot.
-        image: Docker image override. Defaults to estampo/estampo:cura-5.12.0.
-        printer: Printer definition name (e.g. ``"Ultimaker 2"``).
-        project_dir: Project root for pinned profile lookup.
-        profiles_dir: Profiles directory name within the project.
-
-    Returns:
-        The output directory (matching slicer.slice_plate contract).
-    """
-    if overrides is None:
-        overrides = {}
-    if per_extruder is None:
-        per_extruder = []
-    if image is None:
-        image = cura_docker_image()
-
-    _warn_unknown_cura_settings(overrides, per_extruder)
-
-    stl_path = stl_path.resolve()
-    output_dir = output_dir.resolve()
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    staging, machine_def = _prepare_cura_staging(printer, project_dir, profiles_dir, output_dir)
-
-    # Get machine dimensions for mesh centering and settings JSON
-    machine_dims = resolve_cura_machine_dims(printer or "", project_dir, profiles_dir)
-    bed_w, bed_d = machine_dims["machine_width"], machine_dims["machine_depth"]
-    center_is_zero = resolve_cura_center_is_zero(printer or "", project_dir, profiles_dir)
-
-    # Place mesh on the build plate (Z>=0, centered) before slicing.
-    staged_stl = _place_on_bed(
-        stl_path, staging, bed_width=bed_w, bed_depth=bed_d, center_is_zero=center_is_zero
-    )
-
-    settings = _settings_flags(overrides) + _machine_dims_flags(machine_dims)
-
-    if local:
-        _check_local_def(staging, machine_def, printer)
-        defs_path = _local_defs_path(staging)
-        cura_args = [
-            "-d",
-            defs_path,
-            "-j",
-            str(staging / machine_def),
-            "-o",
-            str(output_dir / (stl_path.stem + ".gcode")),
-            *settings,
-            "-g",
-            "-e0",
-            *settings,
-            "-l",
-            str(staged_stl),
-        ]
-        return _run_local_slice(
-            cura_args, output_dir, staging, stl_path.stem, overrides, machine_dims
-        )
-
-    # Container paths (output_dir mounted at /work/output)
-    c_staging = "/work/output/.cura-staging"
-    c_stl = f"{c_staging}/{staged_stl.name}"
-    c_output = "/work/output/" + stl_path.stem + ".gcode"
-
-    # Build the CuraEngine command.
-    # -d adds search paths for definition file resolution (inherits chain).
-    # -j loads the machine definition (geometry + start/end gcode).
-    # -g starts a mesh group, -e0 sets extruder 0 context for per-extruder
-    # settings (material_diameter etc.) that CuraEngine requires.
-    settings_str = " ".join(f'"{s}"' for s in settings)
-    inner_cmd = (
-        f"CuraEngine slice "
-        f"-d {c_staging}:{_DEFS_DIR}:/opt/cura/extruders "
-        f"-j {c_staging}/{machine_def} "
-        f"-o {c_output} "
-        f"{settings_str} "
-        f"-g -e0 {settings_str} "
-        f"-l {c_stl}"
-    )
-
-    return _run_docker_slice(
-        inner_cmd, image, output_dir, staging, stl_path.stem, overrides, machine_dims
-    )
 
 
 def slice_stl_multi(

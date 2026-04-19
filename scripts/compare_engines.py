@@ -22,7 +22,6 @@ from pathlib import Path
 # Ensure project root is on sys.path for imports
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from estampo.cura import cura_docker_image, slice_stl
 from estampo.gcode import analyze_gcode, parse_gcode_metadata
 from estampo.slicer import slice_plate
 
@@ -150,8 +149,13 @@ def _slice_cura(stl_path: Path, output_base: Path) -> Path:
         "machine_buildplate_type": "textured_pei_plate",
         "material_type": "PETG-CF",
     }
-    image = cura_docker_image(CURA_VERSION)
-    return slice_stl(stl_path, output_dir, overrides=overrides, image=image)
+    return slice_plate(
+        stl_path,
+        engine="cura",
+        output_dir=output_dir,
+        overrides=overrides,
+        docker_version=CURA_VERSION,
+    )
 
 
 def _pct_diff(a: float, b: float) -> str:

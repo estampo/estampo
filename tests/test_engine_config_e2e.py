@@ -293,7 +293,7 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
         assert per_extruder == []
 
     def test_cura_slice_dispatch(self, tmp_path):
-        """Config with engine=cura dispatches to cura.slice_stl."""
+        """Config with engine=cura dispatches to cura.slice_stl_multi."""
         import trimesh
 
         from estampo.slicer import slice_plate
@@ -321,7 +321,7 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
         )
         cfg = load_config(path)
 
-        with patch("estampo.cura.slice_stl", return_value=output_dir) as mock_slice:
+        with patch("estampo.cura.slice_stl_multi", return_value=output_dir) as mock_slice:
             result = slice_plate(
                 input_3mf,
                 engine=cfg.slicer.engine,
