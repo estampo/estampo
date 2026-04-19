@@ -208,7 +208,7 @@ def _resolve_def_chain(
     ``[ultimaker2.def.json]``.
 
     Search order per definition:
-    1. Pinned (squashed) in ``profiles/cura/definitions/``
+    1. Pinned (verbatim) in ``profiles/cura/definitions/``
     2. Bundled with estampo in ``src/estampo/data/``
     """
     chain: list[Path] = []
