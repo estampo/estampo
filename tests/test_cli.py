@@ -872,6 +872,69 @@ def test_profiles_list_json_with_category(mock_discover, capsys):
     assert "process" not in data["profiles"]
 
 
+# --- profiles list --printer ---
+
+
+@patch("estampo.profiles.filter_profiles_by_printer")
+@patch("estampo.profiles.discover_profile_names")
+def test_profiles_list_printer_filters(mock_discover, mock_filter, capsys):
+    """profiles list --printer applies the compat filter before printing."""
+    mock_discover.return_value = (
+        {
+            "machine": ["P1S", "P1P"],
+            "process": ["HQ P1P", "HQ P1S"],
+            "filament": [],
+        },
+        "bundled",
+    )
+    mock_filter.return_value = {"machine": ["P1S", "P1P"], "process": ["HQ P1S"], "filament": []}
+
+    main(["profiles", "list", "--engine", "orca", "--category", "process", "--printer", "P1S"])
+    out = capsys.readouterr().out
+    assert "HQ P1S" in out
+    assert "HQ P1P" not in out
+    mock_filter.assert_called_once()
+
+
+@patch("estampo.profiles.filter_profiles_by_printer")
+@patch("estampo.profiles.discover_profile_names")
+def test_profiles_list_printer_json(mock_discover, mock_filter, capsys):
+    """profiles list --printer --json applies filter and emits JSON."""
+    import json as json_mod
+
+    mock_discover.return_value = (
+        {"machine": ["P1S"], "process": ["HQ P1P", "HQ P1S"], "filament": []},
+        "bundled",
+    )
+    mock_filter.return_value = {"machine": ["P1S"], "process": ["HQ P1S"], "filament": []}
+
+    main(
+        [
+            "profiles",
+            "list",
+            "--engine",
+            "orca",
+            "--category",
+            "process",
+            "--printer",
+            "P1S",
+            "--json",
+        ]
+    )
+    out = capsys.readouterr().out
+    data = json_mod.loads(out)
+    assert data["profiles"] == {"process": ["HQ P1S"]}
+
+
+def test_profiles_list_printer_cura_errors(capsys):
+    """--printer is not supported for CuraEngine (no compat concept)."""
+    with pytest.raises(SystemExit) as exc:
+        main(["profiles", "list", "--engine", "cura", "--printer", "anything"])
+    assert exc.value.code == 1
+    err = capsys.readouterr().err
+    assert "not supported" in err and "cura" in err
+
+
 # --- profiles pin --yes ---
 
 
