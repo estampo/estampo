@@ -1110,6 +1110,57 @@ def _check_local_def(staging: Path, machine_def: str, printer: str | None) -> No
     )
 
 
+_CURA_WARNING_RE = re.compile(r"\[WARNING\]\s+(.*?)\s*$", re.IGNORECASE)
+_CURA_NO_DEFAULT_VALUE_RE = re.compile(r"JSON setting '([^']+)' has no \[default_\]value!")
+
+
+def _surface_cura_warnings(stderr: str) -> None:
+    """Surface CuraEngine stderr warnings after a zero-exit run.
+
+    CuraEngine writes warnings to stderr for silently-dropped settings,
+    unknown keys, and other miscompilation risks even when the slice
+    succeeds.  Without surfacing, bugs like #586/#587 stay invisible.
+
+    Any ``JSON setting 'X' has no [default_]value!`` lines are logged at
+    WARNING with the list of affected keys — these signal printer-profile
+    overrides reverting to fdmprinter defaults.  A total count of all
+    warnings is also logged so users know something happened, and each
+    raw warning is logged at DEBUG so ``-v`` surfaces them inline.
+    """
+    warnings: list[str] = []
+    dropped: list[str] = []
+    for line in stderr.splitlines():
+        m = _CURA_WARNING_RE.search(line)
+        if not m:
+            continue
+        msg = m.group(1).strip()
+        warnings.append(msg)
+        dv = _CURA_NO_DEFAULT_VALUE_RE.search(msg)
+        if dv:
+            dropped.append(dv.group(1))
+
+    if not warnings:
+        return
+
+    if dropped:
+        unique = sorted(set(dropped))
+        log.warning(
+            "CuraEngine silently dropped %d printer-profile setting(s), "
+            "reverting to fdmprinter defaults: %s "
+            "(pinned definition is missing 'default_value' entries — see #587).",
+            len(unique),
+            ", ".join(unique),
+        )
+
+    log.warning(
+        "CuraEngine emitted %d warning(s) — run with -v to see them.",
+        len(warnings),
+    )
+
+    for msg in warnings:
+        log.debug("CuraEngine: %s", msg)
+
+
 def _strip_cura_banner(text: str) -> str:
     """Strip the CuraEngine GPL license banner from output text.
 
@@ -1186,6 +1237,7 @@ def _run_docker_slice(
         combined = (result.stdout + "\n" + result.stderr).strip()
         raise EstampoError(f"CuraEngine produced no output:\n{_strip_cura_banner(combined)[:500]}")
 
+    _surface_cura_warnings(result.stderr)
     _patch_gcode_header(output_gcode, result.stderr)
     _write_cura_settings(output_dir, profile, machine_dims)
 
@@ -1233,6 +1285,7 @@ def _run_local_slice(
         combined = (result.stdout + "\n" + result.stderr).strip()
         raise EstampoError(f"CuraEngine produced no output:\n{_strip_cura_banner(combined)[:500]}")
 
+    _surface_cura_warnings(result.stderr)
     _patch_gcode_header(output_gcode, result.stderr)
     _write_cura_settings(output_dir, profile, machine_dims)
 

@@ -1,0 +1,1 @@
+Surface CuraEngine stderr warnings on successful slices. ``JSON setting 'X' has no [default_]value!`` warnings are aggregated into a strong "silently dropped printer-profile setting" log line, other warnings get a total-count summary, and ``-v`` prints every raw warning inline — making bugs like #586/#587 visible instead of silent.
