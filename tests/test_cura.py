@@ -9,6 +9,7 @@ from estampo.cura import (
     _FILAMENT_TEMPS,
     CuraProfile,
     _check_local_def,
+    _copy_cura_def_chain,
     _extruder_settings_str,
     _fetch_printer_def,
     _machine_dims_flags,
@@ -27,6 +28,7 @@ from estampo.cura import (
     _write_cura_settings,
     cura_docker_image,
     cura_profile_from_config,
+    pin_cura_definitions,
     resolve_cura_machine_dims,
     slice_stl,
     slice_stl_multi,
@@ -182,6 +184,170 @@ def test_squash_merges_intermediate_definitions(tmp_path):
     # Literal ``value`` is promoted to ``default_value`` at pin-time (#587)
     assert result["overrides"]["speed_print"]["default_value"] == 60
     assert result["overrides"]["machine_width"]["default_value"] == 300
+
+
+# --- _copy_cura_def_chain (ADR-008) ---
+
+
+def _write_def(path, **fields):
+    import json
+
+    path.write_text(json.dumps(fields))
+
+
+def test_copy_cura_def_chain_stops_at_fdmprinter(tmp_path):
+    """Root defs (fdmprinter/fdmextruder) are not included in the chain."""
+    _write_def(
+        tmp_path / "fdmprinter.def.json",
+        name="FDM Base",
+        version=2,
+        settings={"machine_width": {"default_value": 200}},
+    )
+    _write_def(
+        tmp_path / "my_printer.def.json",
+        name="My Printer",
+        version=2,
+        inherits="fdmprinter",
+        overrides={"machine_width": {"value": 300}},
+    )
+    chain = _copy_cura_def_chain("my_printer", tmp_path)
+    names = [p.name for p in chain]
+    assert names == ["my_printer.def.json"]
+    assert "fdmprinter.def.json" not in names
+
+
+def test_copy_cura_def_chain_includes_intermediate(tmp_path):
+    """Intermediate ancestors are included; fdmprinter is not."""
+    _write_def(tmp_path / "fdmprinter.def.json", name="FDM Base", version=2, settings={})
+    _write_def(
+        tmp_path / "base_printer.def.json",
+        name="Base Printer",
+        version=2,
+        inherits="fdmprinter",
+        overrides={"speed_print": {"value": 60}},
+    )
+    _write_def(
+        tmp_path / "my_printer.def.json",
+        name="My Printer",
+        version=2,
+        inherits="base_printer",
+        overrides={"machine_width": {"value": 300}},
+    )
+    chain = _copy_cura_def_chain("my_printer", tmp_path)
+    names = [p.name for p in chain]
+    # Leaf first, nearest non-root ancestor last; fdmprinter excluded
+    assert names == ["my_printer.def.json", "base_printer.def.json"]
+
+
+def test_copy_cura_def_chain_stops_at_fdmextruder(tmp_path):
+    """fdmextruder is treated as a root definition and excluded from the chain."""
+    _write_def(tmp_path / "fdmextruder.def.json", name="FDM Extruder", version=2, settings={})
+    _write_def(
+        tmp_path / "my_extruder.def.json",
+        name="My Extruder",
+        version=2,
+        inherits="fdmextruder",
+        overrides={"material_diameter": {"default_value": 1.75}},
+    )
+    chain = _copy_cura_def_chain("my_extruder", tmp_path)
+    assert [p.name for p in chain] == ["my_extruder.def.json"]
+
+
+def test_copy_cura_def_chain_missing_leaf_raises(tmp_path):
+    """Raises when the leaf definition itself cannot be located."""
+    with pytest.raises(EstampoError, match="not found in"):
+        _copy_cura_def_chain("nonexistent", tmp_path)
+
+
+def test_copy_cura_def_chain_missing_ancestor_stops_without_raising(tmp_path):
+    """A missing non-root ancestor truncates the chain; leaf is still returned."""
+    _write_def(
+        tmp_path / "my_printer.def.json",
+        name="My Printer",
+        version=2,
+        inherits="missing_base",
+        overrides={"machine_width": {"value": 300}},
+    )
+    chain = _copy_cura_def_chain("my_printer", tmp_path)
+    assert [p.name for p in chain] == ["my_printer.def.json"]
+
+
+# --- pin_cura_definitions (ADR-008 verbatim copy) ---
+
+
+def test_pin_cura_definitions_copies_chain_verbatim(tmp_path, monkeypatch):
+    """Each ancestor def is copied byte-for-byte into profiles/cura/definitions/."""
+    import json
+
+    source_dir = tmp_path / "bundled"
+    source_dir.mkdir()
+    monkeypatch.setattr("estampo.cura._DATA_DIR", source_dir)
+
+    # A realistic-ish chain: leaf → mid → fdmprinter (the root is bundled)
+    fdmprinter = {
+        "name": "FDM Base",
+        "version": 2,
+        "settings": {"machine_width": {"default_value": 200}},
+    }
+    mid = {
+        "name": "Base Printer",
+        "version": 2,
+        "inherits": "fdmprinter",
+        "overrides": {
+            "speed_print": {"value": 60},
+            "acceleration_infill": {"value": "acceleration_print"},
+        },
+    }
+    leaf = {
+        "name": "My Printer",
+        "version": 2,
+        "inherits": "base_printer",
+        "metadata": {"visible": True},
+        "overrides": {
+            "machine_width": {"default_value": 256, "value": 256},
+            "adhesion_type": {"value": "'brim'"},
+        },
+    }
+    (source_dir / "fdmprinter.def.json").write_text(json.dumps(fdmprinter, indent=4))
+    (source_dir / "base_printer.def.json").write_text(json.dumps(mid, indent=4))
+    (source_dir / "my_printer.def.json").write_text(json.dumps(leaf, indent=4))
+
+    project_dir = tmp_path / "project"
+    pinned = pin_cura_definitions("my_printer", project_dir)
+
+    dest_dir = project_dir / "profiles" / "cura" / "definitions"
+    # Leaf + intermediate are pinned; fdmprinter is NOT (estampo ships it)
+    assert (dest_dir / "my_printer.def.json") in pinned
+    assert (dest_dir / "base_printer.def.json") in pinned
+    assert not (dest_dir / "fdmprinter.def.json").exists()
+
+    # Byte-for-byte equality — no transformation of value/default_value/inherits
+    assert (dest_dir / "my_printer.def.json").read_bytes() == (
+        source_dir / "my_printer.def.json"
+    ).read_bytes()
+    assert (dest_dir / "base_printer.def.json").read_bytes() == (
+        source_dir / "base_printer.def.json"
+    ).read_bytes()
+
+    # Inheritance metadata and expression values are preserved verbatim
+    pinned_leaf = json.loads((dest_dir / "my_printer.def.json").read_text())
+    assert pinned_leaf["inherits"] == "base_printer"
+    assert pinned_leaf["overrides"]["adhesion_type"] == {"value": "'brim'"}
+    pinned_mid = json.loads((dest_dir / "base_printer.def.json").read_text())
+    assert pinned_mid["inherits"] == "fdmprinter"
+    assert pinned_mid["overrides"]["acceleration_infill"] == {"value": "acceleration_print"}
+
+
+def test_pin_cura_definitions_returns_existing_local_file(tmp_path):
+    """When the printer is already a local file path, no pinning is performed."""
+    project_dir = tmp_path / "project"
+    profiles_dir = project_dir / "profiles" / "cura" / "definitions"
+    profiles_dir.mkdir(parents=True)
+    existing = profiles_dir / "custom_printer.def.json"
+    existing.write_text('{"name": "Custom", "version": 2}')
+
+    pinned = pin_cura_definitions(str(existing), project_dir)
+    assert pinned == [existing]
 
 
 # --- cura_docker_image ---
