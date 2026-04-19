@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from estampo import EstampoError
 from estampo.config import DEFAULT_STAGES, SUPPORTED_EXTENSIONS
 
 if TYPE_CHECKING:
@@ -241,6 +242,48 @@ def _check_profile_type(name: str, engine: str, category: str) -> str | None:
         return None
 
 
+def _check_orca_process_compat(
+    printer: str, process: str, project_dir: Path, profiles_dir: str
+) -> str | None:
+    """Verify the process's ``compatible_printers`` list contains *printer*.
+
+    Loads the flattened process profile (pinned → system → bundled) and reads
+    the resolved ``compatible_printers`` list. Returns a warning string if the
+    printer is missing from the list, otherwise ``None``.
+
+    Returns ``None`` when compatibility cannot be determined (process file not
+    readable, or ``compatible_printers_condition`` is set — a dynamic Orca
+    expression we can't evaluate statically).
+    """
+    from estampo.profiles import resolve_profile_data
+
+    try:
+        data = resolve_profile_data(
+            process, "orca", "process", project_dir=project_dir, profiles_dir=profiles_dir
+        )
+    except (EstampoError, FileNotFoundError, OSError):
+        return None
+
+    if data.get("compatible_printers_condition"):
+        return None
+
+    compat = data.get("compatible_printers")
+    if not compat or not isinstance(compat, list):
+        return None
+
+    if printer in compat:
+        return None
+
+    compat_str = ", ".join(f"'{p}'" for p in compat)
+    return (
+        f"slicer.process '{process}' is not compatible with slicer.printer '{printer}'.\n"
+        f"  Process's compatible_printers: {compat_str}.\n"
+        f"  Note: this combination fails at slice time with a silent exit 239.\n"
+        f"  Fix: pick a process whose compatible_printers includes '{printer}', "
+        f"or choose a different printer."
+    )
+
+
 def validate_config(path: Path) -> ValidationResult:
     """Validate an estampo.toml and return passes and warnings.
 
@@ -341,6 +384,21 @@ def validate_config(path: Path) -> ValidationResult:
 
         if profile_ok:
             passes.append(f"Slicer profiles valid ({source})")
+
+        # Check process/printer compatibility (OrcaSlicer only).
+        # The pinned process JSON has a `compatible_printers` list. When the
+        # active printer isn't in it, OrcaSlicer rejects the slice with
+        # `run found error, return -17, exit...` which surfaces as exit 239.
+        if profile_ok and orca and active.printer and orca.process:
+            compat_warning = _check_orca_process_compat(
+                active.printer, orca.process, cfg.base_dir, cfg.slicer.profiles_dir
+            )
+            if compat_warning:
+                warnings.append(compat_warning)
+            else:
+                passes.append(
+                    f"Process '{orca.process}' compatible with printer '{active.printer}'"
+                )
     else:
         warnings.append(
             f"slicer profile names could not be validated — no {cfg.slicer.engine} "

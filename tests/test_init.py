@@ -501,6 +501,99 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
         result = validate_config(toml)
         assert any("override keys valid" in p.lower() for p in result.passes)
 
+    def test_process_printer_compat_mismatch_warns(self, tmp_path):
+        """Process listed with an incompatible printer produces a compat warning."""
+        process_dir = tmp_path / "profiles" / "orca" / "process"
+        process_dir.mkdir(parents=True)
+        (process_dir / "HighQuality P1P.json").write_text(
+            '{"type": "process", "name": "HighQuality P1P", "layer_height": "0.12", '
+            '"compatible_printers": ["Bambu Lab P1P 0.4 nozzle"]}'
+        )
+        machine_dir = tmp_path / "profiles" / "orca" / "machine"
+        machine_dir.mkdir(parents=True)
+        (machine_dir / "Bambu Lab P1S 0.4 nozzle.json").write_text(
+            '{"type": "machine", "name": "Bambu Lab P1S 0.4 nozzle"}'
+        )
+
+        toml = tmp_path / "estampo.toml"
+        toml.write_text(f"""
+[slicer]
+engine = "orca"
+version = "2.3.1"
+
+[slicer.orca]
+printer = "Bambu Lab P1S 0.4 nozzle"
+process = "HighQuality P1P"
+
+[[parts]]
+file = "{_posix(FIXTURES / "cube_10mm.stl")}"
+""")
+        result = validate_config(toml)
+        assert any("not compatible" in w and "exit 239" in w for w in result.warnings)
+        assert not any("Process" in p and "compatible with printer" in p for p in result.passes)
+
+    def test_process_printer_compat_match_passes(self, tmp_path):
+        """Process whose compatible_printers includes the active printer passes."""
+        process_dir = tmp_path / "profiles" / "orca" / "process"
+        process_dir.mkdir(parents=True)
+        (process_dir / "HighQuality P1S.json").write_text(
+            '{"type": "process", "name": "HighQuality P1S", "layer_height": "0.12", '
+            '"compatible_printers": ["Bambu Lab P1S 0.4 nozzle"]}'
+        )
+        machine_dir = tmp_path / "profiles" / "orca" / "machine"
+        machine_dir.mkdir(parents=True)
+        (machine_dir / "Bambu Lab P1S 0.4 nozzle.json").write_text(
+            '{"type": "machine", "name": "Bambu Lab P1S 0.4 nozzle"}'
+        )
+
+        toml = tmp_path / "estampo.toml"
+        toml.write_text(f"""
+[slicer]
+engine = "orca"
+version = "2.3.1"
+
+[slicer.orca]
+printer = "Bambu Lab P1S 0.4 nozzle"
+process = "HighQuality P1S"
+
+[[parts]]
+file = "{_posix(FIXTURES / "cube_10mm.stl")}"
+""")
+        result = validate_config(toml)
+        assert not any("not compatible" in w for w in result.warnings)
+        assert any("compatible with printer" in p for p in result.passes)
+
+    def test_process_printer_compat_skipped_with_dynamic_condition(self, tmp_path):
+        """A compatible_printers_condition expression is dynamic — skip the check."""
+        process_dir = tmp_path / "profiles" / "orca" / "process"
+        process_dir.mkdir(parents=True)
+        (process_dir / "DynamicProcess.json").write_text(
+            '{"type": "process", "name": "DynamicProcess", "layer_height": "0.2", '
+            '"compatible_printers": ["Bambu Lab P1P 0.4 nozzle"], '
+            '"compatible_printers_condition": "nozzle_diameter[0]==0.4"}'
+        )
+        machine_dir = tmp_path / "profiles" / "orca" / "machine"
+        machine_dir.mkdir(parents=True)
+        (machine_dir / "Bambu Lab P1S 0.4 nozzle.json").write_text(
+            '{"type": "machine", "name": "Bambu Lab P1S 0.4 nozzle"}'
+        )
+
+        toml = tmp_path / "estampo.toml"
+        toml.write_text(f"""
+[slicer]
+engine = "orca"
+version = "2.3.1"
+
+[slicer.orca]
+printer = "Bambu Lab P1S 0.4 nozzle"
+process = "DynamicProcess"
+
+[[parts]]
+file = "{_posix(FIXTURES / "cube_10mm.stl")}"
+""")
+        result = validate_config(toml)
+        assert not any("not compatible" in w for w in result.warnings)
+
     def test_override_keys_unknown_errors(self, tmp_path):
         """Unknown override keys produce errors (not just warnings)."""
         profiles = tmp_path / "profiles" / "orca" / "process"
