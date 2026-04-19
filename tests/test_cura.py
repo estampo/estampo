@@ -872,6 +872,36 @@ def test_slice_plate_cura_positions_meshes_on_bed(tmp_path):
     assert (min_y + max_y) / 2 == pytest.approx(100.0, abs=0.1)
 
 
+def test_slice_plate_cura_preserves_z_when_already_above_bed(tmp_path):
+    """A mesh already at Z>0 is not shifted down — only lifted when Z<0."""
+    import trimesh
+
+    from estampo.slicer import slice_plate
+
+    # Mesh sitting at Z: 5..15 (already above bed).
+    mesh = trimesh.creation.box(extents=[10, 10, 10])
+    mesh.vertices[:, 2] += 10  # now Z: 5..15
+    scene = trimesh.Scene(mesh)
+    input_3mf = tmp_path / "plate.3mf"
+    scene.export(str(input_3mf))
+
+    output_dir = tmp_path / "output"
+
+    with patch("estampo.cura.slice_stl_multi", return_value=output_dir) as mock_multi:
+        slice_plate(
+            input_3mf,
+            engine="cura",
+            output_dir=output_dir,
+            docker_version="5.12.0",
+        )
+
+    stl_meshes_arg = mock_multi.call_args.args[0]
+    placed = trimesh.load(str(stl_meshes_arg[0][1]), force="mesh")
+    # Z range preserved (5..15), not re-lifted to 0..10.
+    assert placed.bounds[0][2] == pytest.approx(5.0, abs=0.01)
+    assert placed.bounds[1][2] == pytest.approx(15.0, abs=0.01)
+
+
 def test_slice_plate_cura_center_is_zero_printer(tmp_path):
     """A center_is_zero printer centers meshes at (0,0), not (bed/2, bed/2)."""
     import json
