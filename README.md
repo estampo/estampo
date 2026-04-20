@@ -98,7 +98,7 @@ estampo run        # arrange → slice → pack, one command
 Everything is declared in a single TOML file. Lock the slicer version, pin the
 profiles, and the output is reproducible on any machine or in CI.
 
-![estampo pipeline](https://raw.githubusercontent.com/estampo/estampo/main/docs/images/pipeline.png)
+![estampo pipeline](https://raw.githubusercontent.com/estampo/estampo/main/docs/images/pipeline.svg)
 
 ### Why not just use the slicer CLI directly?
 
