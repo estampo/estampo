@@ -12,16 +12,9 @@
 
 **The build system for reproducible 3D prints.**
 
-3D printing workflows are trapped in GUIs. Slicer settings get lost between
-sessions, printer configs drift across machines, and there's no way to version,
-diff, or review a print job. None of this is accessible to automation — or to
-AI assistants.
+You can version your CAD. You can't version your slicer setup — estampo fixes that.
 
-estampo takes a different approach: define parts, slicer settings, and pipeline
-stages in a single TOML file — text that's git-friendly, diffable, and
-committable alongside your CAD files. Because the entire workflow is text,
-it's naturally accessible to AI coding assistants, CI systems, and code review.
-Same repo, same config → same G-code, locally or [in CI](#cicd-example).
+Define parts, slicer settings, and the full pipeline in one TOML file, commit it, and run it anywhere. Same repo, same config → same G-code, locally or [in CI](#cicd-example).
 
 estampo is a thin orchestration layer around slicer CLIs — it wraps OrcaSlicer or CuraEngine (Docker-pinned, CI-friendly, diffable) and doesn't replace them. See [the comparison table](#why-not-just-use-the-slicer-cli-directly) for what estampo adds over the raw CLIs.
 
@@ -33,7 +26,7 @@ estampo is a thin orchestration layer around slicer CLIs — it wraps OrcaSlicer
 
 Works with STL, STEP, and 3MF files, and pairs naturally with code-CAD tools like
 [build123d](https://github.com/gumyr/build123d), [OpenSCAD](https://openscad.org),
-and [cadquery](https://github.com/cadquery/cadquery).
+and [cadquery](https://github.com/cadquery/cadquery) — and with AI coding assistants, since the whole workflow is plain text.
 
 **Requires [Docker](https://docs.docker.com/get-docker/) and Python 3.11+.** estampo runs the slicer (OrcaSlicer or CuraEngine) in a pinned Docker image so every machine produces identical G-code. A local slicer install works as a fallback but is not recommended.
 
