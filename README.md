@@ -27,9 +27,6 @@ Same repo, same config → same G-code, locally or [in CI](#cicd-example).
 
 > **Safety:** estampo generates G-code from your configuration but does not verify that settings are safe for your specific printer. Incorrect temperatures, speeds, or missing supports can damage your printer or create a fire hazard. Always review sliced output before sending to a printer. `estampo validate` checks config structure and setting names — it does not check print safety. **Use at your own risk.**
 
-> **Note:** This project was previously called **fabprint**. If you have an existing install,
-> run `pip install estampo` to upgrade — config files and credentials are migrated automatically.
-
 Works with STL, STEP, and 3MF files, and pairs naturally with code-CAD tools like
 [build123d](https://github.com/gumyr/build123d), [OpenSCAD](https://openscad.org),
 and [cadquery](https://github.com/cadquery/cadquery).
@@ -157,22 +154,13 @@ If you mostly want interactive print setup in a GUI, use OrcaSlicer or Cura dire
 
 ## Status
 
-### Stable
-
 - Declarative print config in `estampo.toml`
 - Multi-part arrangement
 - Docker-based slicing with pinned slicer versions (OrcaSlicer, CuraEngine)
 - Slicing for any printer supported by OrcaSlicer or CuraEngine
 - Profile pinning into your repository
 - CI slicing and artifact generation
-- Network print initiation via Bambu Cloud
-
-
-
-### Experimental
-
-- Bambu LAN printing
-- Moonraker printing
+- Printing handled by external tools (e.g. [bambox](#sending-prints-to-a-printer) for Bambu Lab) wired in as command stages
 
 ## Quick start
 
@@ -287,9 +275,47 @@ estampo profiles list               # list available slicer profiles
 estampo profiles pin                # pin profiles for reproducible builds
 ```
 
-## Printing
+## Sending prints to a printer
 
-estampo is printer-agnostic — it produces sliced output but does not send files to printers. For Bambu Lab printers, use [bambox](https://github.com/estampo/bambox) as a command stage to pack and print. Run `bambox login` to set up credentials (`~/.config/bambox/credentials.toml`). See the [AI setup prompt](docs/ai-setup-prompt.md) for full examples.
+estampo is **printer-agnostic**: it produces a sliced `.gcode.3mf` on disk and
+stops there. Packing the output into a vendor-specific format and sending it
+to a printer are handled by external CLIs wired into the pipeline as
+[command stages](https://github.com/estampo/estampo/blob/main/docs/config.md#command-stages).
+This keeps vendor-specific code out of estampo and lets you swap printer
+backends without touching the build system.
+
+### bambox (Bambu Lab)
+
+For Bambu Lab printers, the companion CLI is
+[bambox](https://github.com/estampo/bambox). estampo never imports bambox —
+you install it separately and call it from your pipeline. Typical wiring:
+
+```bash
+pipx install bambox
+bambox login        # one-time — credentials go to ~/.config/bambox/
+```
+
+```toml
+[pipeline]
+stages = ["load", "arrange", "plate", "slice", "pack"]
+
+[pack]
+command = "bambox repack {sliced_3mf}"
+output = "{sliced_3mf}"
+```
+
+`bambox repack` adds the metadata a Bambu printer needs to accept the file
+(AMS mapping, plate thumbnails, auxiliary bed entries). `bambox send` can
+then ship it to the printer — add a `[send]` command stage if you want
+printing in the pipeline too. See the
+[AI setup prompt](docs/ai-setup-prompt.md) for full examples.
+
+### Other printers
+
+Any CLI that reads a sliced file and does something with it can be a
+command stage. If your printer vendor has a CLI, wire it in the same way.
+If it doesn't, `estampo run` already gives you a G-code file — hand it to
+your printer however you normally would.
 
 ## Documentation
 
