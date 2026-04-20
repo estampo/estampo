@@ -291,6 +291,10 @@
       "id": "bambox_p1s"
     },
     {
+      "name": "Bambu Lab P1S (bambox, AMS)",
+      "id": "bambox_p1s_ams"
+    },
+    {
       "name": "BeamUp L",
       "id": "beamup_l"
     },
