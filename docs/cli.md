@@ -1,6 +1,21 @@
 # CLI reference
 
-estampo provides commands for creating configs (`init`, `validate`), running the pipeline (`run`), and managing slicer profiles (`profiles`).
+estampo provides commands for creating configs (`init`, `validate`), inspecting valid config values (`info`), running the pipeline (`run`), and managing slicer profiles (`profiles`).
+
+## Top-level options
+
+| Option                  | Description                                              |
+|-------------------------|----------------------------------------------------------|
+| `--version`             | Print estampo version and exit                           |
+| `--install-completion`  | Install shell completion for the current shell           |
+| `--show-completion`     | Print the completion script (bash/zsh/fish/pwsh) to stdout |
+| `--help`                | Show help and exit                                       |
+
+### Shell completion
+
+After running `estampo --install-completion`, restart your shell. You will get
+tab completion on commands, flags, and stage names. To inspect or customize
+the installed script, run `estampo --show-completion`.
 
 ## `estampo init`
 
@@ -82,6 +97,35 @@ sliced output before sending to a printer.
 ```bash
 estampo validate                  # check ./estampo.toml
 estampo validate myproject.toml   # check a specific file
+```
+
+## `estampo info`
+
+Print the enumerated values that estampo understands in configs — useful
+for humans checking what's valid, and for AI assistants grounding
+suggestions without scraping source.
+
+```
+estampo info [--json]
+```
+
+Reports:
+
+- Valid pipeline stages (`load`, `arrange`, `plate`, `slice`, `gcode-info`, `resolve_templates`, `pack`)
+- Valid slicer engines (`orca`, `cura`)
+- Valid `orient` values for `[[parts]]`
+- Recognised bed type values
+- Recognised mesh file extensions (`.stl`, `.step`, `.3mf`, ...)
+- Command-stage substitution variables (`{sliced_3mf}`, `{output_dir}`, ...)
+
+Pass `--json` for machine-readable output — this is what the AI setup
+prompt uses to stay in sync with the installed version.
+
+### Examples
+
+```bash
+estampo info                  # human-readable output
+estampo info --json           # JSON for tooling
 ```
 
 ## `estampo setup` *(deprecated — removed in v0.4.0)*
