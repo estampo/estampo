@@ -1,0 +1,1 @@
+Tighten the README pitch to name the CAD formats estampo is designed to version alongside (Code CAD, STEP, STL) and soften the absolute "can't version your slicer setup" claim to "can't version your slicer setup easily", which better reflects what estampo actually solves.
