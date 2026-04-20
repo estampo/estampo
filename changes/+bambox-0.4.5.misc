@@ -1,0 +1,1 @@
+Bump bundled ``bambox`` to ``0.4.5`` in both Docker images (``Dockerfile``, ``Dockerfile.cura``) so the ``:orca-2.3.1`` and ``:cura-5.12.0`` floating tags ship the latest bambox release. Version-pinned tags like ``:orca-2.3.1-0.4.0`` remain on bambox 0.4.4, as intended.
