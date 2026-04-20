@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Record estampo demo phases and merge into a single GIF.
 
-Each phase is recorded as a separate .cast file. The setup phase uses a
-pre-recorded cast file since it requires interactive login.
+Each phase is recorded as a separate .cast file, then merged into a
+single demo.cast that ``agg`` renders to demo.gif.
 
 Usage:
-    # Record all auto phases and build the merged GIF:
+    # Record all phases and build the merged GIF:
     python scripts/record_demo.py
 
     # Re-record only specific phases:
@@ -17,7 +17,11 @@ Usage:
     # Convert to GIF (done automatically):
     agg --font-size 20 docs/recordings/demo.cast docs/recordings/demo.gif
 
-Phases: setup (pre-recorded), status, init, profiles-pin, validate, run, status-w
+Phases: init, profiles-pin, validate, run
+
+The demo runs against ``examples/multi-part/``. Recording deletes the
+checked-in estampo.toml / profiles/ / estampo_output/ in that directory —
+restore with ``git checkout examples/multi-part/`` when done.
 
 Requires: pexpect, asciinema, agg (brew install agg)
 """
@@ -34,7 +38,7 @@ from pathlib import Path
 import pexpect
 
 RECORDINGS_DIR = Path(__file__).parent.parent / "docs" / "recordings"
-DEMO_DIR = Path.home() / "repos" / "decoy-case"
+DEMO_DIR = Path(__file__).parent.parent / "examples" / "multi-part"
 TYPING_DELAY = 0.04
 
 # Max idle gap in the final recording (seconds)
@@ -45,20 +49,17 @@ DOWN = "\x1b[B"
 
 # Phase definitions: name → cast file
 PHASE_FILES = {
-    "setup": RECORDINGS_DIR / "setup.fixed.cast",
-    "status": RECORDINGS_DIR / "status.cast",
     "init": RECORDINGS_DIR / "init.cast",
     "profiles-pin": RECORDINGS_DIR / "profiles-pin.cast",
     "validate": RECORDINGS_DIR / "validate.cast",
     "run": RECORDINGS_DIR / "run.cast",
-    "status-w": RECORDINGS_DIR / "status-w.cast",
 }
 
-# Phases that can be auto-recorded (setup is always pre-recorded)
-AUTO_PHASES = ["status", "init", "profiles-pin", "validate", "run", "status-w"]
+# Phases that can be auto-recorded
+AUTO_PHASES = ["init", "profiles-pin", "validate", "run"]
 
 # Default phase order for the merged demo
-PHASE_ORDER = ["setup", "status", "init", "profiles-pin", "validate", "run", "status-w"]
+PHASE_ORDER = ["init", "profiles-pin", "validate", "run"]
 
 
 def status(msg: str) -> None:
@@ -155,30 +156,18 @@ def stop_recording(child: pexpect.spawn) -> None:
 # ---------------------------------------------------------------------------
 
 
-def record_status() -> None:
-    """Record the status phase (quick printer status check)."""
-    cast_file = PHASE_FILES["status"]
-    status("RECORDING PHASE: status")
-
-    child = start_recording(cast_file)
-
-    try:
-        type_comment(child, "# Check printer status")
-        type_command(child, "estampo status")
-        expect(child, r"IDLE|RUNNING|FINISH|FAILED|State:", timeout=30)
-        time.sleep(3)
-    finally:
-        stop_recording(child)
-
-    status(f"status phase saved to {cast_file}")
-
-
 def record_init() -> None:
-    """Record the init phase."""
+    """Record the init phase.
+
+    Drives the current wizard (see ``run_wizard`` in ``src/estampo/init.py``):
+    engine pick → project name → CAD files (multi-select + per-file copies
+    & orient) → printer profile → process profile → slicer version →
+    filament → bed type → nozzle → overrides → preview.
+    """
     cast_file = PHASE_FILES["init"]
     status("RECORDING PHASE: init")
 
-    # Clean up for fresh demo
+    # Clean up any previously-generated config so the wizard starts fresh.
     import shutil
 
     estampo_toml = DEMO_DIR / "estampo.toml"
@@ -194,16 +183,20 @@ def record_init() -> None:
         shutil.rmtree(output_dir)
         status("removed existing estampo_output/")
 
-    child = start_recording(cast_file)
+    child = start_recording(cast_file, cwd=str(DEMO_DIR))
 
     try:
         type_comment(child, "# an estampo project is just CAD files + estampo.toml")
-        type_command(child, "cd repos/decoy-case")
-        time.sleep(0.5)
-        type_command(child, "ls -l")
+        type_command(child, "ls")
         time.sleep(1.5)
         type_comment(child, "# estampo init creates the config from your project")
         type_command(child, "estampo init")
+
+        # Engine pick — accept default (orca)
+        expect(child, "Pick engine")
+        time.sleep(1)
+        child.send("\r")
+        status("selected engine: orca")
 
         # Project name — accept default
         expect(child, "Project name")
@@ -211,46 +204,30 @@ def record_init() -> None:
         child.send("\r")
         status("accepted project name")
 
-        # CAD Files — multi-select both
+        # CAD Files — multi-select all three
         expect(child, "Select files")
         time.sleep(1)
-        child.send(" ")
-        time.sleep(0.3)
-        child.send(DOWN)
-        time.sleep(0.3)
-        child.send(" ")
-        time.sleep(0.3)
+        for _ in range(3):
+            child.send(" ")
+            time.sleep(0.3)
+            child.send(DOWN)
+            time.sleep(0.3)
         child.send("\r")
         time.sleep(1)
         status("selected CAD files")
 
-        # First file — copies + orient (accept defaults)
-        expect(child, "copies")
-        time.sleep(0.5)
-        child.send("\r")
-        expect(child, "orient")
-        time.sleep(0.5)
-        child.send("\r")
-        status("configured first file")
-
-        # Second file — copies + orient
-        expect(child, "copies")
-        time.sleep(0.5)
-        child.send("\r")
-        expect(child, "orient")
-        time.sleep(0.5)
-        child.send("\r")
-        status("configured second file")
-
-        # Printer (optional) — select workshop
-        expect(child, r"Printer \(optional\)")
-        time.sleep(1)
-        child.send("\r")
-        time.sleep(1)
-        status("selected printer connection")
+        # Per-file copies + orient (3 parts, accept defaults)
+        for i in range(3):
+            expect(child, "copies")
+            time.sleep(0.5)
+            child.send("\r")
+            expect(child, "orientation")
+            time.sleep(0.5)
+            child.send("\r")
+            status(f"configured part {i + 1}")
 
         # Printer Profile — search P1S
-        expect(child, "Printer Profile")
+        expect(child, "Pick a printer profile")
         time.sleep(1)
         type_slowly(child, "P1S 0.4")
         time.sleep(1)
@@ -258,8 +235,8 @@ def record_init() -> None:
         time.sleep(1)
         status("selected printer profile")
 
-        # Process Profile
-        expect(child, "Process Profile")
+        # Process Profile — standard 0.20mm
+        expect(child, "Pick a process profile")
         time.sleep(1)
         type_slowly(child, "0.20mm Standard @BBL X1C")
         time.sleep(1)
@@ -267,29 +244,31 @@ def record_init() -> None:
         time.sleep(1)
         status("selected process profile")
 
-        # Slicer Version — pick first
-        expect(child, "Pick version")
+        # Slicer Version — accept pinned default
+        expect(child, "Pick version|CuraEngine version")
         time.sleep(0.5)
-        child.sendline("1")
+        child.send("\r")
         time.sleep(1)
-        status("selected slicer version")
+        status("accepted slicer version")
 
-        # Filaments — accept AMS suggestions
-        expect(child, "Use these filaments")
+        # Filament — pick first suggestion
+        expect(child, "Pick a filament|Pick filament for slot")
         time.sleep(1)
-        child.sendline("y")
+        child.send("\r")
         time.sleep(1)
-        status("accepted AMS filaments")
+        status("selected filament")
 
-        # Filament Assignment — slot 3 for both
-        expect(child, r"slot \(1-")
+        # Bed type — accept default / skip
+        expect(child, "Pick bed type")
         time.sleep(0.5)
-        child.sendline("3")
-        expect(child, r"slot \(1-")
+        child.send("\r")
+        status("accepted bed type")
+
+        # Nozzle type — accept default
+        expect(child, "Pick nozzle type")
         time.sleep(0.5)
-        child.sendline("3")
-        time.sleep(1)
-        status("assigned filament slots")
+        child.send("\r")
+        status("accepted nozzle type")
 
         # Slicer Overrides — pick infill density, then finish
         expect(child, "Pick override")
@@ -308,6 +287,12 @@ def record_init() -> None:
         time.sleep(0.5)
         child.send("\r")
         status("finished overrides")
+
+        # Packaging (P1S is a Bambu printer — wizard prompts to add pack stage)
+        expect(child, "Add a pack stage")
+        time.sleep(1)
+        child.send("\r")
+        status("added pack stage")
 
         # Preview — write
         expect(child, "Write.*Go back.*Quit")
@@ -369,18 +354,16 @@ def record_validate() -> None:
     status(f"validate phase saved to {cast_file}")
 
 
-def record_run(dry_run: bool = True) -> None:
-    """Record the run phase."""
+def record_run() -> None:
+    """Record the run phase (full pipeline through slice + pack)."""
     cast_file = PHASE_FILES["run"]
-    mode = "--dry-run" if dry_run else ""
-    status(f"RECORDING PHASE: run {mode}".strip())
+    status("RECORDING PHASE: run")
 
     child = start_recording(cast_file, cwd=str(DEMO_DIR))
 
     try:
-        type_comment(child, "# Build and send to printer")
-        cmd = "estampo run --dry-run" if dry_run else "estampo run"
-        type_command(child, cmd)
+        type_comment(child, "# Run the pipeline end-to-end")
+        type_command(child, "estampo run")
 
         expect(child, "Loaded.*part")
         time.sleep(0.5)
@@ -394,14 +377,15 @@ def record_run(dry_run: bool = True) -> None:
         time.sleep(0.5)
         status("plate exported")
 
-        expect(child, "Sliced", timeout=180)
+        expect(child, "Sliced", timeout=300)
         time.sleep(1)
         status("slicing complete")
 
         expect(child, "Print time|filament")
         time.sleep(1)
 
-        expect(child, "Dry run|Sent to printer")
+        # Pack stage is the final stage of the default pipeline for P1S.
+        expect(child, "pack.*complete|Wrote.*gcode.3mf|Pipeline complete", timeout=120)
         time.sleep(3)
         status("run complete")
         time.sleep(1)
@@ -409,30 +393,6 @@ def record_run(dry_run: bool = True) -> None:
         stop_recording(child)
 
     status(f"run phase saved to {cast_file}")
-
-
-def record_status_w() -> None:
-    """Record the status -w phase (live dashboard)."""
-    cast_file = PHASE_FILES["status-w"]
-    status("RECORDING PHASE: status-w")
-
-    child = start_recording(cast_file)
-
-    try:
-        type_comment(child, "# Live printer dashboard")
-        type_command(child, "estampo status -w --interval 1")
-
-        # Let the dashboard refresh a few times
-        time.sleep(10)
-
-        # Ctrl-C to stop
-        child.send("\x03")
-        time.sleep(2)
-        status("status dashboard done")
-    finally:
-        stop_recording(child)
-
-    status(f"status-w phase saved to {cast_file}")
 
 
 # ---------------------------------------------------------------------------
@@ -535,12 +495,10 @@ def merge_casts(phase_order: list[str], gap: float = 1.5) -> Path:
 # ---------------------------------------------------------------------------
 
 PHASE_RECORDERS: dict[str, object] = {
-    "status": record_status,
     "init": record_init,
     "profiles-pin": record_profiles_pin,
     "validate": record_validate,
     "run": record_run,
-    "status-w": record_status_w,
 }
 
 
@@ -565,17 +523,11 @@ def main() -> None:
         "or 'none' to skip recording and just merge. Default: all auto phases.",
     )
     parser.add_argument(
-        "--no-dry-run",
-        action="store_true",
-        help="Actually send to printer during run phase (default: dry run)",
-    )
-    parser.add_argument(
         "--no-merge",
         action="store_true",
         help="Record phases but don't merge into demo.cast",
     )
     args = parser.parse_args()
-    dry_run = not args.no_dry_run
 
     # Parse phases
     if args.phases.lower() == "none":
@@ -583,12 +535,6 @@ def main() -> None:
     else:
         phases_to_record = [p.strip() for p in args.phases.split(",")]
         for p in phases_to_record:
-            if p == "setup":
-                print(
-                    "ERROR: setup is pre-recorded. Use scripts/record_setup.py to re-record it.",
-                    file=sys.stderr,
-                )
-                sys.exit(1)
             if p not in PHASE_RECORDERS:
                 valid = ", ".join(AUTO_PHASES)
                 print(
@@ -599,10 +545,7 @@ def main() -> None:
 
     # Record requested phases
     for phase in phases_to_record:
-        if phase == "run":
-            record_run(dry_run=dry_run)
-        else:
-            PHASE_RECORDERS[phase]()  # type: ignore[operator]
+        PHASE_RECORDERS[phase]()  # type: ignore[operator]
 
     # Merge all phases into demo.cast
     if not args.no_merge:
