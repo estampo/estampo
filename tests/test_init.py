@@ -11,6 +11,7 @@ from estampo.init import (
     _build_toml,
     _check_cura_template_gcode,
     _closest_match,
+    _emit_cura_pin_hint,
     _is_bambu_printer,
     _validate_override,
     build_config_toml,
@@ -1153,6 +1154,59 @@ class TestIsBambuPrinter:
 
     def test_empty_string(self):
         assert _is_bambu_printer("") is False
+
+
+# ---------------------------------------------------------------------------
+# _emit_cura_pin_hint
+# ---------------------------------------------------------------------------
+
+
+class TestEmitCuraPinHint:
+    def test_skips_orca_engine(self, tmp_path, monkeypatch):
+        """No hint for OrcaSlicer configs — pinning flow is different."""
+        calls = []
+        monkeypatch.setattr("estampo.ui.warn", lambda msg: calls.append(("warn", msg)))
+        monkeypatch.setattr("estampo.ui.info", lambda msg: calls.append(("info", msg)))
+
+        _emit_cura_pin_hint("orca", "Bambu Lab P1S 0.4 nozzle", tmp_path)
+
+        assert calls == []
+
+    def test_skips_when_printer_missing(self, tmp_path, monkeypatch):
+        """No hint if the wizard never resolved a printer."""
+        calls = []
+        monkeypatch.setattr("estampo.ui.warn", lambda msg: calls.append(("warn", msg)))
+        monkeypatch.setattr("estampo.ui.info", lambda msg: calls.append(("info", msg)))
+
+        _emit_cura_pin_hint("cura", None, tmp_path)
+
+        assert calls == []
+
+    def test_skips_when_def_reachable(self, tmp_path, monkeypatch):
+        """No hint when the cura def is already pinned or bundled."""
+        calls = []
+        monkeypatch.setattr("estampo.ui.warn", lambda msg: calls.append(("warn", msg)))
+        monkeypatch.setattr("estampo.ui.info", lambda msg: calls.append(("info", msg)))
+        monkeypatch.setattr("estampo.init._check_cura_def_reachable", lambda *a, **kw: None)
+
+        _emit_cura_pin_hint("cura", "bambox_p1s", tmp_path)
+
+        assert calls == []
+
+    def test_emits_next_step_when_unreachable(self, tmp_path, monkeypatch):
+        """Warns and prints a next-step hint when the def is Docker-only."""
+        calls = []
+        monkeypatch.setattr("estampo.ui.warn", lambda msg: calls.append(("warn", msg)))
+        monkeypatch.setattr("estampo.ui.info", lambda msg: calls.append(("info", msg)))
+        monkeypatch.setattr(
+            "estampo.init._check_cura_def_reachable",
+            lambda *a, **kw: "def unreachable",
+        )
+
+        _emit_cura_pin_hint("cura", "bambox_p1s", tmp_path)
+
+        assert any(kind == "warn" and "bambox_p1s" in msg for kind, msg in calls)
+        assert any(kind == "info" and "estampo profiles pin" in msg for kind, msg in calls)
 
 
 # ---------------------------------------------------------------------------

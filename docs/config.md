@@ -148,6 +148,11 @@ CuraEngine-specific settings — printer definition and overrides.
 | `filaments` | `[string]` | —       | Filament/material profile names  |
 | `overrides` | `{k = v}`  | —       | Flat key-value setting overrides |
 
+> **Pin non-bundled printers.** If `printer` names a definition that isn't
+> shipped with estampo (e.g. `bambox_p1s`), run `estampo profiles pin` and
+> commit the `profiles/` directory. Otherwise `estampo run --local` will
+> fail and teammates cloning the repo won't have the definition file.
+
 ### `[slicer.orca.overrides]` / `[slicer.cura.overrides]`
 
 Key-value pairs applied on top of the engine's default settings:

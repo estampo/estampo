@@ -208,6 +208,26 @@ means no profiles are available locally. Run `estampo profiles pin` to extract
 them from the Docker image. Profiles are also resolved at runtime via Docker,
 so this warning is non-blocking.
 
+### Pinning profiles for reproducibility
+
+After creating the config, pin the referenced slicer profiles into the project
+so builds are reproducible across machines and CI — regardless of what's
+installed locally:
+
+```bash
+estampo profiles pin
+```
+
+This extracts profiles from the Docker image (using the `slicer.version` in your
+config), squashes the inheritance chain, and writes standalone definition files
+to `profiles/`. **Commit the `profiles/` directory to git.**
+
+For CuraEngine configs using custom printer definitions (e.g. `bambox_p1s`),
+pinning is **required for non-bundled printers** — the definition file only
+exists inside the Docker image and is not bundled in the pip package. Without
+pinning, `estampo run --local` will fail, and teammates who clone the repo
+will see an empty `profiles/` directory.
+
 ### Common override recipes
 
 Choose overrides based on the print goals:
@@ -494,25 +514,6 @@ user's printer. When suggesting or modifying overrides:
 - **`estampo validate` checks config correctness, not print safety.** A config
   that passes validation can still produce unsafe G-code if the override values
   are wrong for the hardware.
-
-### Pinning profiles for reproducibility
-
-After creating the config, pin the referenced slicer profiles into the project
-so builds are reproducible across machines and CI — regardless of what's
-installed locally:
-
-```bash
-estampo profiles pin
-```
-
-This extracts profiles from the Docker image (using the `slicer.version` in your
-config), squashes the inheritance chain, and writes standalone definition files
-to `profiles/`. **Commit the `profiles/` directory to git.**
-
-For CuraEngine configs using custom printer definitions (e.g. `bambox_p1s`),
-pinning is especially important — the definition file only exists inside the
-Docker image and is not bundled in the pip package. Without pinning, local
-slicing (`--local`) will fail.
 
 ### Verifying the config
 
