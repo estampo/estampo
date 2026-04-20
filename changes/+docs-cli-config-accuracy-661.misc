@@ -1,1 +1,0 @@
-docs: fix inaccuracies in ``docs/cli.md`` and ``docs/config.md`` — remove references to the removed ``print`` pipeline stage, fix wizard step numbering, repair a broken markdown fence, make ``--docker-version`` engine-agnostic, and align override value-type guidance with the examples (natural TOML types).

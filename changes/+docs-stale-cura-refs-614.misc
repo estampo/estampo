@@ -1,1 +1,0 @@
-Remove stale ``CuraProfile`` references from docs after ADR-008: fix "squashed" → "verbatim" in ``cura.py`` def-chain docstring, rewrite ``todo-slicer.md`` CuraEngine profile-pin note, and annotate the v0.3.1 changelog entry that mentioned the removed API.

@@ -1,1 +1,0 @@
-AI setup prompt: require ``bed_type`` for Bambu Lab printers and warn about the first-layer nozzle-crash risk if the physical plate (e.g. Textured PEI) differs from the OrcaSlicer machine profile default (Cool Plate).

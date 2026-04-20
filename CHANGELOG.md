@@ -4,6 +4,51 @@ All notable changes to this project are documented here.
 
 <!-- towncrier release notes start -->
 
+## 0.4.0 — 2026-04-20
+
+### Features
+
+- ``estampo validate`` now checks that the pinned process profile's ``compatible_printers`` list includes the active ``slicer.printer``, catching mismatches before the slice (which would otherwise surface as a silent OrcaSlicer exit 239). ([#627](https://github.com/estampo/estampo/pull/627))
+- Add ``--printer NAME`` filter to ``estampo profiles list`` (OrcaSlicer) so LLMs and humans can query processes/filaments compatible with a given printer. ([#642](https://github.com/estampo/estampo/pull/642))
+- ``estampo validate`` now warns on unknown TOML keys (e.g. a misplaced ``build_plate`` under ``[slicer.orca]``), with "did you mean?" hints and cross-table suggestions when a key belongs in a neighbouring section.
+
+### Bugfixes
+
+- Fix ``release.yml`` silently skipping the publish pipeline when the GitHub commits→PR API hasn't yet associated the merge commit with the release PR. ``detect-release`` now parses the merge-commit subject (deterministic) instead of relying on eventually-consistent API data, and fails loud if a release-like commit can't be parsed. ([#616](https://github.com/estampo/estampo/pull/616))
+- Fix CuraEngine template variables like ``{material_bed_temperature_layer_0}`` no longer being resolved in v0.4.0b4. ``cura_settings.json`` now includes the extruder-0 filament temperatures (regression introduced by ADR-008 PR 2/3 when ``CuraProfile`` was dropped — the temp keys used to be written into the global settings dict and were inadvertently demoted to per-extruder only). ([#619](https://github.com/estampo/estampo/pull/619))
+- Surface OrcaSlicer stdout on slice failure so the real error (e.g. ``process not compatible with printer`` producing silent exit 239) reaches the user. ([#626](https://github.com/estampo/estampo/pull/626))
+- Docker (OrcaSlicer image): make the uv-managed Python tree readable by the runtime ``estampo`` user so command stages with ``docker = true`` (e.g. ``bambox repack``) no longer fail with ``ModuleNotFoundError: No module named 'encodings'``. ([#643](https://github.com/estampo/estampo/pull/643))
+- Fix the orca Docker image so ``[pack]`` command stages with ``docker = true`` actually run: the traversal path to the uv-managed Python (``/home/estampo/.local/share/uv/python/…``) now has every parent directory a+rx, including ``/home/estampo`` itself. Previously the #641 chmod stopped one level too deep, so the non-root ``estampo`` user could not reach the Python interpreter and ``bambox repack`` crashed with ``Could not find platform independent libraries``. This matches how ``Dockerfile.cura`` already handles ``/root``. ([#677](https://github.com/estampo/estampo/pull/677))
+- AI setup prompt: verify configs with ``estampo run`` (full pipeline) rather than ``estampo run --until slice``. The ``--until slice`` form skips ``pack`` and ``resolve_templates``, hiding broken ``bambox`` commands and CuraEngine template errors that Bambu printers need. Also clarify that local runs should use the installed ``estampo`` CLI directly, not add estampo to the project's dependencies.
+- Fix CuraEngine placement shifting prints by ``+bed/2`` in each axis on corner-origin printers (regression from ADR-008). STLs are now centred at ``(0, 0)`` — CuraEngine's own ``machine_center_is_zero`` convention lands the print at bed centre.
+- Refresh the bed-type list surfaced by ``estampo info`` and the ``estampo init`` wizard to match OrcaSlicer 2.3.1, adding the previously missing ``Textured Cool Plate`` and ``Supertack Plate`` values.
+- ``estampo validate`` no longer flags valid OrcaSlicer override keys that default to an "off" value in libslic3r and never appear in shipped BBL profiles — e.g. ``brim_type`` (the companion to ``brim_width``), ``enable_support``, ``support_type``, ``enable_prime_tower``, ``timelapse_type``. Typos of these keys still produce "did you mean?" hints.
+- ``estampo validate`` now flags CuraEngine printers whose definition file is not reachable locally. The bundled Cura name manifest includes every printer present in the Docker image (e.g. ``bambox_p1s`` from ``cura-p1s``), but the ``.def.json`` files for non-stock printers are not shipped with the pip package — previously validate passed and only ``estampo run --local`` would fail. The warning points users at ``estampo profiles pin``.
+
+### Misc
+
+- Document the verbatim CuraEngine def-chain pinning decision as ADR-008. ([#610](https://github.com/estampo/estampo/pull/610))
+- Make the CuraEngine profile-pin requirement obvious: wizard emits an explicit "run ``estampo profiles pin``" hint when a non-bundled printer is picked, README + ``[slicer.cura]`` docs call it out, and ``ai-setup-prompt.md`` surfaces the guidance next to the config creation flow. ([#618](https://github.com/estampo/estampo/pull/618))
+- README: show ``uv tool install estampo`` alongside pip/pipx, and specify Python 3.11–3.13 support (3.14 is not yet tested). ([#624](https://github.com/estampo/estampo/pull/624))
+- AI setup prompt: make it explicit that STEP files are loaded natively (via build123d) so assistants no longer advise users to pre-convert STEP to STL/3MF. ([#631](https://github.com/estampo/estampo/pull/631))
+- README: remove references to ``estampo run --dry-run`` — the flag was never implemented in the CLI. ([#639](https://github.com/estampo/estampo/pull/639))
+- AI setup prompt: require ``bed_type`` for Bambu Lab printers and warn about the first-layer nozzle-crash risk if the physical plate (e.g. Textured PEI) differs from the OrcaSlicer machine profile default (Cool Plate). ([#645](https://github.com/estampo/estampo/pull/645))
+- Drop the ``(experimental)`` suffix from the CuraEngine label in ``estampo init``; CuraEngine has bundled printer definitions, E2E tests, and example projects and is no longer experimental. ([#663](https://github.com/estampo/estampo/pull/663))
+- CONTRIBUTING.md: refer to ``EstampoError`` instead of the old ``FabprintError`` name. ([#666](https://github.com/estampo/estampo/pull/666))
+- README: add "who this is for / not for" block and flag estampo as printer-agnostic in the pipeline description. ([#669](https://github.com/estampo/estampo/pull/669))
+- README: add a short CLI-comparison teaser under the pitch and move the "active early development" warning down to just above ``## Quick start``. ([#673](https://github.com/estampo/estampo/pull/673))
+- Tighten the README pitch to name the CAD formats estampo is designed to version alongside (Code CAD, STEP, STL) and soften the absolute "can't version your slicer setup" claim to "can't version your slicer setup easily", which better reflects what estampo actually solves. ([#676](https://github.com/estampo/estampo/pull/676))
+- Regenerate ``docs/recordings/demo.cast`` and ``docs/recordings/demo.gif`` against the current ``estampo init`` wizard flow, replacing the stale Bambu-era recording. ([#679](https://github.com/estampo/estampo/pull/679))
+- Document the engine-selection rule (OrcaSlicer for Bambu Lab printers, CuraEngine for everything else) and the ``orient`` / ``rotate`` semantics across the README, ``CLAUDE.md``, ``docs/ai-setup-prompt.md``, ``docs/config.md``, and ``docs/llm.md``. Also fix broken ``estampo/estampo/action@v1`` references to ``@v0`` — ``v1`` is never created by the release pipeline (``release.yml`` derives ``v${MAJOR}`` from the package version, which is pre-1.0). ([#681](https://github.com/estampo/estampo/pull/681))
+- Add ADR-009 (Proposed) for vendor printer-def discovery via Python entry points and lifting the CuraEngine template resolver into estampo as ``cura_resolve`` — see #600 for discussion.
+- README: remove stale fabprint migration note and Bambu/Moonraker printing claims; add a proper ``bambox`` section explaining how vendor-specific printing plugs in as a command stage.
+- Refresh ``scripts/record_demo.py`` for the current estampo CLI: drop the retired ``setup`` (Bambu cloud login), ``status``, and ``status-w`` phases, point the demo at the in-tree ``examples/multi-part/`` fixture, and rewrite the ``init`` recorder against the current wizard (engine pick → project name → CAD files → printer/process profiles → slicer version → filament → bed type → nozzle → overrides → packaging → preview). Also remove the obsolete ``scripts/record_setup.py`` and the stale ``setup.fixed.cast`` / ``status.cast`` / ``status-w.cast`` recordings.
+- Remove references to nonexistent ``estampo run --dry-run`` and other stale printer-era flags from docs.
+- Remove stale ``CuraProfile`` references from docs after ADR-008: fix "squashed" → "verbatim" in ``cura.py`` def-chain docstring, rewrite ``todo-slicer.md`` CuraEngine profile-pin note, and annotate the v0.3.1 changelog entry that mentioned the removed API.
+- Update bundled CuraEngine 5.12.0 definitions
+- docs: fix inaccuracies in ``docs/cli.md`` and ``docs/config.md`` — remove references to the removed ``print`` pipeline stage, fix wizard step numbering, repair a broken markdown fence, make ``--docker-version`` engine-agnostic, and align override value-type guidance with the examples (natural TOML types).
+
+
 ## 0.4.0b4 — 2026-04-19
 
 ### Bugfixes

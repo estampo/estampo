@@ -1,1 +1,0 @@
-Surface OrcaSlicer stdout on slice failure so the real error (e.g. ``process not compatible with printer`` producing silent exit 239) reaches the user.

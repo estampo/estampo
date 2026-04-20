@@ -1,1 +1,0 @@
-``estampo validate`` now checks that the pinned process profile's ``compatible_printers`` list includes the active ``slicer.printer``, catching mismatches before the slice (which would otherwise surface as a silent OrcaSlicer exit 239).

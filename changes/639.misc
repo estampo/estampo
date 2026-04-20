@@ -1,1 +1,0 @@
-README: remove references to ``estampo run --dry-run`` — the flag was never implemented in the CLI.
