@@ -1,0 +1,1 @@
+Fix ``release.yml`` github-release job's "Update action version tag" step failing with ``fatal: Failed to resolve 'vX.Y.Z' as a valid ref``. The job's ``actions/checkout@v6`` didn't fetch tags, so the tag created earlier in the pipeline wasn't locally visible. Added ``fetch-tags: true``. Hit on v0.4.0 — ``v0`` had to be advanced manually.

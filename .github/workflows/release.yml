@@ -437,6 +437,12 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: main
+          # The "Update action version tag" step below references
+          # v${VERSION} as the target of `git tag -f v${MAJOR}`. Without
+          # fetch-tags, the shallow checkout does not know the tag just
+          # created upstream, and the step fails with
+          # "Failed to resolve 'vX.Y.Z' as a valid ref".
+          fetch-tags: true
 
       - uses: actions/download-artifact@v7
         with:
