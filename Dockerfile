@@ -88,10 +88,12 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 # orca-base sets HOME=/home/estampo, so uv (running as root) installs the
 # managed Python under /home/estampo/.local/... Without these chmods the
-# estampo runtime user can't read python-build-standalone's relocation
-# data and Python falls back to its hardcoded /install prefix, breaking
-# any command stage that invokes Python (e.g. bambox repack). See #641.
-RUN chmod a+rx /home/estampo/.local /home/estampo/.local/share \
+# estampo runtime user can't traverse the path or read python-build-standalone's
+# relocation data, so Python falls back to its hardcoded /install prefix and
+# breaks any command stage that invokes Python (e.g. bambox repack). Every
+# directory on the traversal path — including /home/estampo itself — must be
+# a+rx (compare Dockerfile.cura which chmods /root the same way). See #641.
+RUN chmod a+rx /home/estampo /home/estampo/.local /home/estampo/.local/share \
     /home/estampo/.local/share/uv /home/estampo/.local/share/uv/python
 
 # Install bambox (CLI-only tool for Bambu Lab printers — not an estampo
