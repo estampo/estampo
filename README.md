@@ -264,16 +264,30 @@ The action slices your model, uploads G-code as an artifact, and posts print tim
 ## CLI overview
 
 ```bash
+estampo --version                   # print version
 estampo init                        # interactive config wizard
 estampo init --template             # dump commented TOML template
 estampo init --workflow             # wizard + GitHub Actions workflow
 estampo validate                    # check config for issues
+estampo info                        # list valid stages, engines, orient values, substitution variables
 estampo run                         # full pipeline
 estampo run --until plate           # stop after plating
 estampo run --only slice            # run just one stage
 estampo profiles list               # list available slicer profiles
+estampo profiles list --printer "Bambu Lab P1S 0.4 nozzle"   # processes/filaments compatible with a printer
 estampo profiles pin                # pin profiles for reproducible builds
 ```
+
+### Shell completion
+
+estampo ships with Typer's built-in completion support:
+
+```bash
+estampo --install-completion        # install completion for your current shell (bash/zsh/fish/pwsh)
+estampo --show-completion           # print the completion script without installing
+```
+
+After installing, restart your shell — you'll get tab completion for commands, flags, and stage names.
 
 ## Sending prints to a printer
 
@@ -292,8 +306,11 @@ you install it separately and call it from your pipeline. Typical wiring:
 
 ```bash
 pipx install bambox
-bambox login        # one-time — credentials go to ~/.config/bambox/
+bambox login        # one-time — credentials go to ~/.config/bambox/credentials.toml
 ```
+
+For OrcaSlicer output, repack the sliced `.gcode.3mf` so the printer
+accepts it:
 
 ```toml
 [pipeline]
@@ -304,11 +321,18 @@ command = "bambox repack {sliced_3mf}"
 output = "{sliced_3mf}"
 ```
 
-`bambox repack` adds the metadata a Bambu printer needs to accept the file
-(AMS mapping, plate thumbnails, auxiliary bed entries). `bambox send` can
-then ship it to the printer — add a `[send]` command stage if you want
-printing in the pipeline too. See the
-[AI setup prompt](docs/ai-setup-prompt.md) for full examples.
+For CuraEngine output, `bambox pack` wraps the raw `.gcode` into a
+`.gcode.3mf`:
+
+```toml
+[pack]
+command = "bambox pack {sliced_dir}/plate.gcode -o {output_dir}/plate.gcode.3mf"
+output = "{output_dir}/plate.gcode.3mf"
+```
+
+To send the packed file to a printer, add a `print` stage that calls
+`bambox print`. See the [AI setup prompt](docs/ai-setup-prompt.md) for
+full examples including GitHub Actions wiring.
 
 ### Other printers
 
