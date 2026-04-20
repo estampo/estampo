@@ -1,1 +1,0 @@
-Document the engine-selection rule (OrcaSlicer for Bambu Lab printers, CuraEngine for everything else) and the ``orient`` / ``rotate`` semantics in the README, the AI setup prompt, ``docs/llm.md``, ``docs/config.md``, and ``CLAUDE.md``.

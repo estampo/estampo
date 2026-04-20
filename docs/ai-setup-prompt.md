@@ -379,7 +379,7 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
-      - uses: estampo/estampo/action@v1
+      - uses: estampo/estampo/action@v0
         with:
           config: estampo.toml
 ```
@@ -407,7 +407,7 @@ estampo action. (If the STEP files are committed to the repo, skip this — esta
       - uses: actions/checkout@v4
       - name: Build models
         run: python build.py  # or make, ./generate.sh, etc.
-      - uses: estampo/estampo/action@v1
+      - uses: estampo/estampo/action@v0
         with:
           config: estampo.toml
 ```
@@ -505,7 +505,7 @@ jobs:
           echo "$BAMBOX_CREDENTIALS" > ~/.config/bambox/credentials.toml
         env:
           BAMBOX_CREDENTIALS: ${{ secrets.BAMBOX_CREDENTIALS }}
-      - uses: estampo/estampo/action@v1
+      - uses: estampo/estampo/action@v0
         with:
           config: estampo.toml
           comment: "false"

@@ -144,7 +144,7 @@ estampo_output/
 Use the estampo GitHub Action to slice on every PR:
 
 ```yaml
-- uses: estampo/estampo/action@v1
+- uses: estampo/estampo/action@v0
   with:
     config: estampo.toml
     orca-version: "2.3.1"

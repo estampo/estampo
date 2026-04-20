@@ -118,7 +118,7 @@ without asking you to assemble the full invocation by hand each time.
 | Reproducible builds | Track slicer binary + profiles yourself | Track all definition JSONs yourself | `version = "..."` in TOML + pinned Docker image |
 | Partial re-runs | Re-slice the whole thing | Re-slice the whole thing | `--until plate`, `--only slice` |
 | Version control | Shell scripts + scattered JSON overrides | Shell scripts + `-s` lists + JSON definitions | Single TOML file — git-diffable, reviewable |
-| Run in CI | Install OrcaSlicer manually (needs display on some builds) | Install CuraEngine + definitions manually | `uses: estampo/estampo/action@v1` |
+| Run in CI | Install OrcaSlicer manually (needs display on some builds) | Install CuraEngine + definitions manually | `uses: estampo/estampo/action@v0` |
 | Post-process (e.g. pack for Bambu) | Separate manual step | Separate manual step | `[pack]` command stage with variable substitution |
 | Headless slicing | GUI builds can require an X server | CLI-only already | Docker container pinned to a specific slicer version |
 
@@ -262,7 +262,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: estampo/estampo/action@v1
+      - uses: estampo/estampo/action@v0
 ```
 
 The action slices your model, uploads G-code as an artifact, and posts print time / filament stats as a PR comment. See [`action/README.md`](action/README.md) for all options.
