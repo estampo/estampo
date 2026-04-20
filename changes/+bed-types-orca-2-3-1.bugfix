@@ -1,0 +1,1 @@
+Refresh the bed-type list surfaced by ``estampo info`` and the ``estampo init`` wizard to match OrcaSlicer 2.3.1, adding the previously missing ``Textured Cool Plate`` and ``Supertack Plate`` values.

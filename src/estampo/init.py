@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from estampo import EstampoError
 from estampo.config import DEFAULT_STAGES, SUPPORTED_EXTENSIONS
 
 if TYPE_CHECKING:
@@ -15,7 +16,17 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
-BED_TYPES = ["Cool Plate", "Engineering Plate", "High Temp Plate", "Textured PEI Plate"]
+# Source of truth: BedType enum + curr_bed_type enum_values in OrcaSlicer
+# libslic3r/PrintConfig.{hpp,cpp}. Order must match the enum so menu indexes
+# are stable. Update when bumping the pinned Orca version.
+BED_TYPES = [
+    "Cool Plate",
+    "Engineering Plate",
+    "High Temp Plate",
+    "Textured PEI Plate",
+    "Textured Cool Plate",
+    "Supertack Plate",
+]
 
 # ---------------------------------------------------------------------------
 # Template
@@ -36,7 +47,7 @@ padding = 5.0           # gap between parts in mm
 [slicer]
 engine = "orca"                            # "orca" (OrcaSlicer) or "cura" (CuraEngine)
 # version = "2.3.1"                        # pin slicer version for reproducibility
-# bed_type = "Textured PEI Plate"          # or: Cool Plate, Engineering Plate, High Temp Plate
+# bed_type = "Textured PEI Plate"          # run `estampo info` for the full list
 
 # OrcaSlicer profile chain:
 [slicer.orca]
@@ -241,19 +252,99 @@ def _check_profile_type(name: str, engine: str, category: str) -> str | None:
         return None
 
 
+def _check_orca_process_compat(
+    printer: str, process: str, project_dir: Path, profiles_dir: str
+) -> str | None:
+    """Verify the process's ``compatible_printers`` list contains *printer*.
+
+    Loads the flattened process profile (pinned → system → bundled) and reads
+    the resolved ``compatible_printers`` list. Returns a warning string if the
+    printer is missing from the list, otherwise ``None``.
+
+    Returns ``None`` when compatibility cannot be determined (process file not
+    readable, or ``compatible_printers_condition`` is set — a dynamic Orca
+    expression we can't evaluate statically).
+    """
+    from estampo.profiles import resolve_profile_data
+
+    try:
+        data = resolve_profile_data(
+            process, "orca", "process", project_dir=project_dir, profiles_dir=profiles_dir
+        )
+    except (EstampoError, FileNotFoundError, OSError):
+        return None
+
+    if data.get("compatible_printers_condition"):
+        return None
+
+    compat = data.get("compatible_printers")
+    if not compat or not isinstance(compat, list):
+        return None
+
+    if printer in compat:
+        return None
+
+    compat_str = ", ".join(f"'{p}'" for p in compat)
+    return (
+        f"slicer.process '{process}' is not compatible with slicer.printer '{printer}'.\n"
+        f"  Process's compatible_printers: {compat_str}.\n"
+        f"  Note: this combination fails at slice time with a silent exit 239.\n"
+        f"  Fix: pick a process whose compatible_printers includes '{printer}', "
+        f"or choose a different printer."
+    )
+
+
+def _check_cura_def_reachable(printer: str, project_dir: Path, profiles_dir: str) -> str | None:
+    """Warn when a Cura printer name is known but the def.json isn't local.
+
+    The bundled Cura name manifest enumerates every machine present in the
+    Docker image, including non-stock definitions (e.g. ``bambox_p1s``).
+    Their ``.def.json`` files are not shipped in the estampo pip package,
+    so a slice without Docker (local fallback) would fail with a definition
+    -not-found error.  Flag this at validate time instead of letting run
+    surface it.
+
+    URL or filesystem-path printers are treated as reachable — the
+    downstream resolver fetches/reads them directly.
+    """
+    from estampo.cura import _printer_is_file, _printer_is_url, _resolve_def_chain_for_printer
+
+    if _printer_is_url(printer) or _printer_is_file(printer, project_dir):
+        return None
+
+    chain = _resolve_def_chain_for_printer(printer, project_dir, profiles_dir)
+    if chain:
+        return None
+
+    return (
+        f"slicer.printer '{printer}' is known to the CuraEngine Docker image "
+        f"but no matching definition file is reachable locally (neither pinned "
+        f"under {profiles_dir}/cura/definitions/ nor bundled with estampo).\n"
+        f"  Without Docker (e.g. `estampo run --local`), slice will fail.\n"
+        f"  Fix: run 'estampo profiles pin' to extract the definition from the "
+        f"Docker image, or drop '{printer}.def.json' into {profiles_dir}/cura/definitions/."
+    )
+
+
 def validate_config(path: Path) -> ValidationResult:
     """Validate an estampo.toml and return passes and warnings.
 
     Raises EstampoError for hard errors (via load_config).
     Returns a ValidationResult with passes and warnings.
     """
-    from estampo.config import load_config
+    import tomllib
+
+    from estampo.config import detect_unknown_keys, load_config
     from estampo.pipeline import STAGE_OUTPUTS
     from estampo.profiles import discover_profile_names, validate_override_keys
 
     cfg = load_config(path)
     passes: list[str] = []
     warnings: list[str] = []
+
+    with open(path, "rb") as f:
+        raw_toml = tomllib.load(f)
+    warnings.extend(detect_unknown_keys(raw_toml))
 
     # Check slicer version pinning
     if not cfg.slicer.version:
@@ -341,6 +432,36 @@ def validate_config(path: Path) -> ValidationResult:
 
         if profile_ok:
             passes.append(f"Slicer profiles valid ({source})")
+
+        # Cura-only: check that the printer definition file is reachable
+        # locally.  The bundled Cura name manifest knows every printer
+        # present in the Docker image (e.g. `bambox_p1s` from the
+        # `cura-p1s` package), but the physical `<id>.def.json` for
+        # non-stock definitions only lives in the Docker image — not in
+        # estampo's pip bundle.  Without Docker the slice then fails with
+        # a definition-not-found error, which `estampo validate` should
+        # flag before the user ever hits run.
+        if profile_ok and cfg.slicer.engine == "cura" and active.printer:
+            reach_warning = _check_cura_def_reachable(
+                active.printer, cfg.base_dir, cfg.slicer.profiles_dir
+            )
+            if reach_warning:
+                warnings.append(reach_warning)
+
+        # Check process/printer compatibility (OrcaSlicer only).
+        # The pinned process JSON has a `compatible_printers` list. When the
+        # active printer isn't in it, OrcaSlicer rejects the slice with
+        # `run found error, return -17, exit...` which surfaces as exit 239.
+        if profile_ok and orca and active.printer and orca.process:
+            compat_warning = _check_orca_process_compat(
+                active.printer, orca.process, cfg.base_dir, cfg.slicer.profiles_dir
+            )
+            if compat_warning:
+                warnings.append(compat_warning)
+            else:
+                passes.append(
+                    f"Process '{orca.process}' compatible with printer '{active.printer}'"
+                )
     else:
         warnings.append(
             f"slicer profile names could not be validated — no {cfg.slicer.engine} "

@@ -1,0 +1,1 @@
+``estampo validate`` no longer flags valid OrcaSlicer override keys that default to an "off" value in libslic3r and never appear in shipped BBL profiles — e.g. ``brim_type`` (the companion to ``brim_width``), ``enable_support``, ``support_type``, ``enable_prime_tower``, ``timelapse_type``. Typos of these keys still produce "did you mean?" hints.

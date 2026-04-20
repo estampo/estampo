@@ -13,6 +13,7 @@ from estampo.profiles import (
     detect_category,
     discover_profile_names,
     discover_profiles,
+    filter_profiles_by_printer,
     load_bundled_profiles,
     pin_profiles,
     pinned_profiles_version,
@@ -1015,6 +1016,40 @@ def test_validate_override_keys_cross_engine_orca_in_cura():
     assert "wall_line_count" in warnings[0]
 
 
+def test_validate_override_keys_orca_cli_only_brim_type():
+    """brim_type is a real Orca key but not in any shipped profile (#649) —
+    the validator should not flag it."""
+    warnings = validate_override_keys(
+        {"brim_type": "outer_only"},
+        engine="orca",
+        process=None,
+    )
+    assert warnings == []
+
+
+def test_validate_override_keys_orca_cli_only_support_enable():
+    """enable_support is a real Orca key that defaults off (#649) — should
+    not warn."""
+    warnings = validate_override_keys(
+        {"enable_support": "1"},
+        engine="orca",
+        process=None,
+    )
+    assert warnings == []
+
+
+def test_validate_override_keys_typo_of_cli_only_still_warns():
+    """Typos of CLI-only keys still produce a warning with a hint pointing
+    at the real key."""
+    warnings = validate_override_keys(
+        {"brim_typ": "outer_only"},
+        engine="orca",
+        process=None,
+    )
+    assert len(warnings) == 1
+    assert "brim_type" in warnings[0]
+
+
 def test_validate_override_keys_cross_engine_cura_in_orca():
     """Using CuraEngine key in OrcaSlicer config should suggest the OrcaSlicer equivalent."""
     warnings = validate_override_keys(
@@ -1198,3 +1233,125 @@ class TestEngineNamespacedProfiles:
         (engine_dir / ".slicer-version").write_text("2.3.2\n")
 
         assert pinned_profiles_version(tmp_path, engine="orca") == "2.3.2"
+
+
+# ---------------------------------------------------------------------------
+# filter_profiles_by_printer
+# ---------------------------------------------------------------------------
+
+
+def _write_pinned_process(tmp_path, name, compat=None, condition=None):
+    process_dir = tmp_path / "profiles" / "orca" / "process"
+    process_dir.mkdir(parents=True, exist_ok=True)
+    data: dict = {"type": "process", "name": name, "layer_height": "0.2"}
+    if compat is not None:
+        data["compatible_printers"] = compat
+    if condition is not None:
+        data["compatible_printers_condition"] = condition
+    (process_dir / f"{name}.json").write_text(json.dumps(data))
+
+
+class TestFilterByPrinter:
+    def test_filters_out_incompatible_process(self, tmp_path):
+        _write_pinned_process(tmp_path, "HQ P1P", compat=["Bambu Lab P1P 0.4 nozzle"])
+        _write_pinned_process(tmp_path, "HQ P1S", compat=["Bambu Lab P1S 0.4 nozzle"])
+        names = {"machine": [], "process": ["HQ P1P", "HQ P1S"], "filament": []}
+
+        out = filter_profiles_by_printer(
+            "orca", names, "Bambu Lab P1S 0.4 nozzle", project_dir=tmp_path
+        )
+        assert out["process"] == ["HQ P1S"]
+
+    def test_unknown_printer_returns_empty(self, tmp_path):
+        _write_pinned_process(tmp_path, "HQ P1P", compat=["Bambu Lab P1P 0.4 nozzle"])
+        names = {"machine": [], "process": ["HQ P1P"], "filament": []}
+
+        out = filter_profiles_by_printer("orca", names, "Bambu Lab Unknown", project_dir=tmp_path)
+        assert out["process"] == []
+
+    def test_dynamic_condition_included(self, tmp_path):
+        """Entries with compatible_printers_condition can't be statically
+        evaluated — keep them so the user can try them."""
+        _write_pinned_process(
+            tmp_path,
+            "Dyn P1P",
+            compat=["Bambu Lab P1P 0.4 nozzle"],
+            condition="nozzle_diameter[0]==0.4",
+        )
+        names = {"machine": [], "process": ["Dyn P1P"], "filament": []}
+
+        out = filter_profiles_by_printer(
+            "orca", names, "Bambu Lab P1S 0.4 nozzle", project_dir=tmp_path
+        )
+        assert out["process"] == ["Dyn P1P"]
+
+    def test_missing_compat_included(self, tmp_path):
+        """Profiles with no compatible_printers data are kept (unrestricted)."""
+        _write_pinned_process(tmp_path, "Universal")
+        names = {"machine": [], "process": ["Universal"], "filament": []}
+
+        out = filter_profiles_by_printer(
+            "orca", names, "Bambu Lab P1S 0.4 nozzle", project_dir=tmp_path
+        )
+        assert out["process"] == ["Universal"]
+
+    def test_machine_category_passes_through(self, tmp_path):
+        """Machine names are not filtered — they are the printers themselves."""
+        _write_pinned_process(tmp_path, "HQ P1P", compat=["Bambu Lab P1P 0.4 nozzle"])
+        names = {
+            "machine": ["Some Printer", "Another"],
+            "process": ["HQ P1P"],
+            "filament": [],
+        }
+
+        out = filter_profiles_by_printer(
+            "orca", names, "Bambu Lab P1S 0.4 nozzle", project_dir=tmp_path
+        )
+        assert out["machine"] == ["Some Printer", "Another"]
+
+    def test_uses_bundled_manifest_for_lookup(self):
+        """When a name matches a bundled manifest entry, we use its compat
+        data without needing the profile JSON on disk."""
+        names = {
+            "machine": [],
+            "process": ["0.08mm Extra Fine @BBL X1C"],
+            "filament": [],
+        }
+        out = filter_profiles_by_printer("orca", names, "Bambu Lab P1S 0.4 nozzle", version="2.3.1")
+        assert out["process"] == ["0.08mm Extra Fine @BBL X1C"]
+
+        out = filter_profiles_by_printer("orca", names, "Bambu Lab NotAThing", version="2.3.1")
+        assert out["process"] == []
+
+    def test_cura_raises(self):
+        from estampo import EstampoError
+
+        with pytest.raises(EstampoError, match="not supported for engine 'cura'"):
+            filter_profiles_by_printer("cura", {"process": ["foo"]}, "some-printer")
+
+    def test_filament_also_filtered(self, tmp_path):
+        filament_dir = tmp_path / "profiles" / "orca" / "filament"
+        filament_dir.mkdir(parents=True)
+        (filament_dir / "PLA P1P.json").write_text(
+            json.dumps(
+                {
+                    "type": "filament",
+                    "name": "PLA P1P",
+                    "compatible_printers": ["Bambu Lab P1P 0.4 nozzle"],
+                }
+            )
+        )
+        (filament_dir / "PLA P1S.json").write_text(
+            json.dumps(
+                {
+                    "type": "filament",
+                    "name": "PLA P1S",
+                    "compatible_printers": ["Bambu Lab P1S 0.4 nozzle"],
+                }
+            )
+        )
+        names = {"machine": [], "process": [], "filament": ["PLA P1P", "PLA P1S"]}
+        out = filter_profiles_by_printer(
+            "orca", names, "Bambu Lab P1S 0.4 nozzle", project_dir=tmp_path
+        )
+        assert out["filament"] == ["PLA P1S"]

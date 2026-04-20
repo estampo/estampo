@@ -22,6 +22,9 @@ from estampo.orca import (  # noqa: F401
     _system_dirs,
     extract_docker_profiles,
 )
+from estampo.orca import (
+    filter_profiles_by_printer as _orca_filter_profiles_by_printer,
+)
 
 log = logging.getLogger(__name__)
 
@@ -213,6 +216,33 @@ def discover_profile_names(
         return bundled, "bundled"
 
     return {cat: [] for cat in CATEGORIES}, "none"
+
+
+def filter_profiles_by_printer(
+    engine: str,
+    names_by_category: dict[str, list[str]],
+    printer: str,
+    version: str | None = None,
+    project_dir: Path | None = None,
+    profiles_dir: str = "profiles",
+) -> dict[str, list[str]]:
+    """Filter process/filament names to those compatible with *printer*.
+
+    Dispatches to the engine module. CuraEngine has no compatibility concept
+    (inline settings), so this is only meaningful for OrcaSlicer.
+    """
+    if engine == "orca":
+        return _orca_filter_profiles_by_printer(
+            names_by_category,
+            printer,
+            version=version,
+            project_dir=project_dir,
+            profiles_dir=profiles_dir,
+        )
+    raise EstampoError(
+        f"--printer filter is not supported for engine '{engine}'. "
+        "CuraEngine uses inline settings with no process/filament compatibility data."
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -411,16 +441,51 @@ def validate_override_keys(
     return warnings
 
 
+# OrcaSlicer keys that exist in libslic3r's PrintConfig but never appear in
+# any shipped BBL profile — typically because they default to an "off" value
+# in C++ code (e.g. brim_type = no_brim) and no profile needs to override
+# them. ``scripts/extract_settings.py`` scrapes profiles, so these are
+# missed. Without this supplement the validator flags them as unknown and
+# users (or AI agents) drop them, producing silently wrong slices — e.g.
+# setting ``brim_width = 5`` with no ``brim_type`` gives no brim. See #649
+# for the proper fix (enumerate from OrcaSlicer source rather than
+# profiles); this list is an interim override.
+_ORCA_CLI_ONLY_KEYS: set[str] = {
+    # Brim — default brim_type is "no_brim", so it's in zero profiles
+    "brim_type",
+    "brim_ears_max_angle",
+    "brim_ears_detection_length",
+    # Support — default is off, so only profiles that enable it set these
+    "enable_support",
+    "support_type",
+    "support_style",
+    "support_threshold_angle",
+    # Prime tower / wipe tower — default off
+    "enable_prime_tower",
+    "wipe_tower",
+    # Timelapse — default off
+    "timelapse_type",
+}
+
+
 def _load_engine_settings(engine: str) -> set[str]:
-    """Load known setting keys from bundled settings JSON."""
+    """Load known setting keys from bundled settings JSON.
+
+    OrcaSlicer results are augmented with ``_ORCA_CLI_ONLY_KEYS`` — keys
+    that are real CLI overrides but don't appear in any shipped profile
+    (the extractor only sees keys that show up in profile JSON).
+    """
     settings_file = Path(__file__).parent / "data" / f"{engine}-settings.json"
-    if not settings_file.exists():
-        return set()
-    try:
-        data = json.loads(settings_file.read_text())
-        return {s["key"] for s in data.get("settings", [])}
-    except (json.JSONDecodeError, KeyError, OSError):
-        return set()
+    keys: set[str] = set()
+    if settings_file.exists():
+        try:
+            data = json.loads(settings_file.read_text())
+            keys = {s["key"] for s in data.get("settings", [])}
+        except (json.JSONDecodeError, KeyError, OSError):
+            pass
+    if engine == "orca":
+        keys |= _ORCA_CLI_ONLY_KEYS
+    return keys
 
 
 def _cross_engine_map() -> dict[str, str]:

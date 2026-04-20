@@ -6,6 +6,7 @@ import pytest
 
 from estampo.cli import main
 from estampo.init import (
+    BED_TYPES,
     ValidationResult,
     _build_toml,
     _check_cura_template_gcode,
@@ -97,6 +98,20 @@ def _mock_ui_inputs(monkeypatch, inputs):
 # ---------------------------------------------------------------------------
 # Template tests
 # ---------------------------------------------------------------------------
+
+
+class TestBedTypes:
+    def test_matches_orca_2_3_1_enum(self):
+        # Source: libslic3r/PrintConfig.cpp curr_bed_type enum_values @ v2.3.1.
+        # Order matters: it's the enum ordinal order and the wizard menu order.
+        assert BED_TYPES == [
+            "Cool Plate",
+            "Engineering Plate",
+            "High Temp Plate",
+            "Textured PEI Plate",
+            "Textured Cool Plate",
+            "Supertack Plate",
+        ]
 
 
 class TestTemplate:
@@ -501,6 +516,99 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
         result = validate_config(toml)
         assert any("override keys valid" in p.lower() for p in result.passes)
 
+    def test_process_printer_compat_mismatch_warns(self, tmp_path):
+        """Process listed with an incompatible printer produces a compat warning."""
+        process_dir = tmp_path / "profiles" / "orca" / "process"
+        process_dir.mkdir(parents=True)
+        (process_dir / "HighQuality P1P.json").write_text(
+            '{"type": "process", "name": "HighQuality P1P", "layer_height": "0.12", '
+            '"compatible_printers": ["Bambu Lab P1P 0.4 nozzle"]}'
+        )
+        machine_dir = tmp_path / "profiles" / "orca" / "machine"
+        machine_dir.mkdir(parents=True)
+        (machine_dir / "Bambu Lab P1S 0.4 nozzle.json").write_text(
+            '{"type": "machine", "name": "Bambu Lab P1S 0.4 nozzle"}'
+        )
+
+        toml = tmp_path / "estampo.toml"
+        toml.write_text(f"""
+[slicer]
+engine = "orca"
+version = "2.3.1"
+
+[slicer.orca]
+printer = "Bambu Lab P1S 0.4 nozzle"
+process = "HighQuality P1P"
+
+[[parts]]
+file = "{_posix(FIXTURES / "cube_10mm.stl")}"
+""")
+        result = validate_config(toml)
+        assert any("not compatible" in w and "exit 239" in w for w in result.warnings)
+        assert not any("Process" in p and "compatible with printer" in p for p in result.passes)
+
+    def test_process_printer_compat_match_passes(self, tmp_path):
+        """Process whose compatible_printers includes the active printer passes."""
+        process_dir = tmp_path / "profiles" / "orca" / "process"
+        process_dir.mkdir(parents=True)
+        (process_dir / "HighQuality P1S.json").write_text(
+            '{"type": "process", "name": "HighQuality P1S", "layer_height": "0.12", '
+            '"compatible_printers": ["Bambu Lab P1S 0.4 nozzle"]}'
+        )
+        machine_dir = tmp_path / "profiles" / "orca" / "machine"
+        machine_dir.mkdir(parents=True)
+        (machine_dir / "Bambu Lab P1S 0.4 nozzle.json").write_text(
+            '{"type": "machine", "name": "Bambu Lab P1S 0.4 nozzle"}'
+        )
+
+        toml = tmp_path / "estampo.toml"
+        toml.write_text(f"""
+[slicer]
+engine = "orca"
+version = "2.3.1"
+
+[slicer.orca]
+printer = "Bambu Lab P1S 0.4 nozzle"
+process = "HighQuality P1S"
+
+[[parts]]
+file = "{_posix(FIXTURES / "cube_10mm.stl")}"
+""")
+        result = validate_config(toml)
+        assert not any("not compatible" in w for w in result.warnings)
+        assert any("compatible with printer" in p for p in result.passes)
+
+    def test_process_printer_compat_skipped_with_dynamic_condition(self, tmp_path):
+        """A compatible_printers_condition expression is dynamic — skip the check."""
+        process_dir = tmp_path / "profiles" / "orca" / "process"
+        process_dir.mkdir(parents=True)
+        (process_dir / "DynamicProcess.json").write_text(
+            '{"type": "process", "name": "DynamicProcess", "layer_height": "0.2", '
+            '"compatible_printers": ["Bambu Lab P1P 0.4 nozzle"], '
+            '"compatible_printers_condition": "nozzle_diameter[0]==0.4"}'
+        )
+        machine_dir = tmp_path / "profiles" / "orca" / "machine"
+        machine_dir.mkdir(parents=True)
+        (machine_dir / "Bambu Lab P1S 0.4 nozzle.json").write_text(
+            '{"type": "machine", "name": "Bambu Lab P1S 0.4 nozzle"}'
+        )
+
+        toml = tmp_path / "estampo.toml"
+        toml.write_text(f"""
+[slicer]
+engine = "orca"
+version = "2.3.1"
+
+[slicer.orca]
+printer = "Bambu Lab P1S 0.4 nozzle"
+process = "DynamicProcess"
+
+[[parts]]
+file = "{_posix(FIXTURES / "cube_10mm.stl")}"
+""")
+        result = validate_config(toml)
+        assert not any("not compatible" in w for w in result.warnings)
+
     def test_override_keys_unknown_errors(self, tmp_path):
         """Unknown override keys produce errors (not just warnings)."""
         profiles = tmp_path / "profiles" / "orca" / "process"
@@ -524,6 +632,220 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
         result = validate_config(toml)
         assert result.errors is not None
         assert any("bogus_setting" in e for e in result.errors)
+
+    def test_unknown_key_orca_build_plate_points_to_slicer(self, tmp_path):
+        """bed_type misplaced under [slicer.orca] as build_plate — should
+        hint to set it in [slicer]."""
+        toml = tmp_path / "estampo.toml"
+        toml.write_text(f"""
+[slicer]
+engine = "orca"
+version = "2.3.1"
+
+[slicer.orca]
+printer = "Bambu Lab P1S 0.4 nozzle"
+process = "0.12mm Fine @BBL X1C"
+filaments = ["Generic PLA @base"]
+build_plate = "Textured PEI Plate"
+
+[[parts]]
+file = "{_posix(FIXTURES / "cube_10mm.stl")}"
+""")
+        warnings = validate_config(toml)
+        matched = [w for w in warnings if "build_plate" in w]
+        assert matched, f"expected a warning for build_plate, got: {list(warnings)}"
+        assert "bed_type" in matched[0]
+        assert "[slicer]" in matched[0]
+
+    def test_unknown_key_orca_exact_parent_match(self, tmp_path):
+        """bed_type placed directly under [slicer.orca] — exact match on
+        parent table key, should point to [slicer]."""
+        toml = tmp_path / "estampo.toml"
+        toml.write_text(f"""
+[slicer]
+engine = "orca"
+version = "2.3.1"
+
+[slicer.orca]
+printer = "Bambu Lab P1S 0.4 nozzle"
+bed_type = "Textured PEI Plate"
+
+[[parts]]
+file = "{_posix(FIXTURES / "cube_10mm.stl")}"
+""")
+        warnings = validate_config(toml)
+        matched = [w for w in warnings if "bed_type" in w and "[slicer.orca]" in w]
+        assert matched, f"expected a warning for bed_type in [slicer.orca], got: {list(warnings)}"
+        assert "[slicer]" in matched[0]
+
+    def test_unknown_key_typo_same_table(self, tmp_path):
+        """printr → printer in [slicer.orca]."""
+        toml = tmp_path / "estampo.toml"
+        toml.write_text(f"""
+[slicer]
+engine = "orca"
+version = "2.3.1"
+
+[slicer.orca]
+printr = "Bambu Lab P1S 0.4 nozzle"
+
+[[parts]]
+file = "{_posix(FIXTURES / "cube_10mm.stl")}"
+""")
+        warnings = validate_config(toml)
+        matched = [w for w in warnings if "printr" in w]
+        assert matched, f"expected a warning for printr, got: {list(warnings)}"
+        assert "'printer'" in matched[0]
+
+    def test_unknown_key_parts_typo(self, tmp_path):
+        """copys → copies in [[parts]]."""
+        toml = tmp_path / "estampo.toml"
+        toml.write_text(f"""
+[slicer]
+engine = "orca"
+version = "2.3.1"
+
+[[parts]]
+file = "{_posix(FIXTURES / "cube_10mm.stl")}"
+copys = 2
+""")
+        warnings = validate_config(toml)
+        matched = [w for w in warnings if "copys" in w]
+        assert matched, f"expected a warning for copys, got: {list(warnings)}"
+        assert "'copies'" in matched[0]
+
+    def test_unknown_key_command_stage_typo(self, tmp_path):
+        """dcker → docker in a user-defined command-stage table."""
+        toml = tmp_path / "estampo.toml"
+        toml.write_text(f"""
+[slicer]
+engine = "orca"
+version = "2.3.1"
+
+[pipeline]
+stages = ["slice", "pack"]
+
+[pack]
+command = "bambox repack {{gcode}} -o {{output}}"
+output = "packed.gcode.3mf"
+dcker = true
+
+[[parts]]
+file = "{_posix(FIXTURES / "cube_10mm.stl")}"
+""")
+        warnings = validate_config(toml)
+        matched = [w for w in warnings if "dcker" in w]
+        assert matched, f"expected a warning for dcker, got: {list(warnings)}"
+        assert "'docker'" in matched[0]
+
+    def test_declared_command_stage_not_flagged(self, tmp_path):
+        """A top-level table whose name is listed in pipeline.stages is a
+        user-defined command stage, not an unknown key."""
+        toml = tmp_path / "estampo.toml"
+        toml.write_text(f"""
+[slicer]
+engine = "orca"
+version = "2.3.1"
+
+[pipeline]
+stages = ["slice", "pack"]
+
+[pack]
+command = "bambox repack {{gcode}} -o {{output}}"
+output = "packed.gcode.3mf"
+
+[[parts]]
+file = "{_posix(FIXTURES / "cube_10mm.stl")}"
+""")
+        warnings = validate_config(toml)
+        assert not any("'pack'" in w and "Unknown" in w for w in warnings)
+
+    def test_unknown_top_level_key(self, tmp_path):
+        """A top-level key not in the allow-list and not a declared command
+        stage is flagged."""
+        toml = tmp_path / "estampo.toml"
+        toml.write_text(f"""
+outpt_dir = "./build"
+
+[slicer]
+engine = "orca"
+version = "2.3.1"
+
+[[parts]]
+file = "{_posix(FIXTURES / "cube_10mm.stl")}"
+""")
+        warnings = validate_config(toml)
+        matched = [w for w in warnings if "outpt_dir" in w]
+        assert matched, f"expected a warning for outpt_dir, got: {list(warnings)}"
+        assert "'output_dir'" in matched[0]
+
+    def test_cura_printer_unreachable_warns(self, tmp_path):
+        """Cura printer in bundled name manifest but with no local def.json warns."""
+        # `bambox_p1s` is in the bundled Cura name manifest (scraped from the
+        # Docker image) but its `.def.json` is not shipped with the pip
+        # package, so a local (non-Docker) slice would fail.  Validate must
+        # flag this rather than reporting "profiles valid".
+        toml = tmp_path / "estampo.toml"
+        toml.write_text(f"""
+[slicer]
+engine = "cura"
+version = "5.12.0"
+
+[slicer.cura]
+printer = "bambox_p1s"
+filaments = ["PLA"]
+
+[[parts]]
+file = "{_posix(FIXTURES / "cube_10mm.stl")}"
+""")
+        result = validate_config(toml)
+        matched = [w for w in result.warnings if "reachable locally" in w]
+        assert matched, f"expected a reachability warning, got: {list(result.warnings)}"
+        assert "bambox_p1s" in matched[0]
+        assert "profiles pin" in matched[0]
+
+    def test_cura_bundled_printer_no_reachability_warning(self, tmp_path):
+        """Cura printer whose def.json is bundled does not warn."""
+        # `ultimaker2` ships in src/estampo/data/ultimaker2.def.json so the
+        # reachability check must find it locally and stay quiet.
+        toml = tmp_path / "estampo.toml"
+        toml.write_text(f"""
+[slicer]
+engine = "cura"
+version = "5.12.0"
+
+[slicer.cura]
+printer = "ultimaker2"
+filaments = ["PLA"]
+
+[[parts]]
+file = "{_posix(FIXTURES / "cube_10mm.stl")}"
+""")
+        result = validate_config(toml)
+        assert not any("reachable locally" in w for w in result.warnings)
+
+    def test_cura_pinned_printer_no_reachability_warning(self, tmp_path):
+        """Cura printer pinned under profiles/cura/definitions/ does not warn."""
+        defs_dir = tmp_path / "profiles" / "cura" / "definitions"
+        defs_dir.mkdir(parents=True)
+        (defs_dir / "bambox_p1s.def.json").write_text(
+            '{"version": 2, "name": "Bambu Lab P1S (bambox)", "inherits": "fdmprinter"}'
+        )
+        toml = tmp_path / "estampo.toml"
+        toml.write_text(f"""
+[slicer]
+engine = "cura"
+version = "5.12.0"
+
+[slicer.cura]
+printer = "bambox_p1s"
+filaments = ["PLA"]
+
+[[parts]]
+file = "{_posix(FIXTURES / "cube_10mm.stl")}"
+""")
+        result = validate_config(toml)
+        assert not any("reachable locally" in w for w in result.warnings)
 
 
 # ---------------------------------------------------------------------------

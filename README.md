@@ -27,12 +27,11 @@ Same repo, same config → same G-code, locally or [in CI](#cicd-example).
 
 > **Safety:** estampo generates G-code from your configuration but does not verify that settings are safe for your specific printer. Incorrect temperatures, speeds, or missing supports can damage your printer or create a fire hazard. Always review sliced output before sending to a printer. `estampo validate` checks config structure and setting names — it does not check print safety. **Use at your own risk.**
 
-> **Note:** This project was previously called **fabprint**. If you have an existing install,
-> run `pip install estampo` to upgrade — config files and credentials are migrated automatically.
-
 Works with STL, STEP, and 3MF files, and pairs naturally with code-CAD tools like
 [build123d](https://github.com/gumyr/build123d), [OpenSCAD](https://openscad.org),
 and [cadquery](https://github.com/cadquery/cadquery).
+
+**Requires [Docker](https://docs.docker.com/get-docker/) and Python 3.11+.** estampo runs the slicer (OrcaSlicer or CuraEngine) in a pinned Docker image so every machine produces identical G-code. A local slicer install works as a fallback but is not recommended.
 
 ```toml
 # estampo.toml — a multi-part print with slicer overrides
@@ -101,35 +100,34 @@ estampo run        # arrange → slice → pack, one command
 Everything is declared in a single TOML file. Lock the slicer version, pin the
 profiles, and the output is reproducible on any machine or in CI.
 
-![estampo pipeline](https://raw.githubusercontent.com/estampo/estampo/main/docs/images/pipeline.png)
+![estampo pipeline](https://raw.githubusercontent.com/estampo/estampo/main/docs/images/pipeline.svg)
 
-### Why not just use OrcaSlicer CLI?
+### Why not just use the slicer CLI directly?
 
-OrcaSlicer CLI is great for slicing a prepared plate. estampo builds a reproducible pipeline around it:
+OrcaSlicer and CuraEngine both ship excellent CLIs, and estampo is built on
+top of them — it shells out to one or the other for the actual slicing work.
+The goal isn't to replace either tool; it's to give you a reproducible
+pipeline around them (arrangement, profile pinning, CI, post-processing)
+without asking you to assemble the full invocation by hand each time.
 
-- **Arrangement** — bin-packs multiple STLs onto the build plate (OrcaSlicer CLI has no arrange step)
-- **Multi-part filament mapping** — per-part filament slot assignment and paint color preservation, injected into the 3MF metadata
-- **Reproducible builds** — pin slicer profiles into your repo + lock OrcaSlicer version in Docker = identical gcode on any machine
-- **Partial execution** — `--until plate` to inspect layout, `--only slice` to re-slice, `--dry-run` to test everything
-- **Command stages** — run external tools (e.g. `bambox pack`) as pipeline stages with variable substitution
-- **Headless Docker slicing** — no GUI, no display server, works in CI, uses a specific OrcaSlicer version
+| What you need to do | OrcaSlicer CLI | CuraEngine CLI | estampo |
+|---------------------|----------------|----------------|---------|
+| Load printer/process profiles | `--load-settings` for each JSON in the chain | `-j printer.def.json` + `-d` search paths for inheritance | `printer = "..."` / `process = "..."` in TOML |
+| Set material / quality overrides | Edit JSON or pass inline overrides | Chain of `-j` files or `-s KEY=VALUE` per setting | `[slicer.orca.overrides]` / `[slicer.cura.overrides]` |
+| Arrange multiple parts | Not supported — prepare the plate yourself | Not supported — manual positioning | Automatic bin-packing |
+| Multi-part filament / extruder mapping | Prebuilt 3MF with per-object slot metadata | `-g -e0 -l a.stl -g -e1 -l b.stl` per mesh group | `filament = 1` per part |
+| Reproducible builds | Track slicer binary + profiles yourself | Track all definition JSONs yourself | `version = "..."` in TOML + pinned Docker image |
+| Partial re-runs | Re-slice the whole thing | Re-slice the whole thing | `--until plate`, `--only slice` |
+| Version control | Shell scripts + scattered JSON overrides | Shell scripts + `-s` lists + JSON definitions | Single TOML file — git-diffable, reviewable |
+| Run in CI | Install OrcaSlicer manually (needs display on some builds) | Install CuraEngine + definitions manually | `uses: estampo/estampo/action@v1` |
+| Post-process (e.g. pack for Bambu) | Separate manual step | Separate manual step | `[pack]` command stage with variable substitution |
+| Headless slicing | GUI builds can require an X server | CLI-only already | Docker container pinned to a specific slicer version |
 
-### Why not just use CuraEngine CLI?
-
-CuraEngine CLI (`CuraEngine slice -j definition.json -s KEY=VALUE -l model.stl -o output.gcode`) is powerful but requires assembling the full invocation yourself:
-
-| What you need to do | CuraEngine CLI | estampo |
-|---------------------|---------------|---------|
-| Load printer definition | `-j printer.def.json` + `-d` search paths for inheritance | `printer = "Ultimaker 2"` in TOML |
-| Set material/quality | Chain of `-j` files or `-s` overrides for every setting | `[slicer.cura.overrides]` in TOML |
-| Arrange multiple parts | Not supported — manual positioning | Automatic bin-packing |
-| Multi-extruder mapping | `-g -e0 -l a.stl -g -e1 -l b.stl` per mesh group | `filament = 1` per part |
-| Reproducible builds | Track all definition JSONs yourself | `version = "5.12.0"` + Docker |
-| Version control | Shell scripts + scattered JSON definitions | Single TOML file — git-diffable and reviewable |
-| Run in CI | Install CuraEngine + definitions manually | `uses: estampo/estampo/action@v1` |
-| Pack for Bambu printers | Separate manual step | `[pack]` command stage |
-
-With CuraEngine CLI, your build config ends up spread across shell scripts, `-s` flag lists, and JSON definition files — hard to diff, review, or commit as a coherent unit. estampo replaces all of that with a single declarative TOML file: git-friendly, diffable, and accessible to AI assistants and code review.
+With the slicer CLI alone, your build config ends up spread across shell
+scripts, `-s` flag lists, and JSON definition files — hard to diff, review,
+or commit as a coherent unit. estampo replaces that orchestration layer
+with a single declarative TOML file; the slicer itself does all the actual
+work.
 
 ### Works with AI assistants
 
@@ -157,27 +155,18 @@ If you mostly want interactive print setup in a GUI, use OrcaSlicer or Cura dire
 
 ## Status
 
-### Stable
-
 - Declarative print config in `estampo.toml`
 - Multi-part arrangement
 - Docker-based slicing with pinned slicer versions (OrcaSlicer, CuraEngine)
 - Slicing for any printer supported by OrcaSlicer or CuraEngine
 - Profile pinning into your repository
 - CI slicing and artifact generation
-- Network print initiation via Bambu Cloud
-
-
-
-### Experimental
-
-- Bambu LAN printing
-- Moonraker printing
+- Printing handled by external tools (e.g. [bambox](#sending-prints-to-a-printer) for Bambu Lab) wired in as command stages
 
 ## Quick start
 
-**Prerequisites:** Python 3.11+ and [Docker](https://docs.docker.com/get-docker/). Docker is
-central to estampo — it runs the slicer (OrcaSlicer or CuraEngine) in a container with a pinned
+**Prerequisites:** Python 3.11, 3.12, or 3.13 (3.14 is not yet supported) and [Docker](https://docs.docker.com/get-docker/).
+Docker is central to estampo — it runs the slicer (OrcaSlicer or CuraEngine) in a container with a pinned
 version so every machine produces identical G-code. A locally installed slicer can be used as a
 fallback but is not recommended.
 
@@ -185,6 +174,8 @@ fallback but is not recommended.
 pip install estampo
 # or, to install as an isolated CLI tool:
 pipx install estampo
+# or, with uv:
+uv tool install estampo
 ```
 
 Generate a config with the interactive wizard, or dump a commented template:
@@ -234,9 +225,8 @@ filament = "Generic PETG-CF @base"
 Run it (see [full CLI reference](https://github.com/estampo/estampo/blob/main/docs/cli.md)):
 
 ```bash
-estampo run                   # arrange, slice and send to printer
+estampo run                   # run every stage in pipeline.stages
 estampo run --until slice     # stop after slicing
-estampo run --dry-run         # full pipeline without sending to printer
 ```
 
 The arrangement (`plate`) stage generates a `plate_preview.3mf` — open it in any 3MF viewer to check placement:
@@ -275,21 +265,99 @@ The action slices your model, uploads G-code as an artifact, and posts print tim
 ## CLI overview
 
 ```bash
+estampo --version                   # print version
 estampo init                        # interactive config wizard
 estampo init --template             # dump commented TOML template
 estampo init --workflow             # wizard + GitHub Actions workflow
 estampo validate                    # check config for issues
+estampo info                        # list valid stages, engines, orient values, substitution variables
 estampo run                         # full pipeline
 estampo run --until plate           # stop after plating
 estampo run --only slice            # run just one stage
-estampo run --dry-run               # everything except sending to printer
 estampo profiles list               # list available slicer profiles
+estampo profiles list --printer "Bambu Lab P1S 0.4 nozzle"   # processes/filaments compatible with a printer
 estampo profiles pin                # pin profiles for reproducible builds
 ```
 
-## Printing
+### Shell completion
 
-estampo is printer-agnostic — it produces sliced output but does not send files to printers. For Bambu Lab printers, use [bambox](https://github.com/estampo/bambox) as a command stage to pack and print. Run `bambox login` to set up credentials (`~/.config/bambox/credentials.toml`). See the [AI setup prompt](docs/ai-setup-prompt.md) for full examples.
+estampo ships with Typer's built-in completion support:
+
+```bash
+estampo --install-completion        # install completion for your current shell (bash/zsh/fish/pwsh)
+estampo --show-completion           # print the completion script without installing
+```
+
+After installing, restart your shell — you'll get tab completion for commands, flags, and stage names.
+
+## Sending prints to a printer
+
+estampo is **printer-agnostic**: it produces a sliced `.gcode.3mf` on disk and
+stops there. Packing the output into a vendor-specific format and sending it
+to a printer are handled by external CLIs wired into the pipeline as
+[command stages](https://github.com/estampo/estampo/blob/main/docs/config.md#command-stages).
+This keeps vendor-specific code out of estampo and lets you swap printer
+backends without touching the build system.
+
+### bambox (Bambu Lab)
+
+For Bambu Lab printers, the companion CLI is
+[bambox](https://github.com/estampo/bambox). estampo never imports bambox —
+you install it separately and call it from your pipeline. Typical wiring:
+
+```bash
+pip install bambox
+bambox login        # one-time — credentials saved to ~/.config/bambox/credentials.toml
+```
+
+For OrcaSlicer output, `bambox repack` regenerates the Bambu settings
+in-place so the printer accepts the archive:
+
+```toml
+[pipeline]
+stages = ["load", "arrange", "plate", "slice", "pack"]
+
+[pack]
+command = "bambox repack {sliced_3mf}"
+output = "{sliced_3mf}"
+```
+
+For CuraEngine output, `bambox pack` wraps the raw `.gcode` into a
+`.gcode.3mf`:
+
+```toml
+[pack]
+command = "bambox pack {sliced_dir}/plate.gcode -o {output_dir}/plate.gcode.3mf"
+output = "{output_dir}/plate.gcode.3mf"
+```
+
+To send the packed archive to a printer, add a stage that calls
+`bambox print` — this uses Bambu Cloud and requires either the
+`bambox-bridge` native binary (Linux x86_64) or Docker (macOS,
+Windows, Linux ARM64). See the [AI setup prompt](docs/ai-setup-prompt.md)
+for full examples including GitHub Actions wiring, and the
+[bambox README](https://github.com/estampo/bambox) for bridge setup.
+
+### Other printers
+
+Any CLI that reads a sliced file and does something with it can be a
+command stage. If your printer vendor has a CLI, wire it in the same way.
+If it doesn't, `estampo run` already gives you a G-code file — hand it to
+your printer however you normally would.
+
+For Klipper-based printers with Moonraker, a one-line `curl` upload is
+enough — no extra tool required:
+
+```toml
+[pipeline]
+stages = ["load", "arrange", "plate", "slice", "send"]
+
+[send]
+command = "curl -F 'file=@{sliced_3mf}' -F 'print=true' http://moonraker.local/server/files/upload"
+```
+
+`{sliced_3mf}` is substituted by estampo with the path to the sliced
+file. Set `print=false` if you want to upload without starting the job.
 
 ## Documentation
 

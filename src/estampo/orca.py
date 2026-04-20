@@ -250,9 +250,13 @@ def _slice_via_docker(
     staged_input.unlink(missing_ok=True)
 
     if result.returncode != 0:
-        log.error("Docker slicer stderr:\n%s", result.stderr)
+        # OrcaSlicer writes its `[error] ... run found error, return -N, exit...`
+        # diagnostics to stdout, not stderr. Surface both so the user can see
+        # the real cause (e.g. incompatible process/printer → exit 239).
+        combined = (result.stdout + "\n" + result.stderr).strip()
+        log.error("Docker slicer output:\n%s", combined)
         raise RuntimeError(
-            f"Docker slicer failed (exit code {result.returncode}):\n{result.stderr[:500]}"
+            f"Docker slicer failed (exit code {result.returncode}):\n{combined[-500:]}"
         )
 
     log.info("Docker slicer stdout:\n%s", result.stdout)
@@ -480,8 +484,9 @@ def _slice_local(
         )
 
     if result.returncode != 0:
-        log.error("Slicer stderr:\n%s", result.stderr)
-        raise RuntimeError(f"Slicer failed (exit code {result.returncode}):\n{result.stderr[:500]}")
+        combined = (result.stdout + "\n" + result.stderr).strip()
+        log.error("Slicer output:\n%s", combined)
+        raise RuntimeError(f"Slicer failed (exit code {result.returncode}):\n{combined[-500:]}")
 
     log.info("Slicer stdout:\n%s", result.stdout)
     log.info("Slicing complete. Output in %s", output_dir)
@@ -735,6 +740,101 @@ def _resolve_profile_data_from_dir(
         merged.update(data)
     merged.pop("inherits", None)
     return merged
+
+
+# ---------------------------------------------------------------------------
+# Compatibility filter
+# ---------------------------------------------------------------------------
+
+
+def _compat_entry_matches(entry: dict, printer: str) -> bool:
+    """Return True if a bundled/manifest entry should be kept for *printer*.
+
+    An entry matches when:
+    - it carries a ``compatible_printers`` list containing *printer*, or
+    - it carries neither a list nor a condition (treat as unrestricted), or
+    - it carries a ``compatible_printers_condition`` (dynamic — can't
+      evaluate statically, so err on the side of including it).
+
+    It is filtered out only when ``compatible_printers`` is a non-empty list
+    that does not contain *printer*.
+    """
+    compat = entry.get("compatible_printers")
+    if isinstance(compat, list) and compat:
+        if printer in compat:
+            return True
+        return bool(entry.get("compatible_printers_condition"))
+    return True
+
+
+def _compat_from_resolved(
+    name: str,
+    category: str,
+    project_dir: Path | None,
+    profiles_dir: str,
+) -> dict | None:
+    """Flatten a system/pinned profile and return its compat fields, if any.
+
+    Returns ``None`` when the profile can't be resolved (e.g. bundled-only
+    name with no on-disk file).
+    """
+    from estampo.profiles import resolve_profile_data
+
+    try:
+        data = resolve_profile_data(
+            name, "orca", category, project_dir=project_dir, profiles_dir=profiles_dir
+        )
+    except (EstampoError, FileNotFoundError, OSError):
+        return None
+    entry: dict = {}
+    compat = data.get("compatible_printers")
+    if isinstance(compat, list):
+        entry["compatible_printers"] = compat
+    condition = data.get("compatible_printers_condition")
+    if isinstance(condition, str) and condition:
+        entry["compatible_printers_condition"] = condition
+    return entry
+
+
+def filter_profiles_by_printer(
+    names_by_category: dict[str, list[str]],
+    printer: str,
+    version: str | None = None,
+    project_dir: Path | None = None,
+    profiles_dir: str = "profiles",
+) -> dict[str, list[str]]:
+    """Filter process and filament names to those compatible with *printer*.
+
+    For each process/filament name, compat data is read from (in order):
+    1. the bundled manifest entry for this version, if present
+    2. the flattened profile JSON from system or pinned profiles
+
+    When no compat data is found, the entry is kept (cannot prove
+    incompatibility). ``machine`` lists pass through unchanged.
+    """
+    from estampo.profiles import _load_bundled_manifest
+
+    manifest = _load_bundled_manifest("orca", version) or {}
+    filtered: dict[str, list[str]] = {}
+    for category, names in names_by_category.items():
+        if category not in ("process", "filament"):
+            filtered[category] = list(names)
+            continue
+
+        bundled_by_name: dict[str, dict] = {}
+        for item in manifest.get(category, []):
+            if isinstance(item, dict) and "name" in item:
+                bundled_by_name[item["name"]] = item
+
+        kept: list[str] = []
+        for name in names:
+            entry = bundled_by_name.get(name)
+            if entry is None:
+                entry = _compat_from_resolved(name, category, project_dir, profiles_dir)
+            if entry is None or _compat_entry_matches(entry, printer):
+                kept.append(name)
+        filtered[category] = kept
+    return filtered
 
 
 # ---------------------------------------------------------------------------
