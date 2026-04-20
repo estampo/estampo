@@ -15,7 +15,7 @@ ARG ORCA_VERSION=2.3.1
 # ---------------------------------------------------------------------------
 FROM --platform=linux/amd64 debian:bookworm-slim AS bridge-fetcher
 
-ARG BAMBOX_VERSION=0.4.4
+ARG BAMBOX_VERSION=0.4.5
 ARG BAMBU_SLICER_VERSION=02.05.00.00
 ARG BNL_TOKEN=""
 
@@ -58,7 +58,7 @@ RUN curl -fSL -o /out/cert/slicer_base64.cer \
 # ---------------------------------------------------------------------------
 FROM estampo/orca-base:${ORCA_VERSION}
 
-ARG BAMBOX_VERSION=0.4.4
+ARG BAMBOX_VERSION=0.4.5
 
 LABEL org.opencontainers.image.description="estampo with OrcaSlicer ${ORCA_VERSION}"
 
