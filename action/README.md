@@ -21,7 +21,7 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v6
-      - uses: estampo/estampo/action@v1
+      - uses: estampo/estampo/action@v0
         with:
           config: estampo.toml
 ```

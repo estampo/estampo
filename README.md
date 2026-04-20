@@ -30,6 +30,8 @@ and [cadquery](https://github.com/cadquery/cadquery) — and with AI coding assi
 
 **Requires [Docker](https://docs.docker.com/get-docker/) and Python 3.11+.** estampo runs the slicer (OrcaSlicer or CuraEngine) in a pinned Docker image so every machine produces identical G-code. A local slicer install works as a fallback but is not recommended.
 
+**Which engine?** Use **OrcaSlicer for Bambu Lab printers** and **CuraEngine for everything else**. The bundled profiles reflect this: estampo ships 35 Orca machine profiles (all Bambu Lab — A1, P1P, P1S, X1, X1 Carbon, X1E) and 643 Cura machine profiles (Creality, Prusa, Voron, Ultimaker, Anycubic, Elegoo, etc.). Picking Orca for a non-BBL printer means no bundled machine profile — you'd have to supply your own.
+
 ```toml
 # estampo.toml — a multi-part print with slicer overrides
 
@@ -116,7 +118,7 @@ without asking you to assemble the full invocation by hand each time.
 | Reproducible builds | Track slicer binary + profiles yourself | Track all definition JSONs yourself | `version = "..."` in TOML + pinned Docker image |
 | Partial re-runs | Re-slice the whole thing | Re-slice the whole thing | `--until plate`, `--only slice` |
 | Version control | Shell scripts + scattered JSON overrides | Shell scripts + `-s` lists + JSON definitions | Single TOML file — git-diffable, reviewable |
-| Run in CI | Install OrcaSlicer manually (needs display on some builds) | Install CuraEngine + definitions manually | `uses: estampo/estampo/action@v1` |
+| Run in CI | Install OrcaSlicer manually (needs display on some builds) | Install CuraEngine + definitions manually | `uses: estampo/estampo/action@v0` |
 | Post-process (e.g. pack for Bambu) | Separate manual step | Separate manual step | `[pack]` command stage with variable substitution |
 | Headless slicing | GUI builds can require an X server | CLI-only already | Docker container pinned to a specific slicer version |
 
@@ -221,6 +223,8 @@ orient = "upright"
 filament = "Generic PETG-CF @base"
 ```
 
+`orient` picks a preset (`"flat"`, `"upright"`, `"side"`, `"upside-down"`) and `rotate = [rx, ry, rz]` takes degrees about X, Y, Z and overrides `orient`. See [Orientation](https://github.com/estampo/estampo/blob/main/docs/config.md#orientation) in the config reference for what each preset does and when to use which.
+
 Run it (see [full CLI reference](https://github.com/estampo/estampo/blob/main/docs/cli.md)):
 
 ```bash
@@ -258,7 +262,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: estampo/estampo/action@v1
+      - uses: estampo/estampo/action@v0
 ```
 
 The action slices your model, uploads G-code as an artifact, and posts print time / filament stats as a PR comment. See [`action/README.md`](action/README.md) for all options.

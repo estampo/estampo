@@ -55,6 +55,14 @@ output = "{sliced_3mf}"
 
 ## Slicer engines
 
+**Which engine to pick:** Use `orca` for Bambu Lab printers; use `cura` for
+everything else. The bundled profile sets reflect this — 35 Orca machine
+profiles (all Bambu Lab: A1, P1P, P1S, X1, X1 Carbon, X1E × nozzle sizes)
+vs. 643 Cura machine profiles spanning Creality, Prusa, Voron, Ultimaker,
+Anycubic, Elegoo, Sovol, Geeetech, FLSun, Snapmaker, and hundreds more.
+Picking `orca` for a non-BBL printer means the user must supply their own
+machine profile; the bundled set won't cover them.
+
 ### OrcaSlicer (`engine = "orca"`)
 
 Uses a profile chain: **printer** (machine) -> **process** (quality) -> **filament(s)**.
@@ -216,6 +224,34 @@ rotate = [0, 0, 45]          # [rx, ry, rz] degrees — overrides orient
 filament = 1                 # slot number (1-indexed) or profile name/alias
 scale = 1.5                  # uniform scale factor, default: 1.0
 ```
+
+### Orientation: `orient` vs. `rotate`
+
+Parts are placed with Z pointing up (Z is bed-normal; X and Y are bed-plane).
+After any rotation, the part is translated so its lowest point sits on the bed
+(`z = 0`) — you don't need to drop parts manually.
+
+`orient` is a named preset. Pick one:
+
+| Value | Effect | Use when |
+|---|---|---|
+| `"flat"` (default) | Auto-rotate so the **smallest** extent is along Z — part lies on its largest face. | You want the largest face on the bed for adhesion and minimum support. |
+| `"upright"` | **No rotation** — use the mesh's native orientation from the source file. | The mesh is already oriented correctly (common for STEP files and code-CAD). |
+| `"side"` | Rotate 90° about X. | The mesh was authored Y-up and needs to be laid on its side. |
+| `"upside-down"` | Rotate 180° about X — flip. | You want the top of the mesh on the bed (e.g. mounting plate facing down). |
+
+`rotate = [rx, ry, rz]` is an **arbitrary rotation in degrees** applied about
+X, then Y, then Z. If set, it **fully overrides** `orient` — the preset is
+ignored. Common patterns:
+
+- `[0, 0, 45]` — yaw 45° about Z (spin on the bed, useful for diagonal fit).
+- `[180, 0, 0]` — flip upside-down (same as `orient = "upside-down"`).
+- `[90, 0, 0]` — tip onto its front face.
+- `[0, 90, 0]` — tip onto its right side.
+
+Rule of thumb: prefer `orient` when a named preset fits, and drop to `rotate`
+only when you need a specific angle. Don't set both — `rotate` wins, so
+`orient` becomes dead config.
 
 For multi-object 3MF files, assign filaments per object:
 
@@ -425,7 +461,7 @@ estampo profiles pin config.toml                 # pin profiles for reproducibil
 ## Running in CI
 
 ```yaml
-- uses: estampo/estampo/action@v1
+- uses: estampo/estampo/action@v0
   with:
     config: estampo.toml
     comment: "true"
