@@ -1,0 +1,1 @@
+AI setup prompt: make it explicit that STEP files are loaded natively (via build123d) so assistants no longer advise users to pre-convert STEP to STL/3MF.

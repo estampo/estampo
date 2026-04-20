@@ -1,6 +1,21 @@
 # CLI reference
 
-estampo provides commands for creating configs (`init`, `validate`), running the pipeline (`run`), and managing slicer profiles (`profiles`).
+estampo provides commands for creating configs (`init`, `validate`), inspecting valid config values (`info`), running the pipeline (`run`), and managing slicer profiles (`profiles`).
+
+## Top-level options
+
+| Option                  | Description                                              |
+|-------------------------|----------------------------------------------------------|
+| `--version`             | Print estampo version and exit                           |
+| `--install-completion`  | Install shell completion for the current shell           |
+| `--show-completion`     | Print the completion script (bash/zsh/fish/pwsh) to stdout |
+| `--help`                | Show help and exit                                       |
+
+### Shell completion
+
+After running `estampo --install-completion`, restart your shell. You will get
+tab completion on commands, flags, and stage names. To inspect or customize
+the installed script, run `estampo --show-completion`.
 
 ## `estampo init`
 
@@ -29,12 +44,12 @@ a config without the wizard. Use `--printer` and `--process` for OrcaSlicer.
 
 **Interactive wizard** (default when non-interactive flags are omitted):
 1. Discovers installed slicer profiles (printer, process, filament) with search/filter
-3. Detects printer capabilities from the selected machine profile (plate size, multi-material support)
-4. Queries AMS tray contents in the background and auto-suggests matching filament profiles
-5. Auto-discovers CAD files (STL, 3MF, STEP) in the current directory
-6. Prompts for per-part copies, orientation, and filament slot assignment
-7. Detects installed OrcaSlicer version and offers to pin it for reproducibility
-8. Previews the generated TOML before writing
+2. Detects printer capabilities from the selected machine profile (plate size, multi-material support)
+3. Queries AMS tray contents in the background and auto-suggests matching filament profiles
+4. Auto-discovers CAD files (STL, 3MF, STEP) in the current directory
+5. Prompts for per-part copies, orientation, and filament slot assignment
+6. Detects installed OrcaSlicer version and offers to pin it for reproducibility
+7. Previews the generated TOML before writing
 
 ### Examples
 
@@ -84,6 +99,35 @@ estampo validate                  # check ./estampo.toml
 estampo validate myproject.toml   # check a specific file
 ```
 
+## `estampo info`
+
+Print the enumerated values that estampo understands in configs — useful
+for humans checking what's valid, and for AI assistants grounding
+suggestions without scraping source.
+
+```
+estampo info [--json]
+```
+
+Reports:
+
+- Valid pipeline stages (`load`, `arrange`, `plate`, `slice`, `gcode-info`, `resolve_templates`, `pack`)
+- Valid slicer engines (`orca`, `cura`)
+- Valid `orient` values for `[[parts]]`
+- Recognised bed type values
+- Recognised mesh file extensions (`.stl`, `.step`, `.3mf`, ...)
+- Command-stage substitution variables (`{sliced_3mf}`, `{output_dir}`, ...)
+
+Pass `--json` for machine-readable output — this is what the AI setup
+prompt uses to stay in sync with the installed version.
+
+### Examples
+
+```bash
+estampo info                  # human-readable output
+estampo info --json           # JSON for tooling
+```
+
 ## `estampo setup` *(deprecated — removed in v0.4.0)*
 
 > **Use [bambox](https://github.com/estampo/bambox) instead.** estampo is
@@ -109,13 +153,9 @@ If `config` is omitted, estampo looks for `estampo.toml` in the current director
 | `--only STAGE`      | Run only this stage (fails if prerequisites missing)  |
 | `--scale FACTOR`    | Scale all parts (multiplies per-part scale)           |
 | `--local`           | Force local slicer (fail if not installed)            |
-| `--docker-version`  | Pin OrcaSlicer Docker image version (e.g. `2.3.1`)   |
+| `--docker-version`  | Pin slicer Docker image version (e.g. `2.3.1` for OrcaSlicer, `5.12.0` for CuraEngine) |
 | `--filament-type`   | Override filament profile name                        |
 | `--filament-slot`   | AMS slot for `--filament-type` (default: 1)           |
-| `--dry-run`         | Do everything except send to printer                  |
-| `--upload-only`     | Upload gcode but don't start printing                 |
-| `--experimental`    | Enable experimental printer modes                     |
-| `--no-ams-mapping`  | Skip AMS mapping (diagnostic)                         |
 | `-v, --verbose`     | Enable debug logging with per-stage timing            |
 
 ### Pipeline stages
@@ -129,7 +169,6 @@ The default pipeline runs these stages in order:
 | `plate`     | Export arranged plate as 3MF (+ preview)           | `plate.3mf`, `plate_preview.3mf` |
 | `slice`     | Slice via OrcaSlicer or CuraEngine (Docker or local) | gcode in output dir     |
 | `gcode-info`| Parse print time and filament usage from gcode     | Stats summary             |
-| `print`     | *(deprecated)* Send sliced gcode to printer        | Print job                 |
 
 In addition to built-in stages, you can define **command stages** — custom
 pipeline stages that run external CLI tools. See the
@@ -144,7 +183,7 @@ stages = ["load", "arrange", "plate", "slice", "gcode-info"]
 ### Examples
 
 ```bash
-# Full pipeline: arrange, slice, and print (uses ./estampo.toml)
+# Full pipeline: load → arrange → plate → slice (uses ./estampo.toml)
 estampo run
 
 # Stop after plating (no slicer needed)
@@ -155,9 +194,6 @@ estampo run --only slice
 
 # Slice with a specific Docker image version
 estampo run --until slice --docker-version 2.3.1
-
-# Dry run — do everything except actually send to printer
-estampo run --dry-run
 
 # Verbose mode — shows per-stage timing
 estampo run -v
@@ -178,9 +214,15 @@ You cannot combine `--until` and `--only`.
 Manage slicer profiles.
 
 ```
-estampo profiles list [--category machine|process|filament]
+estampo profiles list [--engine orca|cura]
+                      [--category machine|process|filament]
+                      [--printer NAME] [--json]
 estampo profiles pin [config]
 ```
 
 - **`list`** — show available profiles from your slicer installation.
+  - `--printer NAME` (OrcaSlicer only) filters `process` and `filament`
+    lists to entries whose `compatible_printers` includes *NAME*. Prefer
+    this over manually scanning the full list — incompatible
+    process/printer combos fail silently at slice time (exit 239).
 - **`pin`** — copy the profiles referenced in your config into a local `profiles/` directory. Commit this to git for reproducible builds across machines.

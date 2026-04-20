@@ -4,6 +4,23 @@ All notable changes to this project are documented here.
 
 <!-- towncrier release notes start -->
 
+## 0.4.0b4 — 2026-04-19
+
+### Bugfixes
+
+- Fix CuraEngine user overrides being silently ignored when the pinned printer definition has a matching ``value`` expression (e.g. ``adhesion_type = "brim"`` losing to a def-level ``"value": "'skirt'"``). ([#584](https://github.com/estampo/estampo/pull/584))
+- Pass ``machine_width``/``machine_depth``/``machine_height`` as ``-s`` flags so CuraEngine's bed size agrees with mesh placement; fixes silently-dropped brim when the pinned def declares bed dims with ``value`` only. ([#586](https://github.com/estampo/estampo/pull/586))
+- Promote literal ``value`` overrides to ``default_value`` when pinning CuraEngine defs, so settings like ``relative_extrusion``, ``retraction_amount``, ``speed_print``, and the machine dimensions are no longer silently dropped and replaced with fdmprinter defaults. ([#587](https://github.com/estampo/estampo/pull/587))
+- Surface CuraEngine stderr warnings on successful slices. ``JSON setting 'X' has no [default_]value!`` warnings are aggregated into a strong "silently dropped printer-profile setting" log line, other warnings get a total-count summary, and ``-v`` prints every raw warning inline — making bugs like #586/#587 visible instead of silent. ([#590](https://github.com/estampo/estampo/pull/590))
+- Drop the ``CuraProfile`` wrapper and the OrcaSlicer-to-CuraEngine key translation map (ADR-008). ``[slicer.cura.overrides]`` now passes through to CuraEngine verbatim — rename orca-style keys to their CuraEngine equivalents: ``wall_loops`` → ``wall_line_count``, ``top_shell_layers`` → ``top_layers``, ``bottom_shell_layers`` → ``bottom_layers``, ``sparse_infill_density`` → ``infill_sparse_density``, ``nozzle_temperature`` → ``material_print_temperature``, ``bed_temperature`` → ``material_bed_temperature``, ``initial_layer_print_height`` → ``layer_height_0``. The hardcoded ``adhesion_type = "none"`` baseline is also removed so setting ``adhesion_type = "brim"`` in TOML now reaches CuraEngine (#586). ([#608](https://github.com/estampo/estampo/pull/608))
+
+### Misc
+
+- Pin CuraEngine definition chains verbatim instead of squashing (ADR-008 PR 1/3). ([#603](https://github.com/estampo/estampo/pull/603))
+- Remove dead inheritance-squashing helpers and value-literal workarounds now that CuraEngine definitions are copied verbatim (ADR-008 PR 3/3). ([#609](https://github.com/estampo/estampo/pull/609))
+- Drop the single-mesh CuraEngine fallback: ``slice_plate`` with ``engine="cura"`` now always exports per-part STLs and slices through the multi-mesh path, group-centered on the bed. ([#611](https://github.com/estampo/estampo/pull/611))
+
+
 ## 0.4.0b3 — 2026-04-18
 
 ### Bugfixes
@@ -122,7 +139,7 @@ All notable changes to this project are documented here.
 ### Features
 
 - Multi-mesh CuraEngine slicing: parts on different filament slots are passed as separate ``-g -eN`` groups, preserving plate arrangement and extruder assignments ([#405](https://github.com/estampo/estampo/pull/405))
-- Per-extruder filament profiles for CuraEngine: filament type and temperatures are set independently per AMS slot via ``CuraProfile.per_extruder`` ([#406](https://github.com/estampo/estampo/pull/406))
+- Per-extruder filament profiles for CuraEngine: filament type and temperatures are set independently per AMS slot via ``CuraProfile.per_extruder`` ([#406](https://github.com/estampo/estampo/pull/406)) *(API superseded in v0.4.0 — ``CuraProfile`` removed, see ADR-008)*
 - Pipeline stages can now run external CLI commands defined in TOML (e.g. ``bambox pack``), enabling tool integration without Python dependencies.
 
 ### Bugfixes

@@ -1,0 +1,1 @@
+Remove references to nonexistent ``estampo run --dry-run`` and other stale printer-era flags from docs.

@@ -121,13 +121,12 @@ def slice_plate(
     """
     # CuraEngine backend — separate execution path
     if engine == "cura":
+        import numpy as np
         import trimesh
 
         from estampo.cura import (
+            build_cura_config,
             cura_docker_image,
-            cura_profile_from_config,
-            resolve_cura_bed_size,
-            slice_stl,
             slice_stl_multi,
         )
 
@@ -143,7 +142,7 @@ def slice_plate(
         else:
             filament_type = None
 
-        profile = cura_profile_from_config(
+        cura_overrides, cura_per_extruder = build_cura_config(
             overrides=overrides,
             bed_type=bed_type,
             filament_type=filament_type,
@@ -155,73 +154,54 @@ def slice_plate(
         image = cura_docker_image(docker_version or required_version)
 
         scene = trimesh.load(str(input_3mf))
-
-        # Multi-mesh path: when parts span multiple filament slots and the
-        # scene geometry count matches the filament_ids list we can pass each
-        # mesh as a separate -g -eN group to CuraEngine, preserving the
-        # plate arrangement and extruder assignments set up by load_parts.
-        if isinstance(scene, trimesh.Scene) and filament_ids and len(set(filament_ids)) > 1:
+        if isinstance(scene, trimesh.Scene):
             meshes: list[trimesh.Trimesh] = list(scene.dump(concatenate=False))  # type: ignore[arg-type]
-            if len(meshes) == len(filament_ids):
-                import numpy as np
+        else:
+            meshes = [scene]  # type: ignore[list-item]
 
-                bed_w, bed_d = resolve_cura_bed_size(printer or "", project_dir, profiles_dir)
+        if not meshes:
+            raise EstampoError(f"No geometry found in {input_3mf}")
 
-                # Center the group on the build plate as a unit so relative
-                # positions from the arrange stage are preserved.
-                bounds = np.array([m.bounds for m in meshes])
-                group_min = bounds[:, 0, :].min(axis=0)
-                group_max = bounds[:, 1, :].max(axis=0)
-                dx = float(bed_w / 2 - (group_min[0] + group_max[0]) / 2)
-                dy = float(bed_d / 2 - (group_min[1] + group_max[1]) / 2)
-                dz = float(-group_min[2])
-
-                stl_dir = output_dir / ".cura-parts"
-                stl_dir.mkdir(exist_ok=True)
-                stl_meshes: list[tuple[int, Path]] = []
-                for i, (fid, mesh) in enumerate(zip(filament_ids, meshes)):
-                    positioned = mesh.copy()
-                    positioned.vertices[:, 0] += dx
-                    positioned.vertices[:, 1] += dy
-                    positioned.vertices[:, 2] += dz
-                    stl_path = stl_dir / f"part_{i}.stl"
-                    positioned.export(str(stl_path), file_type="stl")
-                    stl_meshes.append((fid - 1, stl_path))  # 0-based extruder
-
-                return slice_stl_multi(
-                    stl_meshes,
-                    output_dir,
-                    profile,
-                    image=image,
-                    printer=printer,
-                    project_dir=project_dir,
-                    profiles_dir=profiles_dir,
-                    local=local,
-                )
-            else:
+        if filament_ids and len(filament_ids) == len(meshes):
+            extruder_ids = [fid - 1 for fid in filament_ids]
+        else:
+            if filament_ids and len(filament_ids) != len(meshes):
                 log.warning(
                     "filament_ids length (%d) does not match scene geometry count (%d) "
-                    "— falling back to single-mesh CuraEngine slice",
+                    "— assigning all meshes to extruder 0",
                     len(filament_ids),
                     len(meshes),
                 )
+            extruder_ids = [0] * len(meshes)
 
-        # Single-mesh fallback: merge all geometries into one.
-        if isinstance(scene, trimesh.Scene):
-            merged: trimesh.Trimesh = scene.to_geometry()  # type: ignore[assignment]
-        else:
-            merged = scene  # type: ignore[assignment]
-        mesh = merged
-        z_min = float(mesh.bounds[0][2])  # type: ignore[attr-defined]
-        if z_min < 0:
-            mesh.vertices[:, 2] -= z_min  # type: ignore[attr-defined]
-        stl_path = output_dir / (input_3mf.stem + ".stl")
-        mesh.export(str(stl_path), file_type="stl")
+        # CuraEngine shifts input coords by +bed/2 when
+        # machine_center_is_zero=false, and passes them through when =true.
+        # Either way, centring the mesh group at (0, 0) lands the print at
+        # bed centre in the resulting G-code — see #621 for the diagnosis.
+        bounds = np.array([m.bounds for m in meshes])
+        group_min = bounds[:, 0, :].min(axis=0)
+        group_max = bounds[:, 1, :].max(axis=0)
+        dx = float(-(group_min[0] + group_max[0]) / 2)
+        dy = float(-(group_min[1] + group_max[1]) / 2)
+        dz = float(-group_min[2]) if group_min[2] < 0 else 0.0
 
-        return slice_stl(
-            stl_path,
+        stl_dir = output_dir / ".cura-parts"
+        stl_dir.mkdir(exist_ok=True)
+        stl_meshes: list[tuple[int, Path]] = []
+        for i, (ext_idx, mesh) in enumerate(zip(extruder_ids, meshes)):
+            positioned = mesh.copy()
+            positioned.vertices[:, 0] += dx
+            positioned.vertices[:, 1] += dy
+            positioned.vertices[:, 2] += dz
+            stl_path = stl_dir / f"part_{i}.stl"
+            positioned.export(str(stl_path), file_type="stl")
+            stl_meshes.append((ext_idx, stl_path))
+
+        return slice_stl_multi(
+            stl_meshes,
             output_dir,
-            profile,
+            overrides=cura_overrides,
+            per_extruder=cura_per_extruder,
             image=image,
             printer=printer,
             project_dir=project_dir,

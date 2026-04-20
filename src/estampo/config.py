@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import difflib
 import logging
 import tomllib
 from dataclasses import dataclass, field
@@ -16,6 +17,37 @@ log = logging.getLogger(__name__)
 VALID_ORIENTS = {"flat", "upright", "side", "upside-down"}
 VALID_ENGINES = ("orca", "cura")
 SUPPORTED_EXTENSIONS = {".stl", ".3mf", ".step", ".stp", ".obj"}
+
+# Known keys per TOML table — used by detect_unknown_keys() to flag typos
+# (e.g. "build_plate" under [slicer.orca]) that would otherwise be silently
+# dropped by ``.get(...)``-based parsers. Keep these in sync with the
+# dataclass fields and parser ``raw.get(...)`` calls above / below.
+_TOP_LEVEL_KEYS = {"name", "output_dir", "pipeline", "plate", "slicer", "parts", "filaments"}
+_PIPELINE_KEYS = {"stages"}
+_PLATE_KEYS = {"size", "padding"}
+_SLICER_KEYS = {"engine", "version", "bed_type", "profiles_dir", "orca", "cura"}
+_SLICER_ORCA_KEYS = {
+    "printer",
+    "process",
+    "filaments",
+    "slots",
+    "overrides",
+    "machine_overrides",
+    "filament_overrides",
+}
+_SLICER_CURA_KEYS = {"printer", "overrides", "filaments"}
+_PART_KEYS = {
+    "file",
+    "copies",
+    "orient",
+    "rotate",
+    "filament",
+    "scale",
+    "object",
+    "sequence",
+    "filaments",
+}
+_COMMAND_STAGE_KEYS = {"command", "output", "docker", "image"}
 
 
 @dataclass
@@ -487,3 +519,124 @@ def load_config(path: Path) -> EstampoConfig:
         filaments=filament_aliases,
         pipeline=pipeline,
     )
+
+
+def _warn_unknown_keys(
+    raw: dict,
+    known: set[str],
+    table: str,
+    parent: tuple[set[str], str] | None = None,
+) -> list[str]:
+    """Return warnings for keys in *raw* that aren't in *known*.
+
+    If *parent* is given as ``(parent_keys, parent_label)``, an unknown key
+    that matches (exactly or fuzzily) a parent-table key produces a
+    "did you mean … in [parent]?" hint — this catches keys that are real
+    but placed in the wrong TOML table (e.g. ``bed_type`` under
+    ``[slicer.orca]`` when it belongs under ``[slicer]``).
+    """
+    warnings: list[str] = []
+    label = f"[{table}]" if table else "top-level config"
+    known_list = sorted(known)
+    for key in raw:
+        if key in known:
+            continue
+
+        if parent:
+            parent_keys, parent_label = parent
+            if key in parent_keys:
+                warnings.append(
+                    f"Unknown key '{key}' in {label} — did you mean to set it in [{parent_label}]?"
+                )
+                continue
+
+        close = difflib.get_close_matches(key, known_list, n=1, cutoff=0.6)
+        if close:
+            warnings.append(f"Unknown key '{key}' in {label}. Did you mean '{close[0]}'?")
+            continue
+
+        if parent:
+            parent_keys, parent_label = parent
+            close_parent = difflib.get_close_matches(key, sorted(parent_keys), n=1, cutoff=0.5)
+            if close_parent:
+                warnings.append(
+                    f"Unknown key '{key}' in {label}. "
+                    f"Did you mean '{close_parent[0]}' in [{parent_label}]?"
+                )
+                continue
+
+        warnings.append(f"Unknown key '{key}' in {label}.")
+    return warnings
+
+
+def detect_unknown_keys(raw: dict) -> list[str]:
+    """Return warnings for unknown keys in any recognised TOML table.
+
+    Covers top-level, ``[pipeline]``, ``[plate]``, ``[slicer]``,
+    ``[slicer.orca]``, ``[slicer.cura]``, each ``[[parts]]`` entry, and
+    user-defined command-stage tables (e.g. ``[pack]``).
+
+    ``[slicer.orca]`` / ``[slicer.cura]`` additionally check against
+    ``[slicer]``'s keys so a misplaced ``bed_type`` (or similar) gets a
+    pointer to the right table rather than a silent drop.
+
+    Unknown top-level tables that aren't in ``_TOP_LEVEL_KEYS`` but **are**
+    listed in ``pipeline.stages`` are treated as user-defined command
+    stages and are not flagged.
+    """
+    from estampo.pipeline import STAGE_OUTPUTS
+
+    warnings: list[str] = []
+
+    pipeline_raw = raw.get("pipeline", {})
+    if isinstance(pipeline_raw, dict):
+        stages = pipeline_raw.get("stages", [])
+    else:
+        stages = []
+    command_stage_names = {s for s in stages if isinstance(s, str) and s and s not in STAGE_OUTPUTS}
+
+    warnings.extend(_warn_unknown_keys(raw, _TOP_LEVEL_KEYS | command_stage_names, ""))
+
+    if isinstance(pipeline_raw, dict):
+        warnings.extend(_warn_unknown_keys(pipeline_raw, _PIPELINE_KEYS, "pipeline"))
+
+    plate_raw = raw.get("plate")
+    if isinstance(plate_raw, dict):
+        warnings.extend(_warn_unknown_keys(plate_raw, _PLATE_KEYS, "plate"))
+
+    slicer_raw = raw.get("slicer")
+    if isinstance(slicer_raw, dict):
+        warnings.extend(_warn_unknown_keys(slicer_raw, _SLICER_KEYS, "slicer"))
+        orca_raw = slicer_raw.get("orca")
+        if isinstance(orca_raw, dict):
+            warnings.extend(
+                _warn_unknown_keys(
+                    orca_raw,
+                    _SLICER_ORCA_KEYS,
+                    "slicer.orca",
+                    parent=(_SLICER_KEYS, "slicer"),
+                )
+            )
+        cura_raw = slicer_raw.get("cura")
+        if isinstance(cura_raw, dict):
+            warnings.extend(
+                _warn_unknown_keys(
+                    cura_raw,
+                    _SLICER_CURA_KEYS,
+                    "slicer.cura",
+                    parent=(_SLICER_KEYS, "slicer"),
+                )
+            )
+
+    parts_raw = raw.get("parts", [])
+    if isinstance(parts_raw, list):
+        for i, p in enumerate(parts_raw):
+            if isinstance(p, dict):
+                warnings.extend(_warn_unknown_keys(p, _PART_KEYS, f"parts[{i}]"))
+
+    for stage_name in command_stage_names:
+        stage_raw = raw.get(stage_name)
+        if isinstance(stage_raw, dict):
+            warnings.extend(_warn_unknown_keys(stage_raw, _COMMAND_STAGE_KEYS, stage_name))
+
+    return warnings

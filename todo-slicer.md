@@ -71,8 +71,10 @@ CuraEngine exists alongside OrcaSlicer.
   OrcaSlicer-style project 3MFs. `estampo init --from-3mf` is an OrcaSlicer
   convenience feature.
 
-- **Profile pin/list for CuraEngine**: CuraEngine has no extractable profile
-  chain — settings are inline in `CuraProfile`. No equivalent to OrcaSlicer's
+- **Profile pin/list for CuraEngine**: CuraEngine has no OrcaSlicer-style
+  profile chain to pin or list. Printer settings come from pinned ``.def.json``
+  files; per-slice process/filament settings are passed verbatim via
+  ``[slicer.cura.overrides]`` (see ADR-008). No equivalent to OrcaSlicer's
   printer/process/filament profile discovery.
 
 - **`auth.py` BBL client name**: This header is for Bambu Cloud API

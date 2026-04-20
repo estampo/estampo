@@ -1,1 +1,0 @@
-Fix CuraEngine user overrides being silently ignored when the pinned printer definition has a matching ``value`` expression (e.g. ``adhesion_type = "brim"`` losing to a def-level ``"value": "'skirt'"``).

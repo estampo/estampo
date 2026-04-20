@@ -159,5 +159,4 @@ During iteration, you often want to re-run just part of the pipeline:
 ```bash
 estampo run --until plate     # stop after arrangement (check layout)
 estampo run --only slice      # re-slice without re-arranging
-estampo run --dry-run         # full pipeline without sending to printer
 ```

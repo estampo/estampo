@@ -13,6 +13,7 @@ from estampo.profiles import (
     detect_category,
     discover_profile_names,
     discover_profiles,
+    filter_profiles_by_printer,
     load_bundled_profiles,
     pin_profiles,
     pinned_profiles_version,
@@ -812,105 +813,6 @@ def test_detect_category_cura_def():
     )
 
 
-def test_deep_merge_cura_overrides():
-    """Child setting values override parent at the sub-dict level."""
-    from estampo.profiles import _deep_merge_cura_overrides
-
-    base = {
-        "layer_height": {"value": 0.4, "default_value": 0.4},
-        "speed_print": {"value": 60},
-    }
-    child = {
-        "layer_height": {"value": 0.2},
-        "wall_count": {"value": 3},
-    }
-    merged = _deep_merge_cura_overrides(base, child)
-    # Child overrides value but preserves parent's default_value
-    assert merged["layer_height"] == {"value": 0.2, "default_value": 0.4}
-    # Parent-only key preserved
-    assert merged["speed_print"] == {"value": 60}
-    # Child-only key added
-    assert merged["wall_count"] == {"value": 3}
-
-
-def test_squash_cura_def(tmp_path):
-    """Squashing walks inheritance and deep-merges overrides."""
-    from estampo.profiles import _squash_cura_def
-
-    # Create a chain: child → parent
-    parent = {
-        "version": 2,
-        "name": "Parent",
-        "metadata": {"visible": False, "author": "test"},
-        "overrides": {
-            "machine_width": {"value": 200},
-            "speed_print": {"value": 60, "default_value": 60},
-        },
-    }
-    child = {
-        "version": 2,
-        "name": "Child Printer",
-        "inherits": "parent",
-        "metadata": {"visible": True},
-        "overrides": {
-            "machine_width": {"value": 256},
-            "machine_depth": {"value": 256},
-        },
-    }
-    (tmp_path / "parent.def.json").write_text(json.dumps(parent))
-    (tmp_path / "child.def.json").write_text(json.dumps(child))
-
-    squashed = _squash_cura_def("child", tmp_path)
-    # Both definitions are local — fully resolved, no inherits
-    assert "inherits" not in squashed
-    assert squashed["name"] == "Child Printer"
-    # Child overrides parent; literal ``value`` is promoted to ``default_value`` (#587)
-    assert squashed["overrides"]["machine_width"] == {"default_value": 256}
-    # Parent-only setting preserved — existing ``default_value`` blocks promotion
-    assert squashed["overrides"]["speed_print"] == {"value": 60, "default_value": 60}
-    # Child-only setting added (also promoted)
-    assert squashed["overrides"]["machine_depth"] == {"default_value": 256}
-    # Metadata merged (child visible overrides parent)
-    assert squashed["metadata"]["visible"] is True
-    assert squashed["metadata"]["author"] == "test"
-
-
-def test_squash_cura_def_keeps_unresolved_parent(tmp_path):
-    """Squashing preserves inherits when the root parent is not available locally."""
-    from estampo.profiles import _squash_cura_def
-
-    # child → base → fdmprinter (not available locally)
-    base = {
-        "version": 2,
-        "name": "Base",
-        "inherits": "fdmprinter",
-        "metadata": {"visible": False},
-        "overrides": {
-            "speed_print": {"value": 100},
-            "acceleration_infill": {"value": "acceleration_print"},
-        },
-    }
-    child = {
-        "version": 2,
-        "name": "My Printer",
-        "inherits": "base",
-        "metadata": {"visible": True},
-        "overrides": {"machine_width": {"value": 256}},
-    }
-    (tmp_path / "base.def.json").write_text(json.dumps(base))
-    (tmp_path / "child.def.json").write_text(json.dumps(child))
-
-    squashed = _squash_cura_def("child", tmp_path)
-    # fdmprinter is not local — keep inherits so CuraEngine resolves at runtime
-    assert squashed["inherits"] == "fdmprinter"
-    assert squashed["name"] == "My Printer"
-    # Literal ``value`` entries are promoted to ``default_value`` at pin-time (#587)
-    assert squashed["overrides"]["machine_width"] == {"default_value": 256}
-    assert squashed["overrides"]["speed_print"] == {"default_value": 100}
-    # Expression left intact — depends on another setting
-    assert squashed["overrides"]["acceleration_infill"] == {"value": "acceleration_print"}
-
-
 def test_add_profile_cura_def(tmp_path):
     """Adding a CuraEngine .def.json writes to profiles/cura/definitions/."""
     def_data = {
@@ -932,7 +834,7 @@ def test_add_profile_cura_def(tmp_path):
 
 
 def test_pin_cura_definitions_from_bundled(tmp_path):
-    """Pinning a bundled CuraEngine definition squashes it."""
+    """Pinning a bundled CuraEngine definition copies it verbatim (ADR-008)."""
     from estampo.profiles import pin_cura_definitions
 
     result = pin_cura_definitions(
@@ -944,16 +846,21 @@ def test_pin_cura_definitions_from_bundled(tmp_path):
     assert dest.name == "ultimaker2.def.json"
     assert dest.parent.name == "definitions"
 
-    squashed = json.loads(dest.read_text())
+    pinned = json.loads(dest.read_text())
     # fdmprinter is not bundled — kept so CuraEngine resolves at runtime
-    assert squashed.get("inherits") == "fdmprinter"
-    assert squashed["name"] == "Ultimaker 2"
-    assert "machine_width" in squashed["overrides"]
-    assert "machine_heated_bed" in squashed["overrides"]
+    assert pinned.get("inherits") == "fdmprinter"
+    assert pinned["name"] == "Ultimaker 2"
+    assert "machine_width" in pinned["overrides"]
+    assert "machine_heated_bed" in pinned["overrides"]
 
 
 def test_pin_cura_definitions_from_project_dir(tmp_path):
-    """pin finds a def added to profiles/cura/definitions/ via 'profiles add'."""
+    """pin finds a def added to profiles/cura/definitions/ via 'profiles add'.
+
+    Under ADR-008 the chain is copied verbatim: each non-root ancestor is
+    returned in the result and its file is preserved byte-for-byte (no
+    squashing, no value→default_value promotion).
+    """
     from estampo.profiles import pin_cura_definitions
 
     defs_dir = tmp_path / "profiles" / "cura" / "definitions"
@@ -977,16 +884,19 @@ def test_pin_cura_definitions_from_project_dir(tmp_path):
 
     # No docker_version — must resolve entirely from the project dir.
     result = pin_cura_definitions(printer="my_ams", project_dir=tmp_path)
-    assert len(result) == 1
-    dest = result[0]
-    assert dest.name == "my_ams.def.json"
+    names = {p.name for p in result}
+    # Leaf + intermediate ancestor; fdmprinter is shipped separately
+    assert names == {"my_ams.def.json", "my_base.def.json"}
 
-    squashed = json.loads(dest.read_text())
-    assert squashed["name"] == "My AMS Variant"
-    # Literal ``value`` is promoted to ``default_value`` at pin-time (#587)
-    assert squashed["overrides"]["machine_width"] == {"default_value": 200}
-    assert squashed["overrides"]["machine_depth"] == {"default_value": 256}
-    assert squashed["inherits"] == "fdmprinter"
+    leaf = json.loads((defs_dir / "my_ams.def.json").read_text())
+    assert leaf["name"] == "My AMS Variant"
+    assert leaf["inherits"] == "my_base"
+    # Verbatim: literal ``value`` is NOT promoted to ``default_value``
+    assert leaf["overrides"]["machine_depth"] == {"value": 256}
+
+    base = json.loads((defs_dir / "my_base.def.json").read_text())
+    assert base["inherits"] == "fdmprinter"
+    assert base["overrides"]["machine_width"] == {"value": 200}
 
 
 def test_pin_profiles_delegates_to_cura(tmp_path):
@@ -1104,6 +1014,40 @@ def test_validate_override_keys_cross_engine_orca_in_cura():
     assert len(warnings) == 1
     assert "OrcaSlicer" in warnings[0]
     assert "wall_line_count" in warnings[0]
+
+
+def test_validate_override_keys_orca_cli_only_brim_type():
+    """brim_type is a real Orca key but not in any shipped profile (#649) —
+    the validator should not flag it."""
+    warnings = validate_override_keys(
+        {"brim_type": "outer_only"},
+        engine="orca",
+        process=None,
+    )
+    assert warnings == []
+
+
+def test_validate_override_keys_orca_cli_only_support_enable():
+    """enable_support is a real Orca key that defaults off (#649) — should
+    not warn."""
+    warnings = validate_override_keys(
+        {"enable_support": "1"},
+        engine="orca",
+        process=None,
+    )
+    assert warnings == []
+
+
+def test_validate_override_keys_typo_of_cli_only_still_warns():
+    """Typos of CLI-only keys still produce a warning with a hint pointing
+    at the real key."""
+    warnings = validate_override_keys(
+        {"brim_typ": "outer_only"},
+        engine="orca",
+        process=None,
+    )
+    assert len(warnings) == 1
+    assert "brim_type" in warnings[0]
 
 
 def test_validate_override_keys_cross_engine_cura_in_orca():
@@ -1289,3 +1233,125 @@ class TestEngineNamespacedProfiles:
         (engine_dir / ".slicer-version").write_text("2.3.2\n")
 
         assert pinned_profiles_version(tmp_path, engine="orca") == "2.3.2"
+
+
+# ---------------------------------------------------------------------------
+# filter_profiles_by_printer
+# ---------------------------------------------------------------------------
+
+
+def _write_pinned_process(tmp_path, name, compat=None, condition=None):
+    process_dir = tmp_path / "profiles" / "orca" / "process"
+    process_dir.mkdir(parents=True, exist_ok=True)
+    data: dict = {"type": "process", "name": name, "layer_height": "0.2"}
+    if compat is not None:
+        data["compatible_printers"] = compat
+    if condition is not None:
+        data["compatible_printers_condition"] = condition
+    (process_dir / f"{name}.json").write_text(json.dumps(data))
+
+
+class TestFilterByPrinter:
+    def test_filters_out_incompatible_process(self, tmp_path):
+        _write_pinned_process(tmp_path, "HQ P1P", compat=["Bambu Lab P1P 0.4 nozzle"])
+        _write_pinned_process(tmp_path, "HQ P1S", compat=["Bambu Lab P1S 0.4 nozzle"])
+        names = {"machine": [], "process": ["HQ P1P", "HQ P1S"], "filament": []}
+
+        out = filter_profiles_by_printer(
+            "orca", names, "Bambu Lab P1S 0.4 nozzle", project_dir=tmp_path
+        )
+        assert out["process"] == ["HQ P1S"]
+
+    def test_unknown_printer_returns_empty(self, tmp_path):
+        _write_pinned_process(tmp_path, "HQ P1P", compat=["Bambu Lab P1P 0.4 nozzle"])
+        names = {"machine": [], "process": ["HQ P1P"], "filament": []}
+
+        out = filter_profiles_by_printer("orca", names, "Bambu Lab Unknown", project_dir=tmp_path)
+        assert out["process"] == []
+
+    def test_dynamic_condition_included(self, tmp_path):
+        """Entries with compatible_printers_condition can't be statically
+        evaluated — keep them so the user can try them."""
+        _write_pinned_process(
+            tmp_path,
+            "Dyn P1P",
+            compat=["Bambu Lab P1P 0.4 nozzle"],
+            condition="nozzle_diameter[0]==0.4",
+        )
+        names = {"machine": [], "process": ["Dyn P1P"], "filament": []}
+
+        out = filter_profiles_by_printer(
+            "orca", names, "Bambu Lab P1S 0.4 nozzle", project_dir=tmp_path
+        )
+        assert out["process"] == ["Dyn P1P"]
+
+    def test_missing_compat_included(self, tmp_path):
+        """Profiles with no compatible_printers data are kept (unrestricted)."""
+        _write_pinned_process(tmp_path, "Universal")
+        names = {"machine": [], "process": ["Universal"], "filament": []}
+
+        out = filter_profiles_by_printer(
+            "orca", names, "Bambu Lab P1S 0.4 nozzle", project_dir=tmp_path
+        )
+        assert out["process"] == ["Universal"]
+
+    def test_machine_category_passes_through(self, tmp_path):
+        """Machine names are not filtered — they are the printers themselves."""
+        _write_pinned_process(tmp_path, "HQ P1P", compat=["Bambu Lab P1P 0.4 nozzle"])
+        names = {
+            "machine": ["Some Printer", "Another"],
+            "process": ["HQ P1P"],
+            "filament": [],
+        }
+
+        out = filter_profiles_by_printer(
+            "orca", names, "Bambu Lab P1S 0.4 nozzle", project_dir=tmp_path
+        )
+        assert out["machine"] == ["Some Printer", "Another"]
+
+    def test_uses_bundled_manifest_for_lookup(self):
+        """When a name matches a bundled manifest entry, we use its compat
+        data without needing the profile JSON on disk."""
+        names = {
+            "machine": [],
+            "process": ["0.08mm Extra Fine @BBL X1C"],
+            "filament": [],
+        }
+        out = filter_profiles_by_printer("orca", names, "Bambu Lab P1S 0.4 nozzle", version="2.3.1")
+        assert out["process"] == ["0.08mm Extra Fine @BBL X1C"]
+
+        out = filter_profiles_by_printer("orca", names, "Bambu Lab NotAThing", version="2.3.1")
+        assert out["process"] == []
+
+    def test_cura_raises(self):
+        from estampo import EstampoError
+
+        with pytest.raises(EstampoError, match="not supported for engine 'cura'"):
+            filter_profiles_by_printer("cura", {"process": ["foo"]}, "some-printer")
+
+    def test_filament_also_filtered(self, tmp_path):
+        filament_dir = tmp_path / "profiles" / "orca" / "filament"
+        filament_dir.mkdir(parents=True)
+        (filament_dir / "PLA P1P.json").write_text(
+            json.dumps(
+                {
+                    "type": "filament",
+                    "name": "PLA P1P",
+                    "compatible_printers": ["Bambu Lab P1P 0.4 nozzle"],
+                }
+            )
+        )
+        (filament_dir / "PLA P1S.json").write_text(
+            json.dumps(
+                {
+                    "type": "filament",
+                    "name": "PLA P1S",
+                    "compatible_printers": ["Bambu Lab P1S 0.4 nozzle"],
+                }
+            )
+        )
+        names = {"machine": [], "process": [], "filament": ["PLA P1P", "PLA P1S"]}
+        out = filter_profiles_by_printer(
+            "orca", names, "Bambu Lab P1S 0.4 nozzle", project_dir=tmp_path
+        )
+        assert out["filament"] == ["PLA P1S"]

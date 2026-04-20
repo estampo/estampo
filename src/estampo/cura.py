@@ -9,7 +9,6 @@ image with bundled printer definitions.  Default printer: Ultimaker 2.
 
 from __future__ import annotations
 
-import ast
 import importlib.resources
 import json
 import logging
@@ -18,7 +17,6 @@ import re
 import shutil
 import subprocess
 import sys
-from dataclasses import dataclass, field
 from pathlib import Path
 
 from estampo import EstampoError
@@ -210,7 +208,7 @@ def _resolve_def_chain(
     ``[ultimaker2.def.json]``.
 
     Search order per definition:
-    1. Pinned (squashed) in ``profiles/cura/definitions/``
+    1. Pinned (verbatim) in ``profiles/cura/definitions/``
     2. Bundled with estampo in ``src/estampo/data/``
     """
     chain: list[Path] = []
@@ -368,6 +366,34 @@ def resolve_cura_machine_dims(
     }
 
 
+def resolve_cura_center_is_zero(
+    printer_name: str,
+    project_dir: Path | None = None,
+    profiles_dir: str = "profiles",
+) -> bool:
+    """Return True if the printer's build plate origin is at the bed center.
+
+    Walks the definition chain for ``machine_center_is_zero``.  Falls back
+    to CuraEngine's own default (``False`` — origin at front-left corner)
+    when the setting is not declared in the chain.
+    """
+    chain = _resolve_def_chain_for_printer(printer_name, project_dir, profiles_dir)
+    for path in chain:
+        try:
+            with open(path) as f:
+                data = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            continue
+        entry = data.get("overrides", {}).get("machine_center_is_zero")
+        if isinstance(entry, dict):
+            val = entry.get("default_value")
+            if val is None:
+                val = entry.get("value")
+            if val is not None:
+                return bool(val)
+    return False
+
+
 def cura_docker_image(version: str | None = None) -> str:
     """Return the Docker image name for a given CuraEngine version."""
     if version:
@@ -401,59 +427,8 @@ def load_cura_definition_map(version: str | None = None) -> dict[str, str]:
 
 
 # ---------------------------------------------------------------------------
-# CuraEngine definition pinning (inheritance squashing)
+# CuraEngine definition pinning
 # ---------------------------------------------------------------------------
-
-
-def _deep_merge_cura_overrides(base: dict, child: dict) -> dict:
-    """Deep-merge CuraEngine overrides dicts.
-
-    Each key maps to a sub-dict like ``{"value": X, "default_value": Y}``.
-    Child values override parent values at the per-setting sub-dict level.
-    """
-    merged = dict(base)
-    for key, val in child.items():
-        if key in merged and isinstance(merged[key], dict) and isinstance(val, dict):
-            merged[key] = {**merged[key], **val}
-        else:
-            merged[key] = val
-    return merged
-
-
-def _normalize_value_literals(overrides: dict) -> None:
-    """Promote literal ``value`` entries to ``default_value`` in place.
-
-    CuraEngine silently ignores setting entries that carry a ``value`` but no
-    ``default_value`` when the fdmprinter settings tree isn't in scope — it
-    logs ``JSON setting 'X' has no [default_]value!`` and reverts to the
-    root-schema default (see #587).  Squashed pinned defs hit this because
-    ``_squash_cura_def`` only merges ``overrides`` dicts, leaving literal
-    ``value`` entries unpaired with a ``default_value``.
-
-    For each override, if ``value`` is a literal — a native bool/int/float,
-    or a string that parses via :func:`ast.literal_eval` (e.g., ``"'skirt'"``
-    or ``"True"``) — set ``default_value`` to the evaluated literal and drop
-    ``value``.  Entries whose ``value`` is a Python expression referencing
-    other settings (e.g., ``"'zigzag' if infill_sparse_density > 80 else
-    'gyroid'"``) are left untouched so CuraEngine can evaluate them.
-    """
-    for entry in overrides.values():
-        if not isinstance(entry, dict):
-            continue
-        if "default_value" in entry or "value" not in entry:
-            continue
-        raw = entry["value"]
-        if isinstance(raw, bool) or isinstance(raw, (int, float)):
-            literal: object = raw
-        elif isinstance(raw, str):
-            try:
-                literal = ast.literal_eval(raw)
-            except (ValueError, SyntaxError):
-                continue
-        else:
-            literal = raw
-        entry["default_value"] = literal
-        del entry["value"]
 
 
 def extract_cura_docker_defs(
@@ -494,22 +469,24 @@ def extract_cura_docker_defs(
     return tmp_dir
 
 
-def _squash_cura_def(def_id: str, defs_dirs: Path | list[Path]) -> dict:
-    """Walk the inheritance chain for a CuraEngine definition and squash it.
+def _copy_cura_def_chain(def_id: str, defs_dirs: Path | list[Path]) -> list[Path]:
+    """Walk the inheritance chain for a CuraEngine definition verbatim.
 
     Reads ``*.def.json`` files from *defs_dirs* (single dir or list of
     candidate dirs searched in order, first match wins), follows
-    ``inherits`` links, and deep-merges overrides from root to leaf.
+    ``inherits`` links, and returns the chain as a list of source
+    ``Path`` objects — leaf first, nearest non-root ancestor last.
 
-    Root definitions like ``fdmprinter`` provide the full settings schema in
-    a ``settings`` tree (not ``overrides``).  Since we only merge
-    ``overrides``, we must stop before including root definitions and
-    preserve ``inherits`` so CuraEngine resolves the base at runtime via
-    its ``-d`` search path.
+    Root definitions (``fdmprinter``, ``fdmextruder``) are not included:
+    estampo ships these in ``src/estampo/data/`` and CuraEngine resolves
+    them at runtime via its ``-d`` search path.  Ancestors that are
+    missing from *defs_dirs* are treated the same way (callers relying
+    on Docker-extracted defs are responsible for pre-populating the
+    search path).
+
+    Raises :class:`EstampoError` if the leaf definition itself cannot be
+    found — there is nothing to pin otherwise.
     """
-    # Root definitions that provide the full settings schema.  These must
-    # NOT be squashed — their ``settings`` tree is too large and not
-    # representable as ``overrides``.  CuraEngine resolves them at runtime.
     _ROOT_DEFS = {"fdmprinter", "fdmextruder"}
 
     dirs = [defs_dirs] if isinstance(defs_dirs, Path) else list(defs_dirs)
@@ -521,27 +498,28 @@ def _squash_cura_def(def_id: str, defs_dirs: Path | list[Path]) -> dict:
                 return candidate
         return None
 
-    chain: list[dict] = []
+    chain: list[Path] = []
     current_id: str | None = def_id
     seen: set[str] = set()
-    unresolved_parent: str | None = None
 
     while current_id and current_id not in seen:
         seen.add(current_id)
 
-        # Stop before root definitions — they provide the base schema
+        # Stop before root definitions — estampo ships these separately
         if current_id in _ROOT_DEFS and current_id != def_id:
-            unresolved_parent = current_id
             break
 
         path = _find(current_id)
         if path is None:
-            # Parent not available locally — CuraEngine resolves it at runtime
-            unresolved_parent = current_id
+            # Ancestor unavailable locally — CuraEngine resolves at runtime
             break
-        with open(path) as f:
-            data = json.load(f)
-        chain.append(data)
+        chain.append(path)
+
+        try:
+            with open(path) as f:
+                data = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            break
         parent = data.get("inherits")
         current_id = parent if isinstance(parent, str) else None
 
@@ -549,26 +527,7 @@ def _squash_cura_def(def_id: str, defs_dirs: Path | list[Path]) -> dict:
         searched = ", ".join(str(d) for d in dirs)
         raise EstampoError(f"CuraEngine definition '{def_id}' not found in {searched}")
 
-    # Merge root-first so leaf overrides take precedence
-    merged_overrides: dict = {}
-    merged_metadata: dict = {}
-    for data in reversed(chain):
-        merged_overrides = _deep_merge_cura_overrides(merged_overrides, data.get("overrides", {}))
-        merged_metadata.update(data.get("metadata", {}))
-
-    _normalize_value_literals(merged_overrides)
-
-    # Build squashed result from the leaf definition
-    leaf = chain[0]
-    squashed: dict = {
-        "version": leaf.get("version", 2),
-        "name": leaf.get("name", def_id),
-        "metadata": merged_metadata,
-        "overrides": merged_overrides,
-    }
-    if unresolved_parent:
-        squashed["inherits"] = unresolved_parent
-    return squashed
+    return chain
 
 
 def pin_cura_definitions(
@@ -577,10 +536,13 @@ def pin_cura_definitions(
     docker_version: str | None = None,
     profiles_dir: str = "profiles",
 ) -> list[Path]:
-    """Pin (squash) a CuraEngine printer definition for reproducible builds.
+    """Pin a CuraEngine printer definition for reproducible builds.
 
-    Extracts definitions from the Docker image, walks the inheritance chain,
-    deep-merges overrides, and writes a standalone ``.def.json`` file.
+    Walks the inheritance chain (extracting from the Docker image if
+    needed) and copies each ancestor ``.def.json`` file verbatim into
+    ``profiles/cura/definitions/``.  CuraEngine resolves inheritance at
+    slice time; the root defs (``fdmprinter``, ``fdmextruder``) ship
+    with estampo in ``src/estampo/data/`` and are not copied per printer.
 
     Returns list of pinned file paths.
     """
@@ -589,7 +551,7 @@ def pin_cura_definitions(
         return []
 
     # If the printer is a local file path that already exists, it was placed
-    # there by 'profiles add' — treat it as already pinned, nothing to squash.
+    # there by 'profiles add' — treat it as already pinned, nothing to do.
     existing = _printer_is_file(printer, project_dir)
     if existing:
         log.info("Printer definition is a local file — already pinned: %s", existing)
@@ -645,24 +607,37 @@ def pin_cura_definitions(
             cleanup_dir = docker_defs_dir
             search_dirs.append(docker_defs_dir)
 
-        squashed = _squash_cura_def(def_id, search_dirs)
+        chain = _copy_cura_def_chain(def_id, search_dirs)
 
-        # Write to profiles/cura/definitions/
+        # Copy each def file verbatim into profiles/cura/definitions/
         dest_dir = project_defs_dir
         dest_dir.mkdir(parents=True, exist_ok=True)
-        dest = dest_dir / f"{def_id}.def.json"
 
-        with open(dest, "w") as fh:
-            json.dump(squashed, fh, indent=4)
-        log.info("Pinned CuraEngine definition %s → %s (squashed)", printer, dest)
+        pinned: list[Path] = []
+        for src in chain:
+            dest = dest_dir / src.name
+            if src.resolve() == dest.resolve():
+                # Already pinned (source is the destination) — keep in list
+                pinned.append(dest)
+                continue
+            shutil.copy2(src, dest)
+            pinned.append(dest)
+            log.info("Pinned CuraEngine definition → %s (verbatim)", dest)
 
-        # Pin extruder definitions referenced by the machine def
-        pinned = [dest]
-        trains = squashed.get("metadata", {}).get("machine_extruder_trains", {})
+        # Pin extruder definitions referenced by the leaf machine def
+        leaf_path = chain[0]
+        try:
+            with open(leaf_path) as fh:
+                leaf_data = json.load(fh)
+        except (json.JSONDecodeError, OSError):
+            leaf_data = {}
+        trains = leaf_data.get("metadata", {}).get("machine_extruder_trains", {})
         for extruder_id in trains.values():
             ext_filename = f"{extruder_id}.def.json"
             ext_dest = dest_dir / ext_filename
             if ext_dest.exists():
+                if ext_dest not in pinned:
+                    pinned.append(ext_dest)
                 continue
             for d in search_dirs:
                 ext_src = d / ext_filename
@@ -751,101 +726,40 @@ _FILAMENT_TEMPS: dict[str, tuple[int, int]] = {
 }
 
 
-@dataclass
-class CuraProfile:
-    """Slicer profile for CuraEngine.
+CuraOverrides = dict[str, str | int | float | bool]
+"""CuraEngine setting overrides: raw engine-native key/value pairs.
 
-    Machine geometry and start/end G-code come from the printer definition
-    file (default: ultimaker2).  This profile controls process settings
-    (layer height, speeds, temperatures, infill) passed as ``-s`` overrides.
-    Nozzle and material dimensions can be overridden via a machine
-    profile JSON (see ``load_cura_machine_profile``).
+TOML ``[slicer.cura.overrides]`` is parsed as this dict verbatim — no key
+translation, no type coercion.  Values are emitted as ``-s key=value`` to
+CuraEngine, which resolves remaining settings from the pinned def chain.
+"""
+
+CuraPerExtruder = list[dict[str, str | int | float | bool]]
+"""Per-extruder override lists, one dict per extruder slot (0-indexed)."""
+
+
+def _settings_dict(overrides: CuraOverrides) -> dict[str, object]:
+    """Build the flat CuraEngine settings dict from raw TOML overrides.
+
+    User overrides pass through verbatim.  A minimal baseline of
+    CuraEngine 5.12 quirks (roofing/flooring layer counts, prepend flags)
+    is applied first; all other defaults come from the pinned def chain.
     """
-
-    # Nozzle / material
-    nozzle_diameter: float = 0.4
-    material_diameter: float = 1.75
-    material_print_temperature: int = 220
-    material_bed_temperature: int = 55
-
-    # Process
-    layer_height: float = 0.20
-    layer_height_0: float = 0.20
-    infill_sparse_density: int = 25
-    wall_line_count: int = 3
-    top_layers: int = 5
-    bottom_layers: int = 4
-    speed_print: int = 80
-    speed_travel: int = 200
-    speed_wall_0: int = 50
-    speed_infill: int = 80
-
-    # Bed / filament
-    bed_type: str = "Textured PEI Plate"
-    filament_type: str = "PLA"
-
-    # Additional -s overrides (Cura setting key names)
-    overrides: dict[str, str] = field(default_factory=dict)
-
-    # Per-extruder overrides (index 0 = extruder 0).  Each dict contains
-    # CuraEngine setting key/value pairs that are appended after the global
-    # settings in that extruder's ``-g -eN`` block.  If absent or shorter
-    # than the extruder count, global settings apply for remaining extruders.
-    per_extruder: list[dict[str, object]] = field(default_factory=list)
-
-
-def _settings_dict(profile: CuraProfile) -> dict[str, object]:
-    """Build the flat CuraEngine settings dict from a profile.
-
-    Machine settings (bed size, heated bed, start/end gcode) are handled
-    by the printer definition — only process/material settings here.
-    """
-    # CuraEngine computes infill_line_distance from infill_sparse_density
-    # via a ``value`` expression in fdmprinter.def.json, but ``value``
-    # overrides ``-s`` flags. Set infill_line_distance directly so our
-    # density setting actually takes effect.
-    infill_line_width = profile.nozzle_diameter  # default assumption
-    density = profile.infill_sparse_density
-    if density > 0:
-        infill_line_distance = round(infill_line_width * 100 / density, 4)
-    else:
-        infill_line_distance = 0
-
     pairs: dict[str, object] = {
-        "layer_height": profile.layer_height,
-        "layer_height_0": profile.layer_height_0,
-        "material_print_temperature": profile.material_print_temperature,
-        "material_print_temperature_layer_0": profile.material_print_temperature,
-        "material_bed_temperature": profile.material_bed_temperature,
-        "material_bed_temperature_layer_0": profile.material_bed_temperature,
-        "material_diameter": profile.material_diameter,
-        "infill_sparse_density": density,
-        "infill_line_distance": infill_line_distance,
-        "wall_line_count": profile.wall_line_count,
-        "top_layers": profile.top_layers,
-        "bottom_layers": profile.bottom_layers,
-        "speed_print": profile.speed_print,
-        "speed_travel": profile.speed_travel,
-        "speed_wall_0": profile.speed_wall_0,
-        "speed_infill": profile.speed_infill,
         "material_print_temp_prepend": "false",
         "material_bed_temp_prepend": "false",
-        "adhesion_type": "none",
         # CuraEngine 5.12 requires these explicitly (not resolved from def)
         "roofing_layer_count": 0,
         "flooring_layer_count": 0,
-        "machine_nozzle_size": profile.nozzle_diameter,
-        "machine_buildplate_type": profile.bed_type.lower().replace(" ", "_"),
-        "material_type": profile.filament_type,
     }
-    pairs.update(profile.overrides)
+    pairs.update(overrides)
     return pairs
 
 
-def _settings_flags(profile: CuraProfile) -> list[str]:
-    """Build -s key=value flags from profile."""
+def _settings_flags(overrides: CuraOverrides) -> list[str]:
+    """Build -s key=value flags from raw overrides."""
     flags: list[str] = []
-    for k, v in _settings_dict(profile).items():
+    for k, v in _settings_dict(overrides).items():
         flags.extend(["-s", f"{k}={v}"])
     return flags
 
@@ -856,9 +770,9 @@ def _machine_dims_flags(machine_dims: dict[str, float]) -> list[str]:
     Pinned definitions commonly declare bed size with ``value`` only and
     no ``default_value``.  CuraEngine logs "has no [default_]value!" for
     these fields and silently falls back to the fdmprinter defaults
-    (100×100).  ``_place_on_bed`` reads the ``value`` directly, so the
-    mesh gets centred for the real bed and ends up off the bed CuraEngine
-    thinks it has — which silently drops brim/skirt generation (see #586).
+    (100×100).  Slicer-side mesh placement reads the ``value`` directly,
+    so the mesh gets centred for the real bed and ends up off the bed
+    CuraEngine thinks it has — which silently drops brim/skirt (see #586).
 
     Passing the dims as ``-s`` flags keeps CuraEngine in sync with mesh
     placement regardless of how the def declares them.
@@ -870,26 +784,34 @@ def _machine_dims_flags(machine_dims: dict[str, float]) -> list[str]:
     return flags
 
 
-def _extruder_settings_list(profile: CuraProfile, ext_idx: int) -> list[str]:
+def _extruder_settings_list(
+    overrides: CuraOverrides,
+    per_extruder: CuraPerExtruder,
+    ext_idx: int,
+) -> list[str]:
     """Build ``-s key=value`` args list for one extruder's ``-g -eN`` block.
 
     Suitable for passing directly to ``subprocess.run`` (no shell quoting).
     """
-    flags = _settings_flags(profile)
-    if ext_idx < len(profile.per_extruder):
-        for k, v in profile.per_extruder[ext_idx].items():
+    flags = _settings_flags(overrides)
+    if ext_idx < len(per_extruder):
+        for k, v in per_extruder[ext_idx].items():
             flags.extend(["-s", f"{k}={v}"])
     return flags
 
 
-def _extruder_settings_str(profile: CuraProfile, ext_idx: int) -> str:
+def _extruder_settings_str(
+    overrides: CuraOverrides,
+    per_extruder: CuraPerExtruder,
+    ext_idx: int,
+) -> str:
     """Build the ``-s`` flags string for one extruder's ``-g -eN`` block.
 
-    Starts from the global ``_settings_flags(profile)`` output and appends
-    any per-extruder overrides from ``profile.per_extruder[ext_idx]``.
-    If *ext_idx* is out of range the global settings are returned unchanged.
+    Starts from the global ``_settings_flags`` output and appends any
+    per-extruder overrides from ``per_extruder[ext_idx]``.  If *ext_idx*
+    is out of range the global settings are returned unchanged.
     """
-    return " ".join(f'"{s}"' for s in _extruder_settings_list(profile, ext_idx))
+    return " ".join(f'"{s}"' for s in _extruder_settings_list(overrides, per_extruder, ext_idx))
 
 
 def _patch_gcode_header(gcode_path: Path, stderr: str) -> None:
@@ -925,54 +847,11 @@ def _patch_gcode_header(gcode_path: Path, stderr: str) -> None:
         log.debug("G-code header patch had no effect")
 
 
-def _place_on_bed(
-    stl_path: Path,
-    staging_dir: Path,
-    bed_width: float = DEFAULT_PLATE_SIZE[0],
-    bed_depth: float = DEFAULT_PLATE_SIZE[1],
-) -> Path:
-    """Copy STL into staging, ensuring the mesh sits on the bed (Z>=0)
-    and is centered on the build plate.
-
-    CuraEngine only slices geometry above Z=0.  With
-    ``machine_center_is_zero = false`` (common default), the bed origin is at
-    the corner, so the center of the bed is (width/2, depth/2).  This
-    function:
-    1. Shifts Z so the lowest vertex is at Z=0.
-    2. Centers the mesh at (bed_width/2, bed_depth/2) so the print sits
-       in the middle of the build plate.
-    """
-    import trimesh
-
-    mesh: trimesh.Trimesh = trimesh.load(str(stl_path), force="mesh")  # type: ignore[assignment]
-
-    # Center mesh on build plate (bed origin is at corner, not center)
-    x_center = float((mesh.bounds[0][0] + mesh.bounds[1][0]) / 2)
-    y_center = float((mesh.bounds[0][1] + mesh.bounds[1][1]) / 2)
-    target_x = bed_width / 2
-    target_y = bed_depth / 2
-    dx = target_x - x_center
-    dy = target_y - y_center
-    if abs(dx) > 0.01 or abs(dy) > 0.01:
-        mesh.vertices[:, 0] += dx  # type: ignore[attr-defined]
-        mesh.vertices[:, 1] += dy  # type: ignore[attr-defined]
-        log.info("Centered mesh on bed (shifted by %.2f, %.2f)", dx, dy)
-
-    # Place on bed (Z >= 0)
-    z_min = float(mesh.bounds[0][2])
-    if z_min < 0:
-        mesh.vertices[:, 2] -= z_min
-        log.info("Shifted mesh up by %.2fmm to place on bed", -z_min)
-
-    out = staging_dir / stl_path.name
-    mesh.export(str(out), file_type="stl")
-    return out
-
-
 def _write_cura_settings(
     output_dir: Path,
-    profile: CuraProfile,
+    overrides: CuraOverrides,
     machine_dims: dict[str, float] | None = None,
+    per_extruder: CuraPerExtruder | None = None,
 ) -> Path:
     """Write CuraEngine settings to JSON for downstream command stages.
 
@@ -981,71 +860,21 @@ def _write_cura_settings(
 
     *machine_dims* adds machine geometry (width, depth, height) so that
     template variables like ``{machine_height}`` can be resolved.
+
+    *per_extruder* — extruder-0 values are merged in so that start-gcode
+    template variables like ``{material_bed_temperature_layer_0}`` and
+    ``{material_print_temperature_layer_0}`` resolve to the first
+    extruder's filament values (start gcode runs before any tool change).
     """
-    settings = _settings_dict(profile)
+    settings = _settings_dict(overrides)
     if machine_dims:
         settings.update(machine_dims)
+    if per_extruder:
+        settings.update(per_extruder[0])
     settings_path = output_dir / "cura_settings.json"
     settings_path.write_text(json.dumps(settings, indent=2) + "\n")
     log.info("Wrote CuraEngine settings: %s", settings_path)
     return settings_path
-
-
-def _normalize_staging_value_literals(staging: Path) -> None:
-    """Apply :func:`_normalize_value_literals` to every staged ``.def.json``.
-
-    Runs before :func:`_strip_value_overrides` at slice time so that legacy
-    pinned defs — produced before the pin-time normalization in
-    :func:`_squash_cura_def` existed — still reach CuraEngine in well-formed
-    shape (see #587).
-    """
-    for def_path in staging.glob("*.def.json"):
-        try:
-            data = json.loads(def_path.read_text())
-        except (json.JSONDecodeError, OSError):
-            continue
-        overrides = data.get("overrides")
-        if not isinstance(overrides, dict):
-            continue
-        before = json.dumps(overrides, sort_keys=True)
-        _normalize_value_literals(overrides)
-        if json.dumps(overrides, sort_keys=True) != before:
-            def_path.write_text(json.dumps(data, indent=4))
-
-
-def _strip_value_overrides(staging: Path, setting_keys: set[str]) -> None:
-    """Strip ``value`` expressions from staged defs for settings we pass via ``-s``.
-
-    CuraEngine ``value`` expressions in ``.def.json`` take precedence over
-    ``-s`` command-line flags, silently dropping user overrides (see #584).
-    For any key we're about to pass via ``-s``, remove the ``value`` entry
-    from matching override blocks in every staged def so ``-s`` actually wins.
-    ``default_value`` is left intact.
-    """
-    for def_path in staging.glob("*.def.json"):
-        try:
-            data = json.loads(def_path.read_text())
-        except (json.JSONDecodeError, OSError):
-            continue
-        overrides = data.get("overrides", {})
-        if not isinstance(overrides, dict):
-            continue
-        changed = False
-        for key in setting_keys:
-            entry = overrides.get(key)
-            if isinstance(entry, dict) and "value" in entry:
-                del entry["value"]
-                changed = True
-        if changed:
-            def_path.write_text(json.dumps(data, indent=4))
-
-
-def _profile_setting_keys(profile: CuraProfile) -> set[str]:
-    """Return every setting key we pass via ``-s`` for *profile*."""
-    keys = set(_settings_dict(profile).keys())
-    for ext_overrides in profile.per_extruder:
-        keys.update(ext_overrides.keys())
-    return keys
 
 
 def _prepare_cura_staging(
@@ -1184,8 +1013,9 @@ def _run_docker_slice(
     output_dir: Path,
     staging: Path,
     output_stem: str,
-    profile: CuraProfile,
+    overrides: CuraOverrides,
     machine_dims: dict[str, float] | None = None,
+    per_extruder: CuraPerExtruder | None = None,
 ) -> Path:
     """Run CuraEngine via Docker, validate output, and post-process G-code.
 
@@ -1239,7 +1069,7 @@ def _run_docker_slice(
 
     _surface_cura_warnings(result.stderr)
     _patch_gcode_header(output_gcode, result.stderr)
-    _write_cura_settings(output_dir, profile, machine_dims)
+    _write_cura_settings(output_dir, overrides, machine_dims, per_extruder)
 
     log.info("CuraEngine output: %s (%d bytes)", output_gcode, output_gcode.stat().st_size)
     return output_dir
@@ -1250,8 +1080,9 @@ def _run_local_slice(
     output_dir: Path,
     staging: Path,
     output_stem: str,
-    profile: CuraProfile,
+    overrides: CuraOverrides,
     machine_dims: dict[str, float] | None = None,
+    per_extruder: CuraPerExtruder | None = None,
 ) -> Path:
     """Run CuraEngine locally (without Docker), validate output, and post-process G-code.
 
@@ -1287,113 +1118,17 @@ def _run_local_slice(
 
     _surface_cura_warnings(result.stderr)
     _patch_gcode_header(output_gcode, result.stderr)
-    _write_cura_settings(output_dir, profile, machine_dims)
+    _write_cura_settings(output_dir, overrides, machine_dims, per_extruder)
 
     log.info("CuraEngine output: %s (%d bytes)", output_gcode, output_gcode.stat().st_size)
     return output_dir
 
 
-def slice_stl(
-    stl_path: Path,
-    output_dir: Path,
-    profile: CuraProfile | None = None,
-    image: str | None = None,
-    printer: str | None = None,
-    project_dir: Path | None = None,
-    profiles_dir: str = "profiles",
-    local: bool = False,
-) -> Path:
-    """Slice a single STL file with CuraEngine and return the output directory.
-
-    Uses Docker with the estampo/estampo:cura-X.Y.Z image.  The machine
-    definition (resolved from *printer* name) provides machine geometry
-    and start/end G-code; process settings come from the CuraProfile.
-
-    Args:
-        stl_path: Path to the input STL file.
-        output_dir: Directory for output G-code.
-        profile: Slicer profile. Defaults to P1S / PLA / 0.2mm.
-        image: Docker image override. Defaults to estampo/estampo:cura-5.12.0.
-        printer: Printer definition name (e.g. ``"Ultimaker 2"``).
-        project_dir: Project root for pinned profile lookup.
-        profiles_dir: Profiles directory name within the project.
-
-    Returns:
-        The output directory (matching slicer.slice_plate contract).
-    """
-    if profile is None:
-        profile = CuraProfile()
-    if image is None:
-        image = cura_docker_image()
-
-    stl_path = stl_path.resolve()
-    output_dir = output_dir.resolve()
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    staging, machine_def = _prepare_cura_staging(printer, project_dir, profiles_dir, output_dir)
-    _normalize_staging_value_literals(staging)
-    _strip_value_overrides(staging, _profile_setting_keys(profile))
-
-    # Get machine dimensions for mesh centering and settings JSON
-    machine_dims = resolve_cura_machine_dims(printer or "", project_dir, profiles_dir)
-    bed_w, bed_d = machine_dims["machine_width"], machine_dims["machine_depth"]
-
-    # Place mesh on the build plate (Z>=0, centered) before slicing.
-    staged_stl = _place_on_bed(stl_path, staging, bed_width=bed_w, bed_depth=bed_d)
-
-    settings = _settings_flags(profile) + _machine_dims_flags(machine_dims)
-
-    if local:
-        _check_local_def(staging, machine_def, printer)
-        defs_path = _local_defs_path(staging)
-        cura_args = [
-            "-d",
-            defs_path,
-            "-j",
-            str(staging / machine_def),
-            "-o",
-            str(output_dir / (stl_path.stem + ".gcode")),
-            *settings,
-            "-g",
-            "-e0",
-            *settings,
-            "-l",
-            str(staged_stl),
-        ]
-        return _run_local_slice(
-            cura_args, output_dir, staging, stl_path.stem, profile, machine_dims
-        )
-
-    # Container paths (output_dir mounted at /work/output)
-    c_staging = "/work/output/.cura-staging"
-    c_stl = f"{c_staging}/{staged_stl.name}"
-    c_output = "/work/output/" + stl_path.stem + ".gcode"
-
-    # Build the CuraEngine command.
-    # -d adds search paths for definition file resolution (inherits chain).
-    # -j loads the machine definition (geometry + start/end gcode).
-    # -g starts a mesh group, -e0 sets extruder 0 context for per-extruder
-    # settings (material_diameter etc.) that CuraEngine requires.
-    settings_str = " ".join(f'"{s}"' for s in settings)
-    inner_cmd = (
-        f"CuraEngine slice "
-        f"-d {c_staging}:{_DEFS_DIR}:/opt/cura/extruders "
-        f"-j {c_staging}/{machine_def} "
-        f"-o {c_output} "
-        f"{settings_str} "
-        f"-g -e0 {settings_str} "
-        f"-l {c_stl}"
-    )
-
-    return _run_docker_slice(
-        inner_cmd, image, output_dir, staging, stl_path.stem, profile, machine_dims
-    )
-
-
 def slice_stl_multi(
     stl_meshes: list[tuple[int, Path]],
     output_dir: Path,
-    profile: CuraProfile | None = None,
+    overrides: CuraOverrides | None = None,
+    per_extruder: CuraPerExtruder | None = None,
     image: str | None = None,
     printer: str | None = None,
     project_dir: Path | None = None,
@@ -1407,25 +1142,27 @@ def slice_stl_multi(
     relative to each other and to the build plate (no centering is applied).
 
     CuraEngine receives one ``-g -eN -l mesh.stl`` group per entry, in order.
-    Global settings from *profile* apply to all groups; ``profile.per_extruder``
-    provides additional per-extruder overrides (filament type, temperatures).
+    Global *overrides* apply to all groups; *per_extruder* provides additional
+    per-slot overrides (filament type, temperatures).
 
     Returns:
         The output directory containing ``plate.gcode``.
     """
     if not stl_meshes:
         raise ValueError("stl_meshes must not be empty")
-    if profile is None:
-        profile = CuraProfile()
+    if overrides is None:
+        overrides = {}
+    if per_extruder is None:
+        per_extruder = []
     if image is None:
         image = cura_docker_image()
+
+    _warn_unknown_cura_settings(overrides, per_extruder)
 
     output_dir = output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
     staging, machine_def = _prepare_cura_staging(printer, project_dir, profiles_dir, output_dir)
-    _normalize_staging_value_literals(staging)
-    _strip_value_overrides(staging, _profile_setting_keys(profile))
 
     # Get machine dimensions for settings JSON
     machine_dims = resolve_cura_machine_dims(printer or "", project_dir, profiles_dir)
@@ -1436,7 +1173,7 @@ def slice_stl_multi(
         if not dest.exists():
             shutil.copy2(stl_path, dest)
 
-    global_flags = _settings_flags(profile) + _machine_dims_flags(machine_dims)
+    global_flags = _settings_flags(overrides) + _machine_dims_flags(machine_dims)
 
     if local:
         _check_local_def(staging, machine_def, printer)
@@ -1451,9 +1188,11 @@ def slice_stl_multi(
         ]
         for ext_idx, stl_path in stl_meshes:
             cura_args.extend(["-g", f"-e{ext_idx}"])
-            cura_args.extend(_extruder_settings_list(profile, ext_idx))
+            cura_args.extend(_extruder_settings_list(overrides, per_extruder, ext_idx))
             cura_args.extend(["-l", str(staging / stl_path.name)])
-        return _run_local_slice(cura_args, output_dir, staging, "plate", profile, machine_dims)
+        return _run_local_slice(
+            cura_args, output_dir, staging, "plate", overrides, machine_dims, per_extruder
+        )
 
     c_staging = "/work/output/.cura-staging"
     c_output = "/work/output/plate.gcode"
@@ -1463,7 +1202,7 @@ def slice_stl_multi(
     mesh_groups = ""
     for ext_idx, stl_path in stl_meshes:
         c_stl = f"{c_staging}/{stl_path.name}"
-        ext_str = _extruder_settings_str(profile, ext_idx)
+        ext_str = _extruder_settings_str(overrides, per_extruder, ext_idx)
         mesh_groups += f" -g -e{ext_idx} {ext_str} -l {c_stl}"
 
     inner_cmd = (
@@ -1475,19 +1214,12 @@ def slice_stl_multi(
         f"{mesh_groups}"
     )
 
-    return _run_docker_slice(inner_cmd, image, output_dir, staging, "plate", profile, machine_dims)
+    return _run_docker_slice(
+        inner_cmd, image, output_dir, staging, "plate", overrides, machine_dims, per_extruder
+    )
 
 
-def _coerce(value: object, target_type: type) -> object:
-    """Coerce *value* to *target_type*, stripping common unit suffixes first."""
-    if isinstance(value, target_type):
-        return value
-    if isinstance(value, str):
-        value = value.strip().rstrip("%")
-    return target_type(value)  # type: ignore[call-arg]
-
-
-def cura_profile_from_config(
+def build_cura_config(
     overrides: dict[str, object] | None = None,
     bed_type: str | None = None,
     filament_type: str | None = None,
@@ -1495,76 +1227,45 @@ def cura_profile_from_config(
     printer: str | None = None,
     project_dir: Path | None = None,
     profiles_dir: str = "profiles",
-) -> CuraProfile:
-    """Build a CuraProfile from a machine profile JSON and config overrides.
+) -> tuple[CuraOverrides, CuraPerExtruder]:
+    """Build ``(overrides, per_extruder)`` for a CuraEngine slice.
 
-    The machine profile JSON defines machine geometry and nozzle dimensions.
-    Config overrides (process settings) are applied on top.
+    TOML ``[slicer.cura.overrides]`` is passed through verbatim — no key
+    translation, no type coercion.  Any machine profile JSON
+    (``load_cura_machine_profile``) is merged first so TOML overrides win.
+    *bed_type* and *filament_type* seed ``machine_buildplate_type`` and
+    ``material_type`` if the user did not set them.  *filaments* populates
+    ``per_extruder`` with material_type and temperature hints per slot.
 
-    If *filaments* is provided (a list of filament type strings, one per
-    extruder slot), ``profile.per_extruder`` is populated with per-slot
-    temperature and material_type overrides derived from ``_FILAMENT_TEMPS``.
-
-    Maps estampo-style override keys (which may use OrcaSlicer names) to
-    CuraEngine equivalents where possible.
+    The *overrides* parameter is typed as ``dict[str, object]`` because TOML
+    parsing yields mixed types; non-scalar values are skipped.
     """
-    profile = CuraProfile()
+    result: CuraOverrides = {}
 
-    # Load machine profile JSON if available (nozzle/material overrides).
-    # Falls back to CuraProfile defaults when no machine profile exists —
-    # the .def.json definition is sufficient for slicing.
     machine_name = printer or "Ultimaker 2"
     try:
         machine_data = load_cura_machine_profile(machine_name, project_dir, profiles_dir)
         for key, value in machine_data.items():
-            if hasattr(profile, key):
-                field_type = type(getattr(profile, key))
-                value = _coerce(value, field_type)
-                setattr(profile, key, value)
+            if isinstance(value, (str, int, float, bool)):
+                result[key] = value
     except FileNotFoundError:
-        log.debug("No machine profile for '%s', using defaults", machine_name)
+        log.debug("No machine profile for '%s', using def-chain defaults", machine_name)
 
-    if bed_type:
-        profile.bed_type = bed_type
+    if bed_type and "machine_buildplate_type" not in result:
+        result["machine_buildplate_type"] = bed_type.lower().replace(" ", "_")
 
-    if filament_type:
-        profile.filament_type = filament_type
+    if filament_type and "material_type" not in result:
+        result["material_type"] = filament_type
 
     if overrides:
-        # Map common OrcaSlicer override names to CuraProfile fields
-        orca_to_cura = {
-            "layer_height": "layer_height",
-            "initial_layer_print_height": "layer_height_0",
-            "wall_loops": "wall_line_count",
-            "top_shell_layers": "top_layers",
-            "bottom_shell_layers": "bottom_layers",
-            "sparse_infill_density": "infill_sparse_density",
-            "nozzle_temperature": "material_print_temperature",
-            "bed_temperature": "material_bed_temperature",
-        }
-        cura_overrides: dict[str, str] = {}
         for key, value in overrides.items():
-            if key in orca_to_cura:
-                # OrcaSlicer key name → CuraProfile attribute
-                attr = orca_to_cura[key]
-                if hasattr(profile, attr):
-                    field_type = type(getattr(profile, attr))
-                    value = _coerce(value, field_type)
-                    setattr(profile, attr, value)
-            elif hasattr(profile, key):
-                # Native CuraEngine key that matches a CuraProfile attribute
-                setattr(profile, key, value)
-            else:
-                # Pass through as raw CuraEngine -s override
-                cura_overrides[key] = str(value)
+            if isinstance(value, (str, int, float, bool)):
+                result[key] = value
 
-        if cura_overrides:
-            profile.overrides = cura_overrides
-
+    per_ext: CuraPerExtruder = []
     if filaments:
-        per_ext: list[dict[str, object]] = []
         for ft in filaments:
-            ext_overrides: dict[str, object] = {"material_type": ft}
+            ext_overrides: dict[str, str | int | float | bool] = {"material_type": ft}
             if ft in _FILAMENT_TEMPS:
                 print_temp, bed_temp = _FILAMENT_TEMPS[ft]
                 ext_overrides["material_print_temperature"] = print_temp
@@ -1572,6 +1273,37 @@ def cura_profile_from_config(
                 ext_overrides["material_bed_temperature"] = bed_temp
                 ext_overrides["material_bed_temperature_layer_0"] = bed_temp
             per_ext.append(ext_overrides)
-        profile.per_extruder = per_ext
 
-    return profile
+    return result, per_ext
+
+
+def validate_cura_settings(overrides: CuraOverrides) -> list[str]:
+    """Return warnings for unknown CuraEngine override keys.
+
+    Delegates to :func:`estampo.profiles.validate_override_keys`, which
+    validates against the bundled ``cura-settings.json`` schema (derived
+    from ``fdmprinter.def.json``) and surfaces "did you mean" hints for
+    typos and cross-engine key use (e.g. OrcaSlicer's ``wall_loops``).
+    """
+    if not overrides:
+        return []
+    from estampo.profiles import validate_override_keys
+
+    return validate_override_keys(
+        dict(overrides),
+        engine="cura",
+        process=None,
+        project_dir=None,
+    )
+
+
+def _warn_unknown_cura_settings(
+    overrides: CuraOverrides,
+    per_extruder: CuraPerExtruder,
+) -> None:
+    """Log warnings for unknown CuraEngine keys in *overrides* / *per_extruder*."""
+    combined: CuraOverrides = dict(overrides)
+    for ext in per_extruder:
+        combined.update(ext)
+    for warning in validate_cura_settings(combined):
+        log.warning("%s", warning)
