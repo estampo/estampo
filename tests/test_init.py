@@ -779,6 +779,74 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
         assert matched, f"expected a warning for outpt_dir, got: {list(warnings)}"
         assert "'output_dir'" in matched[0]
 
+    def test_cura_printer_unreachable_warns(self, tmp_path):
+        """Cura printer in bundled name manifest but with no local def.json warns."""
+        # `bambox_p1s` is in the bundled Cura name manifest (scraped from the
+        # Docker image) but its `.def.json` is not shipped with the pip
+        # package, so a local (non-Docker) slice would fail.  Validate must
+        # flag this rather than reporting "profiles valid".
+        toml = tmp_path / "estampo.toml"
+        toml.write_text(f"""
+[slicer]
+engine = "cura"
+version = "5.12.0"
+
+[slicer.cura]
+printer = "bambox_p1s"
+filaments = ["PLA"]
+
+[[parts]]
+file = "{_posix(FIXTURES / "cube_10mm.stl")}"
+""")
+        result = validate_config(toml)
+        matched = [w for w in result.warnings if "reachable locally" in w]
+        assert matched, f"expected a reachability warning, got: {list(result.warnings)}"
+        assert "bambox_p1s" in matched[0]
+        assert "profiles pin" in matched[0]
+
+    def test_cura_bundled_printer_no_reachability_warning(self, tmp_path):
+        """Cura printer whose def.json is bundled does not warn."""
+        # `ultimaker2` ships in src/estampo/data/ultimaker2.def.json so the
+        # reachability check must find it locally and stay quiet.
+        toml = tmp_path / "estampo.toml"
+        toml.write_text(f"""
+[slicer]
+engine = "cura"
+version = "5.12.0"
+
+[slicer.cura]
+printer = "ultimaker2"
+filaments = ["PLA"]
+
+[[parts]]
+file = "{_posix(FIXTURES / "cube_10mm.stl")}"
+""")
+        result = validate_config(toml)
+        assert not any("reachable locally" in w for w in result.warnings)
+
+    def test_cura_pinned_printer_no_reachability_warning(self, tmp_path):
+        """Cura printer pinned under profiles/cura/definitions/ does not warn."""
+        defs_dir = tmp_path / "profiles" / "cura" / "definitions"
+        defs_dir.mkdir(parents=True)
+        (defs_dir / "bambox_p1s.def.json").write_text(
+            '{"version": 2, "name": "Bambu Lab P1S (bambox)", "inherits": "fdmprinter"}'
+        )
+        toml = tmp_path / "estampo.toml"
+        toml.write_text(f"""
+[slicer]
+engine = "cura"
+version = "5.12.0"
+
+[slicer.cura]
+printer = "bambox_p1s"
+filaments = ["PLA"]
+
+[[parts]]
+file = "{_posix(FIXTURES / "cube_10mm.stl")}"
+""")
+        result = validate_config(toml)
+        assert not any("reachable locally" in w for w in result.warnings)
+
 
 # ---------------------------------------------------------------------------
 # Closest match helper
