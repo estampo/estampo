@@ -12,7 +12,7 @@
 
 **The build system for reproducible 3D prints.**
 
-You can version your CAD. You can't version your slicer setup — estampo fixes that.
+You can version your Code CAD, STEP and STL files. You can't version your slicer setup easily — estampo fixes that.
 
 Define parts, slicer settings, and the full pipeline in one TOML file, commit it, and run it anywhere. Same repo, same config → same G-code, locally or [in CI](#cicd-example).
 
