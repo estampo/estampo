@@ -1,0 +1,1 @@
+Make the CuraEngine profile-pin requirement obvious: wizard emits an explicit "run ``estampo profiles pin``" hint when a non-bundled printer is picked, README + ``[slicer.cura]`` docs call it out, and ``ai-setup-prompt.md`` surfaces the guidance next to the config creation flow.

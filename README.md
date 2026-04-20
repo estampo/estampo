@@ -248,6 +248,8 @@ git add profiles/              # commit to lock them
 
 Combined with a pinned `version` in `[slicer]` (which locks the Docker image), the same config always produces the same gcode.
 
+> **CuraEngine: pin non-bundled printers.** If your config uses a printer definition that isn't shipped with estampo (e.g. `bambox_p1s`), `estampo profiles pin` is **required**, not optional — the definition only exists inside the Docker image. Without it, `estampo run --local` fails and a teammate who clones the repo gets an empty `profiles/` directory. `estampo init` will remind you when you pick a non-bundled CuraEngine printer.
+
 ### CI/CD example
 
 Automate slicing in GitHub Actions — push a commit, get G-code as a build artifact with print metrics on your PR:
