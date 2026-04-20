@@ -100,33 +100,32 @@ profiles, and the output is reproducible on any machine or in CI.
 
 ![estampo pipeline](https://raw.githubusercontent.com/estampo/estampo/main/docs/images/pipeline.png)
 
-### Why not just use OrcaSlicer CLI?
+### Why not just use the slicer CLI directly?
 
-OrcaSlicer CLI is great for slicing a prepared plate. estampo builds a reproducible pipeline around it:
+OrcaSlicer and CuraEngine both ship excellent CLIs, and estampo is built on
+top of them — it shells out to one or the other for the actual slicing work.
+The goal isn't to replace either tool; it's to give you a reproducible
+pipeline around them (arrangement, profile pinning, CI, post-processing)
+without asking you to assemble the full invocation by hand each time.
 
-- **Arrangement** — bin-packs multiple STLs onto the build plate (OrcaSlicer CLI has no arrange step)
-- **Multi-part filament mapping** — per-part filament slot assignment and paint color preservation, injected into the 3MF metadata
-- **Reproducible builds** — pin slicer profiles into your repo + lock OrcaSlicer version in Docker = identical gcode on any machine
-- **Partial execution** — `--until plate` to inspect layout, `--only slice` to re-slice
-- **Command stages** — run external tools (e.g. `bambox pack`) as pipeline stages with variable substitution
-- **Headless Docker slicing** — no GUI, no display server, works in CI, uses a specific OrcaSlicer version
+| What you need to do | OrcaSlicer CLI | CuraEngine CLI | estampo |
+|---------------------|----------------|----------------|---------|
+| Load printer/process profiles | `--load-settings` for each JSON in the chain | `-j printer.def.json` + `-d` search paths for inheritance | `printer = "..."` / `process = "..."` in TOML |
+| Set material / quality overrides | Edit JSON or pass inline overrides | Chain of `-j` files or `-s KEY=VALUE` per setting | `[slicer.orca.overrides]` / `[slicer.cura.overrides]` |
+| Arrange multiple parts | Not supported — prepare the plate yourself | Not supported — manual positioning | Automatic bin-packing |
+| Multi-part filament / extruder mapping | Prebuilt 3MF with per-object slot metadata | `-g -e0 -l a.stl -g -e1 -l b.stl` per mesh group | `filament = 1` per part |
+| Reproducible builds | Track slicer binary + profiles yourself | Track all definition JSONs yourself | `version = "..."` in TOML + pinned Docker image |
+| Partial re-runs | Re-slice the whole thing | Re-slice the whole thing | `--until plate`, `--only slice` |
+| Version control | Shell scripts + scattered JSON overrides | Shell scripts + `-s` lists + JSON definitions | Single TOML file — git-diffable, reviewable |
+| Run in CI | Install OrcaSlicer manually (needs display on some builds) | Install CuraEngine + definitions manually | `uses: estampo/estampo/action@v1` |
+| Post-process (e.g. pack for Bambu) | Separate manual step | Separate manual step | `[pack]` command stage with variable substitution |
+| Headless slicing | GUI builds can require an X server | CLI-only already | Docker container pinned to a specific slicer version |
 
-### Why not just use CuraEngine CLI?
-
-CuraEngine CLI (`CuraEngine slice -j definition.json -s KEY=VALUE -l model.stl -o output.gcode`) is powerful but requires assembling the full invocation yourself:
-
-| What you need to do | CuraEngine CLI | estampo |
-|---------------------|---------------|---------|
-| Load printer definition | `-j printer.def.json` + `-d` search paths for inheritance | `printer = "Ultimaker 2"` in TOML |
-| Set material/quality | Chain of `-j` files or `-s` overrides for every setting | `[slicer.cura.overrides]` in TOML |
-| Arrange multiple parts | Not supported — manual positioning | Automatic bin-packing |
-| Multi-extruder mapping | `-g -e0 -l a.stl -g -e1 -l b.stl` per mesh group | `filament = 1` per part |
-| Reproducible builds | Track all definition JSONs yourself | `version = "5.12.0"` + Docker |
-| Version control | Shell scripts + scattered JSON definitions | Single TOML file — git-diffable and reviewable |
-| Run in CI | Install CuraEngine + definitions manually | `uses: estampo/estampo/action@v1` |
-| Pack for Bambu printers | Separate manual step | `[pack]` command stage |
-
-With CuraEngine CLI, your build config ends up spread across shell scripts, `-s` flag lists, and JSON definition files — hard to diff, review, or commit as a coherent unit. estampo replaces all of that with a single declarative TOML file: git-friendly, diffable, and accessible to AI assistants and code review.
+With the slicer CLI alone, your build config ends up spread across shell
+scripts, `-s` flag lists, and JSON definition files — hard to diff, review,
+or commit as a coherent unit. estampo replaces that orchestration layer
+with a single declarative TOML file; the slicer itself does all the actual
+work.
 
 ### Works with AI assistants
 
