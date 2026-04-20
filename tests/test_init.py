@@ -6,6 +6,7 @@ import pytest
 
 from estampo.cli import main
 from estampo.init import (
+    BED_TYPES,
     ValidationResult,
     _build_toml,
     _check_cura_template_gcode,
@@ -97,6 +98,20 @@ def _mock_ui_inputs(monkeypatch, inputs):
 # ---------------------------------------------------------------------------
 # Template tests
 # ---------------------------------------------------------------------------
+
+
+class TestBedTypes:
+    def test_matches_orca_2_3_1_enum(self):
+        # Source: libslic3r/PrintConfig.cpp curr_bed_type enum_values @ v2.3.1.
+        # Order matters: it's the enum ordinal order and the wizard menu order.
+        assert BED_TYPES == [
+            "Cool Plate",
+            "Engineering Plate",
+            "High Temp Plate",
+            "Textured PEI Plate",
+            "Textured Cool Plate",
+            "Supertack Plate",
+        ]
 
 
 class TestTemplate:

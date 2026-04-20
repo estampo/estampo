@@ -16,7 +16,17 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
-BED_TYPES = ["Cool Plate", "Engineering Plate", "High Temp Plate", "Textured PEI Plate"]
+# Source of truth: BedType enum + curr_bed_type enum_values in OrcaSlicer
+# libslic3r/PrintConfig.{hpp,cpp}. Order must match the enum so menu indexes
+# are stable. Update when bumping the pinned Orca version.
+BED_TYPES = [
+    "Cool Plate",
+    "Engineering Plate",
+    "High Temp Plate",
+    "Textured PEI Plate",
+    "Textured Cool Plate",
+    "Supertack Plate",
+]
 
 # ---------------------------------------------------------------------------
 # Template
@@ -37,7 +47,7 @@ padding = 5.0           # gap between parts in mm
 [slicer]
 engine = "orca"                            # "orca" (OrcaSlicer) or "cura" (CuraEngine)
 # version = "2.3.1"                        # pin slicer version for reproducibility
-# bed_type = "Textured PEI Plate"          # or: Cool Plate, Engineering Plate, High Temp Plate
+# bed_type = "Textured PEI Plate"          # run `estampo info` for the full list
 
 # OrcaSlicer profile chain:
 [slicer.orca]
