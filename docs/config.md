@@ -91,7 +91,6 @@ stages = ["load", "arrange", "plate", "slice", "gcode-info", "pack"]
 >
 > Credentials are managed by bambox: run `bambox login` to authenticate,
 > credentials are saved to `~/.config/bambox/credentials.toml`.
-```
 
 ## `[plate]`
 
@@ -248,11 +247,7 @@ filament = "Generic PETG-CF @base"
 sequence = 2
 ```
 
-Both objects come from the same 3MF, so estampo guarantees identical bed positioning. Run each sequence separately:
-
-```bash
-estampo run estampo.toml --only print   # after slicing sequence 1
-```
+Both objects come from the same 3MF, so estampo guarantees identical bed positioning.
 
 ## Command stages
 
@@ -322,42 +317,42 @@ Choose overrides based on your print goals:
 **Strong functional part (PETG):**
 ```toml
 [slicer.orca.overrides]
-wall_loops = "5"
+wall_loops = 5
 sparse_infill_density = "40%"
 sparse_infill_pattern = "gyroid"
-top_shell_layers = "6"
-bottom_shell_layers = "6"
+top_shell_layers = 6
+bottom_shell_layers = 6
 ```
 
 **Fast draft:**
 ```toml
 [slicer.orca.overrides]
 sparse_infill_density = "10%"
-wall_loops = "2"
-enable_support = "0"
+wall_loops = 2
+enable_support = 0
 ```
 
 **Smooth top surface:**
 ```toml
 [slicer.orca.overrides]
-ironing_type = "top surface only"
-top_shell_layers = "6"
+ironing_type = "topmost"
+top_shell_layers = 6
 ```
 
 **Dimensional accuracy (engineering parts):**
 ```toml
 [slicer.orca.overrides]
-xy_hole_compensation = "0.1"
-xy_contour_compensation = "-0.05"
-outer_wall_speed = "30"
+xy_hole_compensation = 0.1
+xy_contour_compensation = -0.05
+outer_wall_speed = 30
 ```
 
 **Tree supports for complex overhangs:**
 ```toml
 [slicer.orca.overrides]
-enable_support = "1"
+enable_support = 1
 support_type = "tree(auto)"
-support_threshold_angle = "45"
+support_threshold_angle = 45
 ```
 
 ## Important rules
@@ -367,8 +362,9 @@ support_threshold_angle = "45"
   unknown keys with "did you mean?" suggestions.
 - **Do not force slicer settings** that conflict with the printer's machine
   profile (e.g. `use_relative_e_distances`). Let the profile chain decide.
-- **Use string values** for OrcaSlicer overrides — they are passed as CLI
-  arguments: `layer_height = "0.2"`, not `layer_height = 0.2`.
+- **Values use their natural TOML type** — `enable_support = 1` (int),
+  `layer_height = 0.2` (float), `curr_bed_type = "Textured PEI Plate"`
+  (string). estampo handles conversion to the slicer CLI format.
 - **Pin the slicer version** in `[slicer].version` for reproducible builds.
 - **OrcaSlicer and CuraEngine use different setting names** for the same
   concepts. See the [AI setup prompt](ai-setup-prompt.md) for a mapping table.

@@ -29,12 +29,12 @@ a config without the wizard. Use `--printer` and `--process` for OrcaSlicer.
 
 **Interactive wizard** (default when non-interactive flags are omitted):
 1. Discovers installed slicer profiles (printer, process, filament) with search/filter
-3. Detects printer capabilities from the selected machine profile (plate size, multi-material support)
-4. Queries AMS tray contents in the background and auto-suggests matching filament profiles
-5. Auto-discovers CAD files (STL, 3MF, STEP) in the current directory
-6. Prompts for per-part copies, orientation, and filament slot assignment
-7. Detects installed OrcaSlicer version and offers to pin it for reproducibility
-8. Previews the generated TOML before writing
+2. Detects printer capabilities from the selected machine profile (plate size, multi-material support)
+3. Queries AMS tray contents in the background and auto-suggests matching filament profiles
+4. Auto-discovers CAD files (STL, 3MF, STEP) in the current directory
+5. Prompts for per-part copies, orientation, and filament slot assignment
+6. Detects installed OrcaSlicer version and offers to pin it for reproducibility
+7. Previews the generated TOML before writing
 
 ### Examples
 
@@ -109,7 +109,7 @@ If `config` is omitted, estampo looks for `estampo.toml` in the current director
 | `--only STAGE`      | Run only this stage (fails if prerequisites missing)  |
 | `--scale FACTOR`    | Scale all parts (multiplies per-part scale)           |
 | `--local`           | Force local slicer (fail if not installed)            |
-| `--docker-version`  | Pin OrcaSlicer Docker image version (e.g. `2.3.1`)   |
+| `--docker-version`  | Pin slicer Docker image version (e.g. `2.3.1` for OrcaSlicer, `5.12.0` for CuraEngine) |
 | `--filament-type`   | Override filament profile name                        |
 | `--filament-slot`   | AMS slot for `--filament-type` (default: 1)           |
 | `-v, --verbose`     | Enable debug logging with per-stage timing            |
@@ -125,7 +125,6 @@ The default pipeline runs these stages in order:
 | `plate`     | Export arranged plate as 3MF (+ preview)           | `plate.3mf`, `plate_preview.3mf` |
 | `slice`     | Slice via OrcaSlicer or CuraEngine (Docker or local) | gcode in output dir     |
 | `gcode-info`| Parse print time and filament usage from gcode     | Stats summary             |
-| `print`     | *(deprecated)* Send sliced gcode to printer        | Print job                 |
 
 In addition to built-in stages, you can define **command stages** — custom
 pipeline stages that run external CLI tools. See the
@@ -140,7 +139,7 @@ stages = ["load", "arrange", "plate", "slice", "gcode-info"]
 ### Examples
 
 ```bash
-# Full pipeline: arrange, slice, and print (uses ./estampo.toml)
+# Full pipeline: load → arrange → plate → slice (uses ./estampo.toml)
 estampo run
 
 # Stop after plating (no slicer needed)
