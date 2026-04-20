@@ -1016,6 +1016,40 @@ def test_validate_override_keys_cross_engine_orca_in_cura():
     assert "wall_line_count" in warnings[0]
 
 
+def test_validate_override_keys_orca_cli_only_brim_type():
+    """brim_type is a real Orca key but not in any shipped profile (#649) —
+    the validator should not flag it."""
+    warnings = validate_override_keys(
+        {"brim_type": "outer_only"},
+        engine="orca",
+        process=None,
+    )
+    assert warnings == []
+
+
+def test_validate_override_keys_orca_cli_only_support_enable():
+    """enable_support is a real Orca key that defaults off (#649) — should
+    not warn."""
+    warnings = validate_override_keys(
+        {"enable_support": "1"},
+        engine="orca",
+        process=None,
+    )
+    assert warnings == []
+
+
+def test_validate_override_keys_typo_of_cli_only_still_warns():
+    """Typos of CLI-only keys still produce a warning with a hint pointing
+    at the real key."""
+    warnings = validate_override_keys(
+        {"brim_typ": "outer_only"},
+        engine="orca",
+        process=None,
+    )
+    assert len(warnings) == 1
+    assert "brim_type" in warnings[0]
+
+
 def test_validate_override_keys_cross_engine_cura_in_orca():
     """Using CuraEngine key in OrcaSlicer config should suggest the OrcaSlicer equivalent."""
     warnings = validate_override_keys(
