@@ -1,1 +1,0 @@
-``estampo validate`` now warns on unknown TOML keys (e.g. a misplaced ``build_plate`` under ``[slicer.orca]``), with "did you mean?" hints and cross-table suggestions when a key belongs in a neighbouring section.

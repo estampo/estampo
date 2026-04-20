@@ -1,1 +1,0 @@
-Add ADR-009 (Proposed) for vendor printer-def discovery via Python entry points and lifting the CuraEngine template resolver into estampo as ``cura_resolve`` — see #600 for discussion.

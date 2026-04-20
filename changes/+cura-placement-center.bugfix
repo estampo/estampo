@@ -1,1 +1,0 @@
-Fix CuraEngine placement shifting prints by ``+bed/2`` in each axis on corner-origin printers (regression from ADR-008). STLs are now centred at ``(0, 0)`` — CuraEngine's own ``machine_center_is_zero`` convention lands the print at bed centre.

@@ -1,1 +1,0 @@
-Fix ``release.yml`` silently skipping the publish pipeline when the GitHub commits→PR API hasn't yet associated the merge commit with the release PR. ``detect-release`` now parses the merge-commit subject (deterministic) instead of relying on eventually-consistent API data, and fails loud if a release-like commit can't be parsed.

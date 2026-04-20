@@ -1,1 +1,0 @@
-Fix CuraEngine template variables like ``{material_bed_temperature_layer_0}`` no longer being resolved in v0.4.0b4. ``cura_settings.json`` now includes the extruder-0 filament temperatures (regression introduced by ADR-008 PR 2/3 when ``CuraProfile`` was dropped — the temp keys used to be written into the global settings dict and were inadvertently demoted to per-extruder only).

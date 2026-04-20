@@ -1,1 +1,0 @@
-Drop the ``(experimental)`` suffix from the CuraEngine label in ``estampo init``; CuraEngine has bundled printer definitions, E2E tests, and example projects and is no longer experimental.

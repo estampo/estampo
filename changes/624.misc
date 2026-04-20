@@ -1,1 +1,0 @@
-README: show ``uv tool install estampo`` alongside pip/pipx, and specify Python 3.11–3.13 support (3.14 is not yet tested).

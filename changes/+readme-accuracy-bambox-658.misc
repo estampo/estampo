@@ -1,1 +1,0 @@
-README: remove stale fabprint migration note and Bambu/Moonraker printing claims; add a proper ``bambox`` section explaining how vendor-specific printing plugs in as a command stage.
