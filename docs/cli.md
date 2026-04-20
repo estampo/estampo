@@ -112,10 +112,6 @@ If `config` is omitted, estampo looks for `estampo.toml` in the current director
 | `--docker-version`  | Pin OrcaSlicer Docker image version (e.g. `2.3.1`)   |
 | `--filament-type`   | Override filament profile name                        |
 | `--filament-slot`   | AMS slot for `--filament-type` (default: 1)           |
-| `--dry-run`         | Do everything except send to printer                  |
-| `--upload-only`     | Upload gcode but don't start printing                 |
-| `--experimental`    | Enable experimental printer modes                     |
-| `--no-ams-mapping`  | Skip AMS mapping (diagnostic)                         |
 | `-v, --verbose`     | Enable debug logging with per-stage timing            |
 
 ### Pipeline stages
@@ -155,9 +151,6 @@ estampo run --only slice
 
 # Slice with a specific Docker image version
 estampo run --until slice --docker-version 2.3.1
-
-# Dry run — do everything except actually send to printer
-estampo run --dry-run
 
 # Verbose mode — shows per-stage timing
 estampo run -v
