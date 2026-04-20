@@ -212,12 +212,42 @@ Each `[[parts]]` entry defines a mesh to include on the build plate. At least on
 |------------|---------------|----------|------------------------------------------------------|
 | `file`     | `string`      | —        | Path to mesh file (STL, 3MF, or STEP)               |
 | `copies`   | `int`         | `1`      | Number of copies                                     |
-| `orient`   | `string`      | `"flat"` | `"flat"`, `"upright"`, or `"side"`                   |
-| `rotate`   | `[x, y, z]`   | —        | Custom rotation in degrees (overrides `orient`)      |
+| `orient`   | `string`      | `"flat"` | `"flat"`, `"upright"`, `"side"`, or `"upside-down"` — see [Orientation](#orientation) |
+| `rotate`   | `[rx, ry, rz]`| —        | Rotation in degrees about X, Y, Z (overrides `orient`) |
 | `filament` | `int\|string` | `1`      | Material alias, profile name, or slot index          |
 | `scale`    | `float`       | `1.0`    | Uniform scale factor                                 |
 | `object`   | `string`      | —        | Select a named object from a multi-object 3MF        |
 | `sequence` | `int`         | `1`      | Print order for sequential printing                  |
+
+### Orientation
+
+estampo places parts with Z pointing up (Z is bed-normal; X and Y lie in the
+bed plane). After any rotation, the part is automatically translated so its
+lowest point sits on the bed at `z = 0` — you never need to drop parts
+manually.
+
+Two fields control orientation:
+
+**`orient`** — a named preset. One of:
+
+| Value            | Effect                                                                                     | When to use                                                                 |
+|------------------|--------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|
+| `"flat"` *(default)* | Auto-rotates so the **smallest** extent is along Z — the part rests on its largest face. | Functional prints where you want maximum bed contact and minimum supports.  |
+| `"upright"`      | **No rotation** — keep the mesh's native orientation from the source file.                 | STEP files and code-CAD output (build123d, CadQuery, OpenSCAD) that are already oriented correctly; parts that only make sense one way up (bottles, brackets, figurines). |
+| `"side"`         | Rotate 90° about X.                                                                        | Meshes authored Y-up.                                                       |
+| `"upside-down"`  | Rotate 180° about X (flip).                                                                | You want the top of the mesh on the bed — e.g. a mounting plate facing down. |
+
+**`rotate = [rx, ry, rz]`** — an arbitrary rotation in degrees about the X,
+Y, and Z axes (applied in that order). If set, it **fully overrides**
+`orient` — the preset is silently ignored. Common patterns:
+
+- `[0, 0, 45]` — yaw 45° on the bed (diagonal fit).
+- `[180, 0, 0]` — flip upside-down (equivalent to `orient = "upside-down"`).
+- `[90, 0, 0]` — tip the part onto its front face.
+- `[0, 90, 0]` — tip the part onto its right side.
+
+Prefer `orient` when a preset fits; use `rotate` only for specific angles.
+Setting both makes `orient` dead config.
 
 ### Per-object filament overrides
 

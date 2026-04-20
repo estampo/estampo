@@ -30,6 +30,8 @@ and [cadquery](https://github.com/cadquery/cadquery) — and with AI coding assi
 
 **Requires [Docker](https://docs.docker.com/get-docker/) and Python 3.11+.** estampo runs the slicer (OrcaSlicer or CuraEngine) in a pinned Docker image so every machine produces identical G-code. A local slicer install works as a fallback but is not recommended.
 
+**Which engine?** Use **OrcaSlicer for Bambu Lab printers** and **CuraEngine for everything else**. The bundled profiles reflect this: estampo ships 35 Orca machine profiles (all Bambu Lab — A1, P1P, P1S, X1, X1 Carbon, X1E) and 643 Cura machine profiles (Creality, Prusa, Voron, Ultimaker, Anycubic, Elegoo, etc.). Picking Orca for a non-BBL printer means no bundled machine profile — you'd have to supply your own.
+
 ```toml
 # estampo.toml — a multi-part print with slicer overrides
 
@@ -220,6 +222,8 @@ copies = 5
 orient = "upright"
 filament = "Generic PETG-CF @base"
 ```
+
+`orient` picks a preset (`"flat"`, `"upright"`, `"side"`, `"upside-down"`) and `rotate = [rx, ry, rz]` takes degrees about X, Y, Z and overrides `orient`. See [Orientation](https://github.com/estampo/estampo/blob/main/docs/config.md#orientation) in the config reference for what each preset does and when to use which.
 
 Run it (see [full CLI reference](https://github.com/estampo/estampo/blob/main/docs/cli.md)):
 

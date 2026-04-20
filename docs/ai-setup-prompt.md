@@ -33,7 +33,12 @@ Before creating the config, ask me these questions (skip any you can infer from
 the repo context):
 
 1. **Which slicer engine?** — `orca` (OrcaSlicer) or `cura` (CuraEngine).
-   Default to `orca` if I have a Bambu Lab printer.
+   **Rule: use `orca` for Bambu Lab printers, `cura` for everything else.**
+   estampo ships 35 bundled Orca machine profiles (all Bambu Lab: A1, P1P,
+   P1S, X1, X1 Carbon, X1E) and 643 bundled Cura profiles (Creality, Prusa,
+   Voron, Ultimaker, Anycubic, Elegoo, and hundreds more). Picking `orca`
+   for a non-BBL printer means no bundled machine profile — the user would
+   have to supply their own.
 2. **Which printer?** — e.g. `Bambu Lab P1S 0.4 nozzle` (OrcaSlicer) or
    `bambox_p1s` (CuraEngine). Run `estampo profiles list --engine orca --category machine`
    to see available profiles.
@@ -122,6 +127,44 @@ file = "model.stl"       # .stl, .3mf, or .step / .stp — all three are accepte
 **STEP files are loaded natively** — estampo uses [build123d](https://github.com/gumyr/build123d) to
 convert STEP to a mesh at the start of the pipeline. Do **not** tell the user to pre-convert STEP
 to STL/3MF; point a `[[parts]]` entry directly at the `.step` or `.stp` file.
+
+#### Orientation — `orient` and `rotate`
+
+Every part is placed with Z pointing up (Z is bed-normal). After any rotation,
+estampo automatically drops the part so its lowest point sits on the bed
+(`z = 0`) — never add manual Z translation.
+
+There are **two** orientation fields on `[[parts]]`:
+
+- **`orient`** — a named preset (string). One of:
+  - `"flat"` *(default)* — auto-rotate so the **smallest** extent is along Z.
+    The part ends up resting on its largest face. Use this for functional
+    parts where you want minimum supports and maximum bed adhesion.
+  - `"upright"` — **no rotation**; keep the mesh's native orientation from
+    the source file. Use this for STEP files from CAD and for code-CAD
+    output (build123d / CadQuery / OpenSCAD), where the author already
+    oriented the part. Also the right choice for parts that only make sense
+    one way up — bottles, figurines, brackets with a designed mating face.
+  - `"side"` — rotate 90° about X. For meshes authored Y-up.
+  - `"upside-down"` — rotate 180° about X. Flips the part so its top is on
+    the bed.
+
+- **`rotate = [rx, ry, rz]`** — an arbitrary rotation in **degrees** about the
+  X, Y, and Z axes (applied in that order). Use when no preset fits. Examples:
+  - `[0, 0, 45]` — yaw 45° on the bed (diagonal fit).
+  - `[180, 0, 0]` — flip upside-down.
+  - `[90, 0, 0]` — tip onto the front face.
+
+**Rules:**
+
+- If `rotate` is set, it **fully overrides** `orient`. Don't set both — the
+  `orient` value becomes dead config.
+- Default to `orient = "upright"` for parts generated from STEP or code-CAD
+  (the author already oriented them). Default to `orient = "flat"` only when
+  the mesh orientation is unknown or the goal is auto-lay-flat.
+- Do not invent other preset names. The full set of valid `orient` values is
+  exactly: `"flat"`, `"upright"`, `"side"`, `"upside-down"`. Any other string
+  fails validation.
 
 **Always set `bed_type` for Bambu Lab printers.** The OrcaSlicer machine profile
 for Bambu printers defaults to `"Cool Plate"`, but the plate that physically ships

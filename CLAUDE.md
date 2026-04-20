@@ -95,6 +95,15 @@ To prevent scope creep and re-invention:
 - **Not a standalone G-code generator.** G-code comes from the slicer. estampo parses G-code metadata (print time, filament weight) but does not generate toolpaths.
 - **Not a Bambu tool (or any vendor's tool).** estampo is printer-agnostic. All Bambu-specific code is being deleted (v0.4.0) — not moved, not wrapped. The `bambox` package is a separate CLI tool for Bambu Lab printers. estampo never imports bambox; integration is via command stages (ADR-005, ADR-007). Do not add printer-vendor logic to any estampo module.
 
+## Engine selection (what to recommend users)
+
+**Recommend OrcaSlicer (`engine = "orca"`) for Bambu Lab printers, and CuraEngine (`engine = "cura"`) for everything else.** This isn't a soft default — it reflects what estampo actually bundles:
+
+- `src/estampo/data/profiles.orca.2.3.1.json` ships **35 machine profiles, all Bambu Lab** (A1, A1 mini, P1P, P1S, X1, X1 Carbon, X1E × nozzle sizes). Zero non-BBL printers.
+- `src/estampo/data/profiles.cura.5.12.0.json` ships **643 machine profiles** across Creality (32), Geeetech (28), Ultimaker (23), Anycubic (18), Sovol (18), Voron (11), Prusa (8), Snapmaker (6), FLSun (5), and hundreds more.
+
+If a user with a non-BBL printer asks for Orca, flag that they'll need to supply their own machine profile — the bundled set won't cover them. The wizard in `init.py` currently defaults to `orca`; when the user's printer is clearly non-BBL, suggest `cura` instead.
+
 ## Architecture: Slicer Execution
 
 The user installs estampo via pip/pipx on their local machine. When slicing:
