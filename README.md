@@ -31,6 +31,8 @@ Works with STL, STEP, and 3MF files, and pairs naturally with code-CAD tools lik
 [build123d](https://github.com/gumyr/build123d), [OpenSCAD](https://openscad.org),
 and [cadquery](https://github.com/cadquery/cadquery).
 
+**Requires [Docker](https://docs.docker.com/get-docker/) and Python 3.11+.** estampo runs the slicer (OrcaSlicer or CuraEngine) in a pinned Docker image so every machine produces identical G-code. A local slicer install works as a fallback but is not recommended.
+
 ```toml
 # estampo.toml — a multi-part print with slicer overrides
 
