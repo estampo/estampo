@@ -23,6 +23,10 @@ committable alongside your CAD files. Because the entire workflow is text,
 it's naturally accessible to AI coding assistants, CI systems, and code review.
 Same repo, same config → same G-code, locally or [in CI](#cicd-example).
 
+**estampo is for you if** you use code-CAD (build123d, OpenSCAD, cadquery), want to slice from CI, diff slicer settings in git, or need identical G-code across machines.
+
+**It's not for you if** you want a GUI slicer with preview, one-click printing, or a tool that manages a single local printer from the couch — use [OrcaSlicer](https://github.com/SoftFever/OrcaSlicer) or your vendor's app for that. estampo wraps those tools; it doesn't replace them.
+
 > **Warning:** estampo is in active early development. We are moving fast and breaking things — config format, CLI flags, and Python APIs may change between minor versions without deprecation. Pin your version if stability matters to you.
 
 > **Safety:** estampo generates G-code from your configuration but does not verify that settings are safe for your specific printer. Incorrect temperatures, speeds, or missing supports can damage your printer or create a fire hazard. Always review sliced output before sending to a printer. `estampo validate` checks config structure and setting names — it does not check print safety. **Use at your own risk.**
@@ -95,7 +99,7 @@ estampo run        # arrange → slice → pack, one command
 1. **Define** parts + settings in `estampo.toml`
 2. **Arrange** — bin-packs models onto the build plate
 3. **Slice** — using a pinned slicer version (via Docker) for identical G-code across machines
-4. **Post-process** — run command stages (pack for Bambu, template resolution, etc.)
+4. **Post-process** — run command stages (pack for Bambu via bambox, upload to Klipper via Moonraker, template resolution, etc.). Works with any printer that takes G-code; vendor specifics live in command stages, not in estampo.
 
 Everything is declared in a single TOML file. Lock the slicer version, pin the
 profiles, and the output is reproducible on any machine or in CI.
