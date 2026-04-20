@@ -525,13 +525,29 @@ estampo validate
 # 2. Pin profiles for reproducibility
 estampo profiles pin
 
-# 3. Test slice — catches profile and override issues
-estampo run --until slice
+# 3. Full run — executes every pipeline stage, producing the final artifact
+estampo run
 ```
+
+Run the full pipeline, not `estampo run --until slice`. `--until slice` stops
+**before** the `pack` stage (and before `resolve_templates` for CuraEngine),
+so it will not surface:
+
+- malformed `bambox` invocations in `[pack]`
+- a missing `docker = true` on the pack stage
+- template-resolution errors in the CuraEngine → `resolve_templates` → `pack` flow
+
+A full `estampo run` does not touch any printer — the output is a `.gcode.3mf`
+(or equivalent) on disk. It is safe to run as a verification step.
 
 `estampo validate` exits non-zero if any override keys are invalid. Fix all
 errors before proceeding — invalid keys are silently dropped by the slicer,
 so the print won't match what the user asked for.
+
+**Running locally:** use the installed `estampo` CLI directly — do not add
+estampo to the user's project dependencies. If the user has a pre-release
+version installed (e.g. `0.4.0b4.dev`), that is the one to use; don't try to
+pin estampo itself in the project's `pyproject.toml`.
 
 ### Command stage variables
 
