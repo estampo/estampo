@@ -1220,7 +1220,7 @@ def run_wizard(output: Path | None = None) -> str:
         existing_engine = existing_pre.engine
 
     engines = ["orca", "cura"]
-    engine_labels = {"orca": "OrcaSlicer", "cura": "CuraEngine (experimental)"}
+    engine_labels = {"orca": "OrcaSlicer", "cura": "CuraEngine"}
     default_engine = existing_engine or "orca"
     default_idx = engines.index(default_engine) + 1 if default_engine in engines else 1
     ui.info("Select slicer engine:")
@@ -1356,6 +1356,7 @@ def run_wizard(output: Path | None = None) -> str:
                     continue
             dest.write_text(toml)
             ui.success(f"Wrote {dest}")
+            _emit_cura_pin_hint(engine, printer_profile, dest.parent)
             return toml
 
         if answer in ("q", "quit"):
@@ -1365,6 +1366,30 @@ def run_wizard(output: Path | None = None) -> str:
         # Go back — re-run wizard from the top
         ui.console.print()
         return run_wizard(output=output)
+
+
+def _emit_cura_pin_hint(engine: str, printer: str | None, project_dir: Path) -> None:
+    """Tell the user to run ``estampo profiles pin`` if the chosen Cura def
+    is only reachable via Docker.
+
+    Without pinning, ``estampo run --local`` fails and teammates who clone
+    the repo get an empty ``profiles/`` directory.
+    """
+    if engine != "cura" or not printer:
+        return
+
+    from estampo import ui
+
+    if _check_cura_def_reachable(printer, project_dir, "profiles") is None:
+        return
+
+    ui.console.print()
+    ui.warn(
+        f"Printer '{printer}' is not bundled with estampo — its definition "
+        f"only exists inside the Docker image."
+    )
+    ui.info("Next: run 'estampo profiles pin' and commit the profiles/ directory")
+    ui.info("      so local slicing and clean clones slice identically.")
 
 
 def _is_bambu_printer(printer: str) -> bool:

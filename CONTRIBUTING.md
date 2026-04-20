@@ -25,7 +25,7 @@ All four must pass — CI enforces them.
 
 - Python 3.11+ with `from __future__ import annotations`
 - Type hints on all public functions
-- Use `FabprintError` for user-facing errors (not `ValueError`)
+- Use `EstampoError` for user-facing errors (not `ValueError`)
 - Keep functions focused — prefer small functions over long ones
 - No unnecessary comments or docstrings on obvious code
 
