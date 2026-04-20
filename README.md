@@ -306,7 +306,7 @@ you install it separately and call it from your pipeline. Typical wiring:
 
 ```bash
 pip install bambox
-bambox login        # one-time — credentials saved to ~/.config/estampo/credentials.toml
+bambox login        # one-time — credentials saved to ~/.config/bambox/credentials.toml
 ```
 
 For OrcaSlicer output, `bambox repack` regenerates the Bambu settings
