@@ -317,6 +317,20 @@ command stage. If your printer vendor has a CLI, wire it in the same way.
 If it doesn't, `estampo run` already gives you a G-code file — hand it to
 your printer however you normally would.
 
+For Klipper-based printers with Moonraker, a one-line `curl` upload is
+enough — no extra tool required:
+
+```toml
+[pipeline]
+stages = ["load", "arrange", "plate", "slice", "send"]
+
+[send]
+command = "curl -F 'file=@{sliced_3mf}' -F 'print=true' http://moonraker.local/server/files/upload"
+```
+
+`{sliced_3mf}` is substituted by estampo with the path to the sliced
+file. Set `print=false` if you want to upload without starting the job.
+
 ## Documentation
 
 - [CLI reference](https://github.com/estampo/estampo/blob/main/docs/cli.md) — all commands, flags, and pipeline stages
