@@ -23,11 +23,11 @@ committable alongside your CAD files. Because the entire workflow is text,
 it's naturally accessible to AI coding assistants, CI systems, and code review.
 Same repo, same config → same G-code, locally or [in CI](#cicd-example).
 
+estampo is a thin orchestration layer around slicer CLIs — it wraps OrcaSlicer or CuraEngine (Docker-pinned, CI-friendly, diffable) and doesn't replace them. See [the comparison table](#why-not-just-use-the-slicer-cli-directly) for what estampo adds over the raw CLIs.
+
 **estampo is for you if** you use code-CAD (build123d, OpenSCAD, cadquery), want to slice from CI, diff slicer settings in git, or need identical G-code across machines.
 
 **It's not for you if** you want a GUI slicer with preview, one-click printing, or a tool that manages a single local printer from the couch — use [OrcaSlicer](https://github.com/SoftFever/OrcaSlicer) or your vendor's app for that. estampo wraps those tools; it doesn't replace them.
-
-> **Warning:** estampo is in active early development. We are moving fast and breaking things — config format, CLI flags, and Python APIs may change between minor versions without deprecation. Pin your version if stability matters to you.
 
 > **Safety:** estampo generates G-code from your configuration but does not verify that settings are safe for your specific printer. Incorrect temperatures, speeds, or missing supports can damage your printer or create a fire hazard. Always review sliced output before sending to a printer. `estampo validate` checks config structure and setting names — it does not check print safety. **Use at your own risk.**
 
@@ -166,6 +166,8 @@ If you mostly want interactive print setup in a GUI, use OrcaSlicer or Cura dire
 - Profile pinning into your repository
 - CI slicing and artifact generation
 - Printing handled by external tools (e.g. [bambox](#sending-prints-to-a-printer) for Bambu Lab) wired in as command stages
+
+> **Warning:** estampo is in active early development. We are moving fast and breaking things — config format, CLI flags, and Python APIs may change between minor versions without deprecation. Pin your version if stability matters to you.
 
 ## Quick start
 
