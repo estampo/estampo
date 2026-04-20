@@ -42,8 +42,12 @@ jobs:
             | head -1 || true)
 
           if [[ -n "$VERSION" ]]; then
-            # Verify no existing tag (gh exits 0 if ref exists, non-zero if not)
-            if gh api "repos/${{ github.repository }}/git/refs/tags/v${VERSION}" >/dev/null 2>&1; then
+            # Verify no existing tag. Use the singular `git/ref/...` endpoint
+            # — it's an exact lookup (404 if missing). The plural
+            # `git/refs/...` endpoint does a *prefix* match and will return
+            # e.g. v0.4.0a1 / v0.4.0b4 when asked for v0.4.0, which
+            # incorrectly treats an unreleased stable as "already tagged".
+            if gh api "repos/${{ github.repository }}/git/ref/tags/v${VERSION}" >/dev/null 2>&1; then
               echo "::warning::Tag v${VERSION} already exists — skipping"
               echo "is_release=false" >> "$GITHUB_OUTPUT"
             else
@@ -301,7 +305,9 @@ jobs:
       - name: Create and push tag (if it doesn't exist)
         run: |
           VERSION="${{ needs.version.outputs.version }}"
-          if gh api "repos/${{ github.repository }}/git/refs/tags/v${VERSION}" >/dev/null 2>&1; then
+          # Exact-match endpoint (singular `ref`); see detect-release above
+          # for why the plural form is wrong.
+          if gh api "repos/${{ github.repository }}/git/ref/tags/v${VERSION}" >/dev/null 2>&1; then
             echo "::notice::Tag v${VERSION} already exists — skipping"
           else
             git tag "v${VERSION}"
