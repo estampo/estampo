@@ -294,6 +294,38 @@ def _check_orca_process_compat(
     )
 
 
+def _check_cura_def_reachable(printer: str, project_dir: Path, profiles_dir: str) -> str | None:
+    """Warn when a Cura printer name is known but the def.json isn't local.
+
+    The bundled Cura name manifest enumerates every machine present in the
+    Docker image, including non-stock definitions (e.g. ``bambox_p1s``).
+    Their ``.def.json`` files are not shipped in the estampo pip package,
+    so a slice without Docker (local fallback) would fail with a definition
+    -not-found error.  Flag this at validate time instead of letting run
+    surface it.
+
+    URL or filesystem-path printers are treated as reachable — the
+    downstream resolver fetches/reads them directly.
+    """
+    from estampo.cura import _printer_is_file, _printer_is_url, _resolve_def_chain_for_printer
+
+    if _printer_is_url(printer) or _printer_is_file(printer, project_dir):
+        return None
+
+    chain = _resolve_def_chain_for_printer(printer, project_dir, profiles_dir)
+    if chain:
+        return None
+
+    return (
+        f"slicer.printer '{printer}' is known to the CuraEngine Docker image "
+        f"but no matching definition file is reachable locally (neither pinned "
+        f"under {profiles_dir}/cura/definitions/ nor bundled with estampo).\n"
+        f"  Without Docker (e.g. `estampo run --local`), slice will fail.\n"
+        f"  Fix: run 'estampo profiles pin' to extract the definition from the "
+        f"Docker image, or drop '{printer}.def.json' into {profiles_dir}/cura/definitions/."
+    )
+
+
 def validate_config(path: Path) -> ValidationResult:
     """Validate an estampo.toml and return passes and warnings.
 
@@ -400,6 +432,21 @@ def validate_config(path: Path) -> ValidationResult:
 
         if profile_ok:
             passes.append(f"Slicer profiles valid ({source})")
+
+        # Cura-only: check that the printer definition file is reachable
+        # locally.  The bundled Cura name manifest knows every printer
+        # present in the Docker image (e.g. `bambox_p1s` from the
+        # `cura-p1s` package), but the physical `<id>.def.json` for
+        # non-stock definitions only lives in the Docker image — not in
+        # estampo's pip bundle.  Without Docker the slice then fails with
+        # a definition-not-found error, which `estampo validate` should
+        # flag before the user ever hits run.
+        if profile_ok and cfg.slicer.engine == "cura" and active.printer:
+            reach_warning = _check_cura_def_reachable(
+                active.printer, cfg.base_dir, cfg.slicer.profiles_dir
+            )
+            if reach_warning:
+                warnings.append(reach_warning)
 
         # Check process/printer compatibility (OrcaSlicer only).
         # The pinned process JSON has a `compatible_printers` list. When the
