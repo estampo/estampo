@@ -8,6 +8,7 @@ from estampo.cli import main
 from estampo.init import (
     BED_TYPES,
     ValidationResult,
+    _bambox_machine_key,
     _build_toml,
     _check_cura_template_gcode,
     _closest_match,
@@ -1169,6 +1170,29 @@ class TestIsBambuPrinter:
 
 
 # ---------------------------------------------------------------------------
+# _bambox_machine_key
+# ---------------------------------------------------------------------------
+
+
+class TestBamboxMachineKey:
+    def test_cura_def_id(self):
+        assert _bambox_machine_key("bambox_p1s") == "p1s"
+        assert _bambox_machine_key("bambox_p1s_ams") == "p1s"
+
+    def test_orca_profile_name(self):
+        assert _bambox_machine_key("Bambu Lab P1S 0.4 nozzle") == "p1s"
+        assert _bambox_machine_key("Bambu Lab P1P 0.4 nozzle") == "p1p"
+        assert _bambox_machine_key("Bambu Lab A1 0.4 nozzle") == "a1"
+        assert _bambox_machine_key("Bambu Lab A1 mini 0.4 nozzle") == "a1mini"
+        assert _bambox_machine_key("Bambu Lab X1 Carbon 0.4 nozzle") == "x1c"
+        assert _bambox_machine_key("Bambu Lab X1E 0.4 nozzle") == "x1e"
+
+    def test_unknown_returns_none(self):
+        assert _bambox_machine_key("Ultimaker 2") is None
+        assert _bambox_machine_key("") is None
+
+
+# ---------------------------------------------------------------------------
 # _emit_cura_pin_hint
 # ---------------------------------------------------------------------------
 
@@ -1456,6 +1480,8 @@ class TestBuildConfigTomlCommandStages:
         assert "resolve_templates" in toml
         assert "cura-p1s resolve" in toml
         assert "bambox pack" in toml
+        # --machine flag forwarded so bambox derives printer_model_id (#685)
+        assert "-m p1s" in toml
         assert '"resolve_templates", "pack"' in toml
         assert "docker = true" in toml
 
