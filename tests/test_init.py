@@ -517,8 +517,14 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
         result = validate_config(toml)
         assert any("override keys valid" in p.lower() for p in result.passes)
 
-    def test_process_printer_compat_mismatch_warns(self, tmp_path):
+    def test_process_printer_compat_mismatch_warns(self, tmp_path, monkeypatch):
         """Process listed with an incompatible printer produces a compat warning."""
+        # Force the pinned source so a host-installed OrcaSlicer doesn't shadow
+        # the tmp_path profiles (see issue #633).
+        monkeypatch.setattr(
+            "estampo.profiles.discover_profiles",
+            lambda engine: {"machine": {}, "process": {}, "filament": {}},
+        )
         process_dir = tmp_path / "profiles" / "orca" / "process"
         process_dir.mkdir(parents=True)
         (process_dir / "HighQuality P1P.json").write_text(
@@ -548,8 +554,14 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
         assert any("not compatible" in w and "exit 239" in w for w in result.warnings)
         assert not any("Process" in p and "compatible with printer" in p for p in result.passes)
 
-    def test_process_printer_compat_match_passes(self, tmp_path):
+    def test_process_printer_compat_match_passes(self, tmp_path, monkeypatch):
         """Process whose compatible_printers includes the active printer passes."""
+        # Force the pinned source so a host-installed OrcaSlicer doesn't shadow
+        # the tmp_path profiles (see issue #633).
+        monkeypatch.setattr(
+            "estampo.profiles.discover_profiles",
+            lambda engine: {"machine": {}, "process": {}, "filament": {}},
+        )
         process_dir = tmp_path / "profiles" / "orca" / "process"
         process_dir.mkdir(parents=True)
         (process_dir / "HighQuality P1S.json").write_text(
