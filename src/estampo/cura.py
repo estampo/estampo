@@ -800,20 +800,6 @@ def _extruder_settings_list(
     return flags
 
 
-def _extruder_settings_str(
-    overrides: CuraOverrides,
-    per_extruder: CuraPerExtruder,
-    ext_idx: int,
-) -> str:
-    """Build the ``-s`` flags string for one extruder's ``-g -eN`` block.
-
-    Starts from the global ``_settings_flags`` output and appends any
-    per-extruder overrides from ``per_extruder[ext_idx]``.  If *ext_idx*
-    is out of range the global settings are returned unchanged.
-    """
-    return " ".join(f'"{s}"' for s in _extruder_settings_list(overrides, per_extruder, ext_idx))
-
-
 def _patch_gcode_header(gcode_path: Path, stderr: str) -> None:
     """Patch CuraEngine placeholder header with real values from stderr.
 
@@ -1008,7 +994,7 @@ def _strip_cura_banner(text: str) -> str:
 
 
 def _run_docker_slice(
-    inner_cmd: str,
+    cura_args: list[str],
     image: str,
     output_dir: Path,
     staging: Path,
@@ -1027,6 +1013,8 @@ def _run_docker_slice(
     import os
     import sys
 
+    # argv-only invocation: each flag/value is a separate argument, so shell
+    # metacharacters in TOML override values and mesh filenames are inert.
     cmd = [
         "docker",
         "run",
@@ -1041,10 +1029,10 @@ def _run_docker_slice(
         "-v",
         f"{output_dir}:/work/output",
         "--entrypoint",
-        "/bin/bash",
+        "CuraEngine",
         image,
-        "-c",
-        inner_cmd,
+        "slice",
+        *cura_args,
     ]
 
     from estampo import ui
@@ -1197,25 +1185,22 @@ def slice_stl_multi(
     c_staging = "/work/output/.cura-staging"
     c_output = "/work/output/plate.gcode"
 
-    global_settings_str = " ".join(f'"{s}"' for s in global_flags)
-
-    mesh_groups = ""
+    cura_args = [
+        "-d",
+        f"{c_staging}:{_DEFS_DIR}:/opt/cura/extruders",
+        "-j",
+        f"{c_staging}/{machine_def}",
+        "-o",
+        c_output,
+        *global_flags,
+    ]
     for ext_idx, stl_path in stl_meshes:
-        c_stl = f"{c_staging}/{stl_path.name}"
-        ext_str = _extruder_settings_str(overrides, per_extruder, ext_idx)
-        mesh_groups += f" -g -e{ext_idx} {ext_str} -l {c_stl}"
-
-    inner_cmd = (
-        f"CuraEngine slice "
-        f"-d {c_staging}:{_DEFS_DIR}:/opt/cura/extruders "
-        f"-j {c_staging}/{machine_def} "
-        f"-o {c_output} "
-        f"{global_settings_str}"
-        f"{mesh_groups}"
-    )
+        cura_args.extend(["-g", f"-e{ext_idx}"])
+        cura_args.extend(_extruder_settings_list(overrides, per_extruder, ext_idx))
+        cura_args.extend(["-l", f"{c_staging}/{stl_path.name}"])
 
     return _run_docker_slice(
-        inner_cmd, image, output_dir, staging, "plate", overrides, machine_dims, per_extruder
+        cura_args, image, output_dir, staging, "plate", overrides, machine_dims, per_extruder
     )
 
 
