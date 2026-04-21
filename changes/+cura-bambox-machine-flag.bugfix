@@ -1,1 +1,0 @@
-CuraEngine → ``bambox pack``: forward the printer as ``-m <machine>`` so the packed .gcode.3mf has a valid ``printer_model_id`` and ``bambox validate`` no longer emits W001.

@@ -1,1 +1,0 @@
-Fix two ``test_init`` compat tests that were failing locally when OrcaSlicer was installed on the host.

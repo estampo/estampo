@@ -4,6 +4,21 @@ All notable changes to this project are documented here.
 
 <!-- towncrier release notes start -->
 
+## 0.4.1 — 2026-04-21
+
+### Bugfixes
+
+- CuraEngine → ``bambox pack``: forward the printer as ``-m <machine>`` so the packed .gcode.3mf has a valid ``printer_model_id`` and ``bambox validate`` no longer emits W001.
+- Fix ``release.yml`` github-release job's "Update action version tag" step failing with ``fatal: Failed to resolve 'vX.Y.Z' as a valid ref``. The job's ``actions/checkout@v6`` didn't fetch tags, so the tag created earlier in the pipeline wasn't locally visible. Added ``fetch-tags: true``. Hit on v0.4.0 — ``v0`` had to be advanced manually.
+- Fix ``release.yml`` incorrectly skipping the release when prerelease tags for the same base version exist. The detect-release and create-tag steps queried ``git/refs/tags/vX.Y.Z`` (a prefix match), which returned e.g. ``vX.Y.Zb1`` when asked about ``vX.Y.Z`` and tripped the "tag already exists" guard. Switched to ``git/ref/tags/`` (exact match). Unblocked v0.4.0 by tagging manually and dispatching ``release.yml`` with the ``tag`` input.
+- Fix two ``test_init`` compat tests that were failing locally when OrcaSlicer was installed on the host.
+- Security: invoke CuraEngine via Docker with argv instead of ``bash -c``. TOML override values and mesh filenames previously reached the shell unescaped; a value containing ``"`` or a mesh filename containing ``;`` could execute arbitrary commands inside the slicer container. The docker branch of ``slice_stl_multi`` now mirrors the local branch's argv construction and uses ``--entrypoint CuraEngine``, so shell metacharacters are inert.
+
+### Misc
+
+- Bump bundled ``bambox`` to ``0.4.5`` in both Docker images (``Dockerfile``, ``Dockerfile.cura``) so the ``:orca-2.3.1`` and ``:cura-5.12.0`` floating tags ship the latest bambox release. Version-pinned tags like ``:orca-2.3.1-0.4.0`` remain on bambox 0.4.4, as intended.
+
+
 ## 0.4.0 — 2026-04-20
 
 ### Features
