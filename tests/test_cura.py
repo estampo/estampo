@@ -9,7 +9,7 @@ from estampo.cura import (
     _FILAMENT_TEMPS,
     _check_local_def,
     _copy_cura_def_chain,
-    _extruder_settings_str,
+    _extruder_settings_list,
     _fetch_printer_def,
     _machine_dims_flags,
     _patch_gcode_header,
@@ -637,19 +637,67 @@ def test_slice_stl_multi_docker_command(tmp_path):
             image="estampo/estampo:cura-5.12.0",
         )
 
-    inner_cmd = mock_run.call_args[0][0][-1]
-    assert "-g -e0" in inner_cmd
-    assert "-g -e1" in inner_cmd
-    assert "part_0.stl" in inner_cmd
-    assert "part_1.stl" in inner_cmd
-    # Order must be preserved
-    assert inner_cmd.index("-e0") < inner_cmd.index("-e1")
+    argv = mock_run.call_args[0][0]
+    # Invocation is argv-only: no `bash -c` wrapper.
+    assert "bash" not in argv
+    assert "-c" not in argv
+    assert "--entrypoint" in argv
+    assert argv[argv.index("--entrypoint") + 1] == "CuraEngine"
+    # One -g -eN -l mesh group per entry, order preserved.
+    assert "-e0" in argv
+    assert "-e1" in argv
+    assert argv.index("-e0") < argv.index("-e1")
+    assert any(arg.endswith("/part_0.stl") for arg in argv)
+    assert any(arg.endswith("/part_1.stl") for arg in argv)
 
 
 def test_slice_stl_multi_empty_raises(tmp_path):
     """slice_stl_multi with an empty list raises ValueError."""
     with pytest.raises(ValueError, match="must not be empty"):
         slice_stl_multi([], tmp_path / "output", overrides={})
+
+
+def test_slice_stl_multi_docker_shell_metacharacters_inert(tmp_path):
+    """Shell metacharacters in TOML overrides and mesh filenames stay inert (issue #689).
+
+    The docker invocation must be argv-only.  A value containing ``"; rm -rf ~``
+    or a mesh named ``a; cmd.stl`` must be passed as a single argv element,
+    not split by a shell.
+    """
+    import trimesh
+
+    # Mesh filename contains ``;`` — legal on Linux, injection-prone in a shell string.
+    evil_name = "a;touch_pwned.stl"
+    stl = tmp_path / evil_name
+    trimesh.creation.box(extents=[10, 10, 10]).export(str(stl))
+
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    (output_dir / "plate.gcode").write_text("G28\n" * 100)
+
+    evil_value = 'foo"; touch /tmp/pwned; echo "'
+
+    mock_result = MagicMock(returncode=0, stdout="", stderr="")
+    with (
+        patch("estampo.cura.subprocess.run", return_value=mock_result) as mock_run,
+        patch("estampo.ui.status"),
+    ):
+        slice_stl_multi(
+            [(0, stl)],
+            output_dir,
+            overrides={"custom_setting": evil_value},
+            image="estampo/estampo:cura-5.12.0",
+        )
+
+    argv = mock_run.call_args[0][0]
+    # Must not be a shell invocation.
+    assert "bash" not in argv
+    assert "-c" not in argv
+    # The hostile override value must appear verbatim as a single argv element,
+    # not expanded or split by a shell.
+    assert f"custom_setting={evil_value}" in argv
+    # The hostile mesh filename must appear verbatim too.
+    assert any(arg.endswith(f"/{evil_name}") for arg in argv)
 
 
 def test_slice_plate_cura_multi_dispatch(tmp_path):
@@ -690,32 +738,34 @@ def test_slice_plate_cura_multi_dispatch(tmp_path):
 # --- per-extruder profiles (Stage 2) ---
 
 
-def test_extruder_settings_str_no_per_extruder():
-    """Without per_extruder data, _extruder_settings_str returns global settings."""
+def test_extruder_settings_list_no_per_extruder():
+    """Without per_extruder data, _extruder_settings_list returns global settings."""
     overrides = {"material_print_temperature": 230}
-    s = _extruder_settings_str(overrides, [], 0)
-    assert "material_print_temperature=230" in s
+    flags = _extruder_settings_list(overrides, [], 0)
+    assert "material_print_temperature=230" in flags
     # Same for extruder 1 (no per_extruder entry)
-    assert _extruder_settings_str(overrides, [], 1) == s
+    assert _extruder_settings_list(overrides, [], 1) == flags
 
 
-def test_extruder_settings_str_with_per_extruder():
+def test_extruder_settings_list_with_per_extruder():
     """Per-extruder overrides are appended after the global settings."""
     overrides = {"material_print_temperature": 260}
     per_extruder = [
         {"material_print_temperature": 220, "material_type": "PLA"},
         {"material_print_temperature": 240, "material_type": "PETG"},
     ]
-    s0 = _extruder_settings_str(overrides, per_extruder, 0)
-    s1 = _extruder_settings_str(overrides, per_extruder, 1)
+    flags0 = _extruder_settings_list(overrides, per_extruder, 0)
+    flags1 = _extruder_settings_list(overrides, per_extruder, 1)
 
-    assert "material_print_temperature=220" in s0
-    assert "material_type=PLA" in s0
-    assert "material_print_temperature=240" in s1
-    assert "material_type=PETG" in s1
+    assert "material_print_temperature=220" in flags0
+    assert "material_type=PLA" in flags0
+    assert "material_print_temperature=240" in flags1
+    assert "material_type=PETG" in flags1
 
     # Per-extruder value comes AFTER the global one (CuraEngine uses last wins)
-    assert s0.index("material_print_temperature=220") > s0.index("material_print_temperature=260")
+    assert flags0.index("material_print_temperature=220") > flags0.index(
+        "material_print_temperature=260"
+    )
 
 
 def test_build_cura_config_per_extruder_from_filaments():
@@ -766,12 +816,12 @@ def test_slice_stl_multi_per_extruder_in_command(tmp_path):
             image="estampo/estampo:cura-5.12.0",
         )
 
-    inner_cmd = mock_run.call_args[0][0][-1]
-    # Extruder 0 block must contain PLA overrides
-    e0_start = inner_cmd.index("-g -e0")
-    e1_start = inner_cmd.index("-g -e1")
-    e0_block = inner_cmd[e0_start:e1_start]
-    e1_block = inner_cmd[e1_start:]
+    argv = mock_run.call_args[0][0]
+    # Extruder 0 block must contain PLA overrides; extruder 1 block PETG-CF.
+    e0_start = argv.index("-e0")
+    e1_start = argv.index("-e1")
+    e0_block = argv[e0_start:e1_start]
+    e1_block = argv[e1_start:]
     assert "material_type=PLA" in e0_block
     assert "material_print_temperature=220" in e0_block
     assert "material_type=PETG-CF" in e1_block
