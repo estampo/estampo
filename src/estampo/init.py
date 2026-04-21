@@ -1046,8 +1046,13 @@ def _wizard_pick_command_stages(
                 "docker": True,
             }
             stages.append("pack")
+            machine = _bambox_machine_key(printer_profile)
+            machine_flag = f" -m {machine}" if machine else ""
             command_stages["pack"] = {
-                "command": ("bambox pack {sliced_dir}/plate.gcode -o {output_dir}/plate.gcode.3mf"),
+                "command": (
+                    f"bambox pack {{sliced_dir}}/plate.gcode{machine_flag} "
+                    "-o {output_dir}/plate.gcode.3mf"
+                ),
                 "output": "{output_dir}/plate.gcode.3mf",
                 "docker": True,
             }
@@ -1398,6 +1403,31 @@ def _is_bambu_printer(printer: str) -> bool:
     return any(kw in lower for kw in ("bambu", "bbl", "bambox"))
 
 
+def _bambox_machine_key(printer: str) -> str | None:
+    """Map a Bambu printer profile name to a ``bambox --machine`` key.
+
+    Used to forward the printer identity to ``bambox pack`` so the resulting
+    .gcode.3mf has ``printer_model_id`` set (see issue #685). Returns ``None``
+    when the model can't be derived; caller should omit the ``-m`` flag.
+    """
+    lower = printer.lower()
+    # Order matters: check more specific patterns first.
+    for pattern, key in (
+        ("a1 mini", "a1mini"),
+        ("a1mini", "a1mini"),
+        ("p1s", "p1s"),
+        ("p1p", "p1p"),
+        ("x1e", "x1e"),
+        ("x1c", "x1c"),
+        ("x1 carbon", "x1c"),
+        ("x1", "x1"),
+        ("a1", "a1"),
+    ):
+        if pattern in lower:
+            return key
+    return None
+
+
 def _build_toml(
     *,
     project_name: str | None = None,
@@ -1543,11 +1573,20 @@ def build_config_toml(
                 "docker": True,
             }
         effective_stages.append("pack")
+        if engine == "cura":
+            machine = _bambox_machine_key(printer)
+            machine_flag = f" -m {machine}" if machine else ""
+            pack_cmd = (
+                f"bambox pack {{sliced_dir}}/plate.gcode{machine_flag} "
+                "-o {output_dir}/plate.gcode.3mf"
+            )
+            pack_output = "{output_dir}/plate.gcode.3mf"
+        else:
+            pack_cmd = "bambox repack {sliced_3mf}"
+            pack_output = "{sliced_3mf}"
         command_stages["pack"] = {
-            "command": ("bambox pack {sliced_dir}/plate.gcode -o {output_dir}/plate.gcode.3mf")
-            if engine == "cura"
-            else "bambox repack {sliced_3mf}",
-            "output": "{output_dir}/plate.gcode.3mf" if engine == "cura" else "{sliced_3mf}",
+            "command": pack_cmd,
+            "output": pack_output,
             "docker": True,
         }
 
