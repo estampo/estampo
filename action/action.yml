@@ -154,6 +154,10 @@ runs:
           LAYERS=$(python3 -c "import json; d=json.load(open('$STATS_FILE')); print(d.get('layer_count',''))" 2>/dev/null || true)
           FILAMENT_TYPES=$(python3 -c "import json; d=json.load(open('$STATS_FILE')); t=d.get('filament_types',[]); print(', '.join(t) if t else '')" 2>/dev/null || true)
           FILAMENT_CHANGES=$(python3 -c "import json; d=json.load(open('$STATS_FILE')); print(d.get('filament_changes',''))" 2>/dev/null || true)
+          MACHINE_PROFILE=$(python3 -c "import json; d=json.load(open('$STATS_FILE')); print(d.get('slicer',{}).get('machine',''))" 2>/dev/null || true)
+          PROCESS_PROFILE=$(python3 -c "import json; d=json.load(open('$STATS_FILE')); print(d.get('slicer',{}).get('process',''))" 2>/dev/null || true)
+          FILAMENT_PROFILES=$(python3 -c "import json; d=json.load(open('$STATS_FILE')); f=d.get('slicer',{}).get('filaments',[]); print(', '.join(f) if f else '')" 2>/dev/null || true)
+          OVERRIDE_COUNT=$(python3 -c "import json; d=json.load(open('$STATS_FILE')); print(d.get('slicer',{}).get('override_count',''))" 2>/dev/null || true)
         fi
 
         # Extract project name: match top-level name only (before any [section] header)
@@ -166,6 +170,10 @@ runs:
         echo "filament-changes=${FILAMENT_CHANGES}" >> "$GITHUB_OUTPUT"
         echo "gcode-path=${FULL_OUTPUT_DIR}" >> "$GITHUB_OUTPUT"
         echo "project-name=${PROJECT_NAME}" >> "$GITHUB_OUTPUT"
+        echo "machine-profile=${MACHINE_PROFILE}" >> "$GITHUB_OUTPUT"
+        echo "process-profile=${PROCESS_PROFILE}" >> "$GITHUB_OUTPUT"
+        echo "filament-profiles=${FILAMENT_PROFILES}" >> "$GITHUB_OUTPUT"
+        echo "override-count=${OVERRIDE_COUNT}" >> "$GITHUB_OUTPUT"
 
     - name: Job summary
       shell: bash
@@ -178,12 +186,20 @@ runs:
         PROJECT_NAME: ${{ steps.metrics.outputs.project-name }}
         ENGINE: ${{ steps.detect.outputs.engine }}
         VERSION: ${{ steps.detect.outputs.version }}
+        MACHINE_PROFILE: ${{ steps.metrics.outputs.machine-profile }}
+        PROCESS_PROFILE: ${{ steps.metrics.outputs.process-profile }}
+        FILAMENT_PROFILES: ${{ steps.metrics.outputs.filament-profiles }}
+        OVERRIDE_COUNT: ${{ steps.metrics.outputs.override-count }}
       run: |
         TITLE="${PROJECT_NAME:+Estampo: $PROJECT_NAME}"
         TITLE="${TITLE:-Estampo Slice Results}"
         ENGINE_LABEL="OrcaSlicer"
         if [ "$ENGINE" = "cura" ]; then
           ENGINE_LABEL="CuraEngine"
+        fi
+        PROCESS_LABEL="${PROCESS_PROFILE}"
+        if [ -n "$OVERRIDE_COUNT" ] && [ "$OVERRIDE_COUNT" != "0" ]; then
+          PROCESS_LABEL="${PROCESS_LABEL} (${OVERRIDE_COUNT} overrides)"
         fi
         {
           echo "### ${TITLE}"
@@ -195,6 +211,9 @@ runs:
           [ -n "$LAYERS" ] && echo "| Layers | ${LAYERS} |"
           [ -n "$FILAMENT_TYPES" ] && echo "| Filament type | ${FILAMENT_TYPES} |"
           [ -n "$FILAMENT_CHANGES" ] && [ "$FILAMENT_CHANGES" != "0" ] && echo "| Tool changes | ${FILAMENT_CHANGES} |"
+          [ -n "$MACHINE_PROFILE" ] && echo "| Machine profile | ${MACHINE_PROFILE} |"
+          [ -n "$PROCESS_LABEL" ] && echo "| Process profile | ${PROCESS_LABEL} |"
+          [ -n "$FILAMENT_PROFILES" ] && echo "| Filament profile | ${FILAMENT_PROFILES} |"
           echo ""
           echo "Sliced with ${ENGINE_LABEL} ${VERSION}"
         } >> "$GITHUB_STEP_SUMMARY"
@@ -218,6 +237,10 @@ runs:
         ENGINE: ${{ steps.detect.outputs.engine }}
         VERSION: ${{ steps.detect.outputs.version }}
         PROJECT_NAME: ${{ steps.metrics.outputs.project-name }}
+        MACHINE_PROFILE: ${{ steps.metrics.outputs.machine-profile }}
+        PROCESS_PROFILE: ${{ steps.metrics.outputs.process-profile }}
+        FILAMENT_PROFILES: ${{ steps.metrics.outputs.filament-profiles }}
+        OVERRIDE_COUNT: ${{ steps.metrics.outputs.override-count }}
         RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         EVENT_NAME: ${{ github.event_name }}
         WORKFLOW_RUN_SHA: ${{ github.event.workflow_run.head_sha }}
@@ -251,10 +274,20 @@ runs:
           const filamentTypes = process.env.FILAMENT_TYPES || '';
           const filamentChanges = process.env.FILAMENT_CHANGES || '';
           const projectName = process.env.PROJECT_NAME || '';
+          const machineProfile = process.env.MACHINE_PROFILE || '';
+          const processProfile = process.env.PROCESS_PROFILE || '';
+          const filamentProfiles = process.env.FILAMENT_PROFILES || '';
+          const overrideCount = process.env.OVERRIDE_COUNT || '';
           const runUrl = process.env.RUN_URL;
           const artifactName = `estampo-${projectName || 'output'}`;
           const title = projectName ? `Estampo: ${projectName}` : 'Estampo Slice Results';
           const marker = `<!-- estampo-slice-result-${projectName || 'default'} -->`;
+
+          const processLabel = processProfile
+            ? (overrideCount && overrideCount !== '0'
+                ? `${processProfile} (${overrideCount} overrides)`
+                : processProfile)
+            : '';
 
           const rows = [
             `| Print time | ${printTime} |`,
@@ -263,6 +296,9 @@ runs:
           if (layers) rows.push(`| Layers | ${layers} |`);
           if (filamentTypes) rows.push(`| Filament type | ${filamentTypes} |`);
           if (filamentChanges && filamentChanges !== '0') rows.push(`| Tool changes | ${filamentChanges} |`);
+          if (machineProfile) rows.push(`| Machine profile | ${machineProfile} |`);
+          if (processLabel) rows.push(`| Process profile | ${processLabel} |`);
+          if (filamentProfiles) rows.push(`| Filament profile | ${filamentProfiles} |`);
 
           const body = [
             marker,

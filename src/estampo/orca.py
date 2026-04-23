@@ -282,14 +282,17 @@ def _resolve_profiles(
     docker_profile_dir: Path | None = None,
     bed_type: str | None = None,
     filament_overrides: dict[str, object] | None = None,
-) -> tuple[str | None, str | None]:
+) -> tuple[str | None, str | None, dict]:
     """Resolve and flatten all profiles into tmp_dir.
 
-    Returns (settings_arg, filament_arg) — semicolon-separated paths
-    suitable for --load-settings and --load-filaments.
+    Returns (settings_arg, filament_arg, slicer_info) where settings_arg and
+    filament_arg are semicolon-separated paths for --load-settings /
+    --load-filaments, and slicer_info captures resolved names and override counts
+    for downstream display.
     """
     from estampo.profiles import resolve_profile_data
 
+    slicer_info: dict = {}
     settings = []
     if printer:
         data = resolve_profile_data(
@@ -305,8 +308,10 @@ def _resolve_profiles(
         if bed_type:
             data["curr_bed_type"] = bed_type
             log.info("Set bed type to '%s' in machine profile", bed_type)
+            slicer_info["bed_type"] = bed_type
         if machine_overrides:
             data = _apply_overrides(data, machine_overrides, printer)
+        slicer_info["machine"] = printer
         path = _write_tmp_profile(data, tmp_dir, "machine")
         settings.append(str(path))
     if process:
@@ -315,10 +320,19 @@ def _resolve_profiles(
         )
         if overrides:
             data = _apply_overrides(data, overrides, process)
+        slicer_info["process"] = process
         path = _write_tmp_profile(data, tmp_dir, "process")
         settings.append(str(path))
 
+    # Total overrides across all profile types
+    override_count = (
+        len(overrides or {}) + len(machine_overrides or {}) + len(filament_overrides or {})
+    )
+    if override_count:
+        slicer_info["override_count"] = override_count
+
     filament_arg = None
+    resolved_filament_names: list[str] = []
     if filaments:
         resolved: list[str] = []
         first_path: str | None = None
@@ -331,6 +345,7 @@ def _resolve_profiles(
                     data = _apply_overrides(data, filament_overrides, f)
                 path = _write_tmp_profile(data, tmp_dir, f"filament_{i}")
                 resolved.append(str(path))
+                resolved_filament_names.append(f)
                 if first_path is None:
                     first_path = str(path)
             elif first_path:
@@ -341,8 +356,11 @@ def _resolve_profiles(
 
         filament_arg = ";".join(resolved)
 
+    if resolved_filament_names:
+        slicer_info["filaments"] = resolved_filament_names
+
     settings_arg = ";".join(settings) if settings else None
-    return settings_arg, filament_arg
+    return settings_arg, filament_arg, slicer_info
 
 
 # ---------------------------------------------------------------------------
@@ -581,7 +599,7 @@ def orca_slice_plate(
     allow_mix_temp = bool(detected_version and detected_version >= "2.3.2")
 
     try:
-        settings_arg, filament_arg = _resolve_profiles(
+        settings_arg, filament_arg, slicer_info = _resolve_profiles(
             "orca",
             printer,
             process,
@@ -595,6 +613,9 @@ def orca_slice_plate(
             bed_type,
             filament_overrides,
         )
+
+        if slicer_info:
+            (output_dir / "slice_info.json").write_text(json.dumps(slicer_info, indent=2) + "\n")
 
         if use_docker:
             return _slice_via_docker(
