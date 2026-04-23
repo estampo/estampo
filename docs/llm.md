@@ -416,7 +416,7 @@ process = "0.20mm Standard @BBL X1C"
 filaments = ["Generic PETG @base"]
 
 [slicer.orca.overrides]
-wall_loops = "5"
+wall_loops = "5"           # starting point — increase to 6–8 for thin-walled structural parts
 sparse_infill_density = "40%"
 sparse_infill_pattern = "gyroid"
 top_shell_layers = "6"
