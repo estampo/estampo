@@ -86,7 +86,7 @@ def test_resolve_profiles_all_filaments_resolved(tmp_path):
     out = tmp_path / "out"
     out.mkdir()
 
-    _, filament_arg = _resolve_profiles(
+    _, filament_arg, _ = _resolve_profiles(
         engine="orca",
         printer=None,
         process=None,
@@ -122,7 +122,7 @@ def test_resolve_profiles_machine_overrides(tmp_path: Path):
     out = tmp_path / "out"
     out.mkdir()
 
-    settings_arg, _ = _resolve_profiles(
+    settings_arg, _, _ = _resolve_profiles(
         engine="orca",
         printer="My Printer",
         process=None,
@@ -156,7 +156,7 @@ def test_resolve_profiles_machine_overrides_scalar_broadcast(tmp_path: Path):
     out = tmp_path / "out"
     out.mkdir()
 
-    settings_arg, _ = _resolve_profiles(
+    settings_arg, _, _ = _resolve_profiles(
         engine="orca",
         printer="My Printer",
         process=None,

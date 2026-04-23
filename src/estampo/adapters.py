@@ -210,11 +210,26 @@ class ProgressAdapter(NodeExecutionHook):
             ver_str = f"with {engine_name} {ver}" if ver else ""
             time_str = f" in {elapsed:.0f}s" if elapsed >= 2 else ""
             self._ok(f"Sliced {ver_str}{time_str}".rstrip(), show_elapsed=False)
-            # Show gcode filename if available
             if isinstance(result, Path):
                 gcode_files = list(result.glob("*.gcode"))
                 if gcode_files:
                     self._console.print(f"  [dim]→ {gcode_files[0].name}[/dim]")
+                slice_info_path = result / "slice_info.json"
+                if slice_info_path.exists():
+                    try:
+                        import json as _json
+
+                        info = _json.loads(slice_info_path.read_text())
+                        if machine := info.get("machine"):
+                            self._console.print(f"  [dim]Machine:  {machine}[/dim]")
+                        if process := info.get("process"):
+                            oc = info.get("override_count", 0)
+                            ov_str = f" ({oc} override{'s' if oc != 1 else ''})" if oc else ""
+                            self._console.print(f"  [dim]Process:  {process}{ov_str}[/dim]")
+                        for fil in info.get("filaments", []):
+                            self._console.print(f"  [dim]Filament: {fil}[/dim]")
+                    except (ValueError, TypeError, OSError):
+                        pass
 
         elif node_name == "packaged_output":
             self._ok("Packaged output", elapsed)

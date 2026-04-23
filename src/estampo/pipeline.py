@@ -464,6 +464,16 @@ def gcode_stats(packaged_output: Path) -> dict:
         if info.filament_usage_g:
             stats["filament_usage_g"] = info.filament_usage_g
 
+    # Merge slicer profile info written by the engine module
+    slice_info_path = packaged_output / "slice_info.json"
+    if slice_info_path.exists():
+        try:
+            slicer_info = json.loads(slice_info_path.read_text())
+            if slicer_info:
+                stats["slicer"] = slicer_info
+        except (json.JSONDecodeError, OSError):
+            pass
+
     # Write to output dir for CI/action consumption
     stats_path = packaged_output / "stats.json"
     stats_path.write_text(json.dumps(stats, indent=2) + "\n")
