@@ -65,18 +65,24 @@ The two critical flags:
   thumbnail" when running without a display. Slicing still works; you just
   don't get thumbnails.
 
-## Post-Processing: Three Fixes Required
+## Post-Processing: Four Fixes Required
 
 The `--min-save` output is *almost* right, but Bambu Connect rejects it due to
-three issues in the metadata. You need to patch the ZIP archive after slicing.
+four issues in the metadata. You need to patch the ZIP archive after slicing.
 
 ### Fix 1: project_settings.config -- Missing Keys and Short Arrays
 
-`Metadata/project_settings.config` is a JSON file with ~530+ slicer setting
-keys. The CLI export has two problems:
+`Metadata/project_settings.config` is a JSON file with ~553 keys. The CLI
+export produces only ~544 keys. Bambu Connect validates for completeness; a
+file with too few keys is silently rejected.
 
-**Missing keys.** These 11 keys are absent from the CLI export but required by
-Bambu Connect:
+**The right fix** is to regenerate `project_settings.config` from a full
+BambuStudio-style machine profile rather than patching OrcaSlicer's export.
+`bambox` does this automatically by reading `printer_model` from OrcaSlicer's
+settings and mapping it to the appropriate profile.
+
+If you are patching manually, these 11 keys are commonly absent from the CLI
+export:
 
 ```json
 {
@@ -94,6 +100,11 @@ Bambu Connect:
 }
 ```
 
+Adding only these 11 keys is **not sufficient** — BC requires ~178 additional
+BambuStudio 02.05+ keys (machine geometry, filament behaviour tables, toolchange
+coordinates, etc.). The only reliable approach is to start from a full machine
+profile, not to patch the OrcaSlicer output.
+
 **Short filament arrays.** The CLI sizes arrays to match the number of loaded
 filaments (e.g. 3 elements if you loaded 3 filaments). Bambu Connect expects
 arrays padded to the AMS slot count -- **5 for a P1S** (4 AMS slots + 1
@@ -105,29 +116,91 @@ but needs to be `["PLA", "PLA", "PETG-CF", "PETG-CF", "PETG-CF"]`.
 ### Fix 2: model_settings.config -- Missing Metadata Keys
 
 `Metadata/model_settings.config` is an XML file describing the plate. The CLI
-export is missing 5 metadata entries that Bambu Connect requires:
+export is missing metadata entries that Bambu Connect requires. The complete
+set of required keys, in order:
 
 ```xml
-<metadata key="thumbnail_file" value="Metadata/plate_1.png"/>
-<metadata key="thumbnail_no_light_file" value="Metadata/plate_no_light_1.png"/>
-<metadata key="top_file" value="Metadata/top_1.png"/>
-<metadata key="pick_file" value="Metadata/pick_1.png"/>
-<metadata key="pattern_bbox_file" value="Metadata/plate_1.json"/>
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+  <plate>
+    <metadata key="plater_id" value="1"/>
+    <metadata key="plater_name" value=""/>
+    <metadata key="locked" value="false"/>
+    <metadata key="filament_map_mode" value="Auto For Flush"/>
+    <metadata key="filament_maps" value="1 1 1 1 1"/>
+    <metadata key="filament_volume_maps" value="0 0 0 0 0"/>
+    <metadata key="gcode_file" value="Metadata/plate_1.gcode"/>
+    <metadata key="thumbnail_file" value="Metadata/plate_1.png"/>
+    <metadata key="thumbnail_no_light_file" value="Metadata/plate_no_light_1.png"/>
+    <metadata key="top_file" value="Metadata/top_1.png"/>
+    <metadata key="pick_file" value="Metadata/pick_1.png"/>
+    <metadata key="pattern_bbox_file" value="Metadata/plate_1.json"/>
+  </plate>
+</config>
 ```
 
-These references must be present even if the actual PNG files don't exist in the
-archive. Bambu Connect checks for the XML entries but doesn't validate that the
-referenced files are present.
+Key notes:
+- `filament_maps` must be padded to AMS slot count (space-separated, one per slot): `"1"` → `"1 1 1 1 1"`
+- `filament_volume_maps` is required (BambuStudio 02.05+) and must appear **before** `gcode_file`
+- The thumbnail/bbox keys are required even if the actual PNG files are absent
 
-Additionally, the `filament_maps` value needs padding, same as in
-project_settings: `"1"` should become `"1 1 1 1 1"` (space-separated, one per
-AMS slot).
+### Fix 3: slice_info.config -- Missing BambuStudio 02.05 Keys
 
-### Fix 3: Thumbnails (Optional but Recommended)
+OrcaSlicer's `slice_info.config` is missing several keys that BambuStudio 02.05
+always emits. The complete working structure:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+  <header>
+    <header_item key="X-BBL-Client-Type" value="slicer"/>
+    <header_item key="X-BBL-Client-Version" value="02.05.00.66"/>
+  </header>
+  <plate>
+    <metadata key="index" value="1"/>
+    <metadata key="extruder_type" value="0"/>
+    <metadata key="nozzle_volume_type" value="0"/>
+    <metadata key="printer_model_id" value="C12"/>
+    <metadata key="nozzle_diameters" value="0.4"/>
+    <metadata key="timelapse_type" value="0"/>
+    <metadata key="prediction" value="681"/>
+    <metadata key="weight" value="8.51"/>
+    <metadata key="outside" value="false"/>
+    <metadata key="support_used" value="false"/>
+    <metadata key="label_object_enabled" value="true"/>
+    <metadata key="filament_maps" value="1 1 1 1 1"/>
+    <metadata key="limit_filament_maps" value="0 0 0 0 0"/>
+    <filament id="1" tray_info_idx="GFL99" type="PLA" color="#F2754E"
+      used_m="0.12" used_g="0.36" used_for_object="true"
+      used_for_support="false" group_id="0" nozzle_diameter="0.40"
+      volume_type="Standard"/>
+  </plate>
+</config>
+```
+
+Keys OrcaSlicer omits that must be added:
+- `X-BBL-Client-Version` — OrcaSlicer leaves this blank; set to `02.05.00.66`
+- `extruder_type` — must appear **before** `printer_model_id`
+- `nozzle_volume_type` — must appear **before** `printer_model_id`
+- `limit_filament_maps` — space-separated zeros, one per AMS slot
+
+OrcaSlicer also emits `weight=""` (empty string) when `filament_density = 0` in
+the profile. Bambu Connect ignores the weight value, but a blank value causes
+parse errors in some tooling. Compute it from the G-code footer:
+
+```
+; filament used [g] = 8.51       ← use this if present
+; filament used [cm3] = 6.86     ← multiply by filament density as fallback
+```
+
+### Fix 4: Thumbnails (Optional but Recommended)
 
 The CLI can't render thumbnails in headless mode. Without them, Bambu Connect
 shows a blank/broken image. Adding placeholder PNGs at `Metadata/plate_1.png`
 and `Metadata/plate_1_small.png` gives a cleaner appearance.
+
+Real thumbnails can be generated from the G-code toolpath using matplotlib or
+similar.
 
 ## Complete Archive Structure
 
@@ -139,11 +212,11 @@ plate_sliced.gcode.3mf
   _rels/.rels                      -- Relationship to 3dmodel.model
   3D/3dmodel.model                 -- Empty model (no mesh data)
   Metadata/plate_1.gcode           -- The actual gcode
-  Metadata/plate_1.gcode.md5       -- MD5 hex digest of gcode
-  Metadata/model_settings.config   -- Plate config XML (with thumbnail refs)
+  Metadata/plate_1.gcode.md5       -- MD5 hex digest of gcode (uppercase hex)
+  Metadata/model_settings.config   -- Plate config XML (with all required keys)
   Metadata/_rels/model_settings.config.rels  -- Links gcode to plate
   Metadata/slice_info.config       -- Print time, weight, filament info
-  Metadata/project_settings.config -- Full slicer settings JSON (~500+ keys)
+  Metadata/project_settings.config -- Full slicer settings JSON (~553 keys)
   Metadata/plate_1.json            -- Plate bounding box / layout data
   Metadata/plate_1.png             -- Thumbnail (optional, but refs required)
   Metadata/plate_1_small.png       -- Small thumbnail (optional)
@@ -151,30 +224,56 @@ plate_sliced.gcode.3mf
 
 ### What Doesn't Matter
 
-Through testing, we confirmed these are **not** required:
+Through testing, we confirmed these are **not** required or validated:
 
 - **Actual thumbnail PNG files** -- the XML references are required but the
-  files themselves are optional
-- **`slice_info.config` accuracy** -- empty `printer_model_id`, short
-  `filament_maps`, different prediction/weight values are all accepted
-- **`_rels/.rels` dangling references** -- referencing thumbnails that don't
-  exist in the archive is fine
-- **`[Content_Types].xml`** -- the CLI version works fine
-- **`3D/3dmodel.model`** -- any empty model works (CLI and GUI produce
-  identical files)
+  files themselves are optional (placeholder 1×1 PNGs are fine)
+- **`slice_info.config` values** -- `prediction`, `weight`, `printer_model_id`,
+  `filament_maps` values are not validated by BC; the keys must be present
+- **`_rels/.rels` whitespace** -- BC's XML parser ignores it
+- **`3D/3dmodel.model` Application version** -- the version string
+  (`BambuStudio-02.05.00.66` vs `BambuStudio-2.3.1`) and metadata element
+  ordering are not validated
+- **`[Content_Types].xml`** -- the OrcaSlicer CLI version works fine
+- **`plate_1.json` bed type** -- `cool_plate` vs `textured_plate` does not
+  affect whether BC loads the file
 
 ### What Matters
 
-- **`project_settings.config`** must have all expected keys and arrays padded
-  to AMS slot count
-- **`model_settings.config`** must have thumbnail/bbox metadata references and
-  padded `filament_maps`
+- **`project_settings.config`** must be present with ~553 keys (full
+  BambuStudio-style profile). OrcaSlicer's ~544-key CLI export is **not
+  sufficient** — BC silently rejects files with too few keys. Regenerate from
+  a machine profile rather than patching the OrcaSlicer output.
+- **`model_settings.config`** must have `filament_volume_maps`, thumbnail/bbox
+  metadata references, and `filament_maps` padded to AMS slot count
+- **`slice_info.config`** must have `extruder_type`, `nozzle_volume_type`,
+  `limit_filament_maps`, and a non-blank `X-BBL-Client-Version`
+- **`plate_1.gcode.md5`** must contain the correct uppercase MD5 hex digest
+  of the gcode bytes
 - **File extension** must be `.gcode.3mf`
-- **`--min-save` flag** must be used (no 3D model data)
+- **`--min-save` flag** must be used when slicing (no 3D model data in the
+  archive)
+
+## G-code Validation
+
+Beyond file loading, `bambox validate` checks the G-code for firmware
+compatibility issues:
+
+- **E001** -- missing `HEADER_BLOCK_START`/`HEADER_BLOCK_END` delimiters
+- **E002** -- `M620.1 E` toolchange feedrate below 1 mm/min (indicates
+  misconfigured profile). **Note:** OrcaSlicer BBL G-code contains legitimate
+  low-feedrate `M620.1 E` commands derived from
+  `filament_max_volumetric_speed / 2.4053 * 60`; E002 is skipped for BBL
+  G-code (detected by `; HEADER_BLOCK_START` presence)
+- **W003** -- `weight=""` in `slice_info.config` when `filament_density = 0`
+  in the OrcaSlicer profile. Compute weight from `; filament used [cm3]`
+  in the G-code footer as a fallback
 
 ## Example Post-Processing Script
 
-Here's a minimal Python script to patch a `--min-save` export:
+Here is a minimal Python script to patch a `--min-save` export. Note that this
+approach is **not sufficient on its own** — you must also regenerate
+`project_settings.config` from a full machine profile (see Fix 1 above).
 
 ```python
 import io
@@ -202,6 +301,8 @@ MIN_SLOTS = 5  # P1S with AMS
 def fix_gcode_3mf(path: str) -> None:
     with zipfile.ZipFile(path, "r") as zin:
         # Fix project_settings.config
+        # WARNING: this only adds 11 keys. BC requires ~553 total.
+        # For a production fix, regenerate from a full machine profile.
         ps = json.loads(zin.read("Metadata/project_settings.config"))
         for key, default in MISSING_KEYS.items():
             if key not in ps:
@@ -223,8 +324,9 @@ def fix_gcode_3mf(path: str) -> None:
 
         ms = re.sub(r'key="filament_maps" value="([^"]*)"', pad_maps, ms)
 
-        # Add missing metadata keys
+        # Add missing metadata keys (filament_volume_maps before gcode_file)
         for key, val in {
+            "filament_volume_maps": "0 0 0 0 0",
             "thumbnail_file": "Metadata/plate_1.png",
             "thumbnail_no_light_file": "Metadata/plate_no_light_1.png",
             "top_file": "Metadata/top_1.png",
@@ -233,9 +335,36 @@ def fix_gcode_3mf(path: str) -> None:
         }.items():
             if f'key="{key}"' not in ms:
                 ms = ms.replace(
-                    "  </plate>",
-                    f'    <metadata key="{key}" value="{val}"/>\n  </plate>',
+                    '    <metadata key="gcode_file"',
+                    f'    <metadata key="{key}" value="{val}"/>\n'
+                    f'    <metadata key="gcode_file"',
+                    1,
                 )
+
+        # Fix slice_info.config
+        si = zin.read("Metadata/slice_info.config").decode()
+        # Set client version
+        si = re.sub(
+            r'(<header_item key="X-BBL-Client-Version" value=")(")',
+            r"\g<1>02.05.00.66\g<2>",
+            si,
+        )
+        # Add missing keys before printer_model_id
+        for key, val in [("extruder_type", "0"), ("nozzle_volume_type", "0")]:
+            if f'key="{key}"' not in si:
+                si = si.replace(
+                    '    <metadata key="printer_model_id"',
+                    f'    <metadata key="{key}" value="{val}"/>\n'
+                    f'    <metadata key="printer_model_id"',
+                    1,
+                )
+        # Add limit_filament_maps
+        if 'key="limit_filament_maps"' not in si:
+            limit = " ".join(["0"] * MIN_SLOTS)
+            si = si.replace(
+                "  </plate>",
+                f'    <metadata key="limit_filament_maps" value="{limit}"/>\n  </plate>',
+            )
 
         # Rewrite the archive
         buf = io.BytesIO()
@@ -245,6 +374,8 @@ def fix_gcode_3mf(path: str) -> None:
                     zout.writestr(item, json.dumps(ps, indent=4))
                 elif item.filename == "Metadata/model_settings.config":
                     zout.writestr(item, ms)
+                elif item.filename == "Metadata/slice_info.config":
+                    zout.writestr(item, si)
                 else:
                     zout.writestr(item, zin.read(item.filename))
 
