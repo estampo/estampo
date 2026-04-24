@@ -1,0 +1,1 @@
+Correct ``docs/gcode-3mf-format.md``: ``plate_1.json`` ``bed_type`` must be ``textured_plate``; ``model_settings.config`` requires full regeneration, not patching.
