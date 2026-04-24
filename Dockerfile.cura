@@ -16,7 +16,7 @@ ARG CURA_VERSION=5.12.0
 # ---------------------------------------------------------------------------
 FROM --platform=linux/amd64 debian:bookworm-slim AS bridge-fetcher
 
-ARG BAMBOX_VERSION=0.4.5
+ARG BAMBOX_VERSION=0.4.7
 ARG BAMBU_SLICER_VERSION=02.05.00.00
 ARG BNL_TOKEN=""
 
@@ -59,7 +59,7 @@ RUN curl -fSL -o /out/cert/slicer_base64.cer \
 # ---------------------------------------------------------------------------
 FROM estampo/cura-base:${CURA_VERSION}
 
-ARG BAMBOX_VERSION=0.4.5
+ARG BAMBOX_VERSION=0.4.7
 
 USER root
 
