@@ -235,8 +235,8 @@ Through testing, we confirmed these are **not** required or validated:
   (`BambuStudio-02.05.00.66` vs `BambuStudio-2.3.1`) and metadata element
   ordering are not validated
 - **`[Content_Types].xml`** -- the OrcaSlicer CLI version works fine
-- **`plate_1.json` bed type** -- `cool_plate` vs `textured_plate` does not
-  affect whether BC loads the file
+- **`plate_1.json` bounding-box data** -- bbox coordinates and other non-`bed_type`
+  keys are not validated by BC
 
 ### What Matters
 
@@ -247,7 +247,10 @@ Through testing, we confirmed these are **not** required or validated:
 - **`model_settings.config`** must have `filament_volume_maps`, thumbnail/bbox
   metadata references, and `filament_maps` padded to AMS slot count
 - **`slice_info.config`** must have `extruder_type`, `nozzle_volume_type`,
-  `limit_filament_maps`, and a non-blank `X-BBL-Client-Version`
+  `limit_filament_maps`, and a non-blank `X-BBL-Client-Version`; `extruder_type`
+  and `nozzle_volume_type` must appear **before** `printer_model_id`
+- **`plate_1.json`** `bed_type` must be `"textured_plate"` — OrcaSlicer CLI
+  emits `"cool_plate"` for some profiles, which BC rejects
 - **`plate_1.gcode.md5`** must contain the correct uppercase MD5 hex digest
   of the gcode bytes
 - **File extension** must be `.gcode.3mf`
@@ -313,33 +316,33 @@ def fix_gcode_3mf(path: str) -> None:
                     val.append(val[-1])
 
         # Fix model_settings.config
-        ms = zin.read("Metadata/model_settings.config").decode()
-
-        # Pad filament_maps
-        def pad_maps(m):
-            parts = m.group(1).split()
-            while len(parts) < MIN_SLOTS:
-                parts.append(parts[-1] if parts else "1")
-            return f'key="filament_maps" value="{" ".join(parts)}"'
-
-        ms = re.sub(r'key="filament_maps" value="([^"]*)"', pad_maps, ms)
-
-        # Add missing metadata keys (filament_volume_maps before gcode_file)
-        for key, val in {
-            "filament_volume_maps": "0 0 0 0 0",
-            "thumbnail_file": "Metadata/plate_1.png",
-            "thumbnail_no_light_file": "Metadata/plate_no_light_1.png",
-            "top_file": "Metadata/top_1.png",
-            "pick_file": "Metadata/pick_1.png",
-            "pattern_bbox_file": "Metadata/plate_1.json",
-        }.items():
-            if f'key="{key}"' not in ms:
-                ms = ms.replace(
-                    '    <metadata key="gcode_file"',
-                    f'    <metadata key="{key}" value="{val}"/>\n'
-                    f'    <metadata key="gcode_file"',
-                    1,
-                )
+        # Patching key-by-key produces wrong ordering. Regenerate from scratch,
+        # preserving filament_maps from the original.
+        ms_raw = zin.read("Metadata/model_settings.config").decode()
+        fm_match = re.search(r'key="filament_maps" value="([^"]*)"', ms_raw)
+        fm_parts = fm_match.group(1).split() if fm_match else []
+        while len(fm_parts) < MIN_SLOTS:
+            fm_parts.append(fm_parts[-1] if fm_parts else "1")
+        fm = " ".join(fm_parts)
+        fvm = " ".join(["0"] * MIN_SLOTS)
+        ms = f"""<?xml version="1.0" encoding="UTF-8"?>
+<config>
+  <plate>
+    <metadata key="plater_id" value="1"/>
+    <metadata key="plater_name" value=""/>
+    <metadata key="locked" value="false"/>
+    <metadata key="filament_map_mode" value="Auto For Flush"/>
+    <metadata key="filament_maps" value="{fm}"/>
+    <metadata key="filament_volume_maps" value="{fvm}"/>
+    <metadata key="gcode_file" value="Metadata/plate_1.gcode"/>
+    <metadata key="thumbnail_file" value="Metadata/plate_1.png"/>
+    <metadata key="thumbnail_no_light_file" value="Metadata/plate_no_light_1.png"/>
+    <metadata key="top_file" value="Metadata/top_1.png"/>
+    <metadata key="pick_file" value="Metadata/pick_1.png"/>
+    <metadata key="pattern_bbox_file" value="Metadata/plate_1.json"/>
+  </plate>
+</config>
+"""
 
         # Fix slice_info.config
         si = zin.read("Metadata/slice_info.config").decode()
@@ -366,6 +369,16 @@ def fix_gcode_3mf(path: str) -> None:
                 f'    <metadata key="limit_filament_maps" value="{limit}"/>\n  </plate>',
             )
 
+        # Fix plate_1.json: BC requires bed_type=textured_plate
+        plate_json_override = None
+        try:
+            pj = json.loads(zin.read("Metadata/plate_1.json"))
+            if pj.get("bed_type") != "textured_plate":
+                pj["bed_type"] = "textured_plate"
+                plate_json_override = json.dumps(pj, separators=(",", ":"))
+        except KeyError:
+            plate_json_override = '{"bed_type":"textured_plate"}'
+
         # Rewrite the archive
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zout:
@@ -376,8 +389,12 @@ def fix_gcode_3mf(path: str) -> None:
                     zout.writestr(item, ms)
                 elif item.filename == "Metadata/slice_info.config":
                     zout.writestr(item, si)
+                elif item.filename == "Metadata/plate_1.json" and plate_json_override:
+                    zout.writestr(item, plate_json_override)
                 else:
                     zout.writestr(item, zin.read(item.filename))
+            if plate_json_override and "Metadata/plate_1.json" not in zin.namelist():
+                zout.writestr("Metadata/plate_1.json", plate_json_override)
 
     with open(path, "wb") as f:
         f.write(buf.getvalue())
