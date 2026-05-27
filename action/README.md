@@ -36,7 +36,7 @@ This works for both OrcaSlicer and CuraEngine projects — the action detects wh
 | `slicer-version` | *(from config)* | Override slicer version (reads `slicer.version` from TOML by default) |
 | `until` | *(all stages)* | Pipeline stage to stop at (e.g. `plate`, `slice`) |
 | `output-dir` | `estampo_output` | Output directory for sliced files (relative to repo root) |
-| `comment` | `true` | Post/update a PR comment with build metrics |
+| `comment` | `"true"` | Post/update a PR comment with build metrics. Set to `"false"` to disable (e.g. in release workflows where there is no PR to comment on). |
 
 ## Outputs
 
@@ -61,6 +61,13 @@ This works for both OrcaSlicer and CuraEngine projects — the action detects wh
 - The GHCR package must be public, or you must authenticate with `docker login ghcr.io` before this action runs
 - If using the `comment` feature, your job needs `permissions: pull-requests: write`
 - PR comments work with both `pull_request` and `workflow_run` triggers (the action looks up the PR from the commit SHA)
+- To disable PR comments (e.g. in a release workflow that runs on `push` to main with no associated PR), pass `comment: "false"`:
+
+  ```yaml
+  - uses: estampo/estampo/action@v0
+    with:
+      comment: "false"   # no PR to comment on in release workflows
+  ```
 
 ## Supported engines and versions
 
