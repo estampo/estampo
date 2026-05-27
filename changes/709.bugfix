@@ -1,0 +1,1 @@
+Declare click and rich as explicit direct dependencies to fix missing-module crash on uv tool install estampo.
