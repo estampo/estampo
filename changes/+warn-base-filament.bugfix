@@ -1,1 +1,0 @@
-Warn in ``estampo validate`` when a filament profile ending in ``@base`` is used — the generic ancestor profile lacks machine-specific calibration (pressure advance, temperatures, retraction) and causes inconsistent extrusion at high speeds. The warning lists available machine-specific variants.
