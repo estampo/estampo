@@ -45,6 +45,7 @@ STAGE_OUTPUTS: dict[str, list[str]] = {
     "plate": ["plate_3mf_path", "preview_path"],
     "slice": ["sliced_output_dir", "packaged_output", "gcode_stats"],
     "gcode-info": ["gcode_stats"],  # kept for backward compat
+    "gcode_info": ["gcode_stats"],  # preferred underscore form
 }
 
 # For --only mode: maps stage names to the Hamilton node overrides that must
@@ -52,6 +53,7 @@ STAGE_OUTPUTS: dict[str, list[str]] = {
 STAGE_REQUIRES: dict[str, list[tuple[str, str]]] = {
     "slice": [("plate_3mf_path", "plate 3MF file")],
     "gcode-info": [("packaged_output", "slicer output directory")],
+    "gcode_info": [("packaged_output", "slicer output directory")],
 }
 
 
