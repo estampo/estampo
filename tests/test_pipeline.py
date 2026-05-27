@@ -211,6 +211,15 @@ def test_resolve_outputs_only_gcode_info():
     assert outputs == ["gcode_stats"]
 
 
+def test_resolve_outputs_only_gcode_info_underscore():
+    """resolve_outputs --only gcode_info (underscore alias) returns gcode_stats."""
+    from estampo.pipeline import resolve_outputs
+
+    stages = ["load", "arrange", "plate", "slice", "gcode_info"]
+    outputs = resolve_outputs(stages, only="gcode_info")
+    assert outputs == ["gcode_stats"]
+
+
 # --- resolve_overrides tests ---
 
 
@@ -245,6 +254,14 @@ def test_resolve_overrides_gcode_info_finds_dir(tmp_path):
     from estampo.pipeline import resolve_overrides
 
     overrides = resolve_overrides("gcode-info", tmp_path)
+    assert overrides["packaged_output"] == tmp_path
+
+
+def test_resolve_overrides_gcode_info_underscore_finds_dir(tmp_path):
+    """--only gcode_info (underscore alias) resolves packaged_output from disk."""
+    from estampo.pipeline import resolve_overrides
+
+    overrides = resolve_overrides("gcode_info", tmp_path)
     assert overrides["packaged_output"] == tmp_path
 
 
