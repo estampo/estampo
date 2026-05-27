@@ -692,6 +692,66 @@ file = "{_posix(FIXTURES / "cube_10mm.stl")}"
         assert matched, f"expected a warning for bed_type in [slicer.orca], got: {list(warnings)}"
         assert "[slicer]" in matched[0]
 
+    def test_base_filament_warns_with_variants(self, tmp_path, monkeypatch):
+        """@base filament triggers a warning listing machine-specific variants."""
+        monkeypatch.setattr(
+            "estampo.profiles.discover_profiles",
+            lambda engine: {"machine": {}, "process": {}, "filament": {}},
+        )
+        filament_dir = tmp_path / "profiles" / "orca" / "filament"
+        filament_dir.mkdir(parents=True)
+        (filament_dir / "Bambu PLA Basic @base.json").write_text(
+            '{"type": "filament", "name": "Bambu PLA Basic @base"}'
+        )
+        (filament_dir / "Bambu PLA Basic @BBL X1C.json").write_text(
+            '{"type": "filament", "name": "Bambu PLA Basic @BBL X1C"}'
+        )
+        toml = tmp_path / "estampo.toml"
+        toml.write_text(f"""
+[slicer]
+engine = "orca"
+version = "2.3.1"
+
+[slicer.orca]
+filaments = ["Bambu PLA Basic @base"]
+
+[[parts]]
+file = "{_posix(FIXTURES / "cube_10mm.stl")}"
+""")
+        result = validate_config(toml)
+        assert any("@base" in w and "machine-specific calibration" in w for w in result.warnings)
+        assert any("BBL X1C" in w for w in result.warnings)
+
+    def test_machine_specific_filament_no_base_warning(self, tmp_path, monkeypatch):
+        """Machine-specific filament variant does not trigger @base warning."""
+        monkeypatch.setattr(
+            "estampo.profiles.discover_profiles",
+            lambda engine: {"machine": {}, "process": {}, "filament": {}},
+        )
+        filament_dir = tmp_path / "profiles" / "orca" / "filament"
+        filament_dir.mkdir(parents=True)
+        (filament_dir / "Bambu PLA Basic @base.json").write_text(
+            '{"type": "filament", "name": "Bambu PLA Basic @base"}'
+        )
+        (filament_dir / "Bambu PLA Basic @BBL X1C.json").write_text(
+            '{"type": "filament", "name": "Bambu PLA Basic @BBL X1C"}'
+        )
+        toml = tmp_path / "estampo.toml"
+        toml.write_text(f"""
+[slicer]
+engine = "orca"
+version = "2.3.1"
+
+[slicer.orca]
+filaments = ["Bambu PLA Basic @BBL X1C"]
+
+[[parts]]
+file = "{_posix(FIXTURES / "cube_10mm.stl")}"
+""")
+        result = validate_config(toml)
+        base_warnings = [w for w in result.warnings if "@base" in w and "machine-specific" in w]
+        assert not base_warnings
+
     def test_unknown_key_typo_same_table(self, tmp_path):
         """printr → printer in [slicer.orca]."""
         toml = tmp_path / "estampo.toml"
