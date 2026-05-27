@@ -58,6 +58,9 @@ version = "2.3.1"               # pinned for reproducibility
 printer = "Bambu Lab P1S 0.4 nozzle"
 process = "0.20mm Standard @BBL X1C"   # P1S, P1P, and A1 share process profiles with the X1C
 filaments = ["Generic PETG-CF @base", "Generic PLA @base"]
+# Match the filament profile to the actual filament loaded, not just the printer brand.
+# Vendor-branded profiles (e.g. "Bambu PLA Basic") assume that vendor's own filament;
+# using them with generic filament causes under-extrusion. Default to "Generic ...".
 
 [slicer.orca.overrides]
 sparse_infill_density = "25%"

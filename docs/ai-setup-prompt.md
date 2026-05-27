@@ -55,6 +55,19 @@ the repo context):
    ```bash
    estampo profiles list --engine orca --category filament --printer "Bambu Lab P1S 0.4 nozzle"
    ```
+
+   **Default to `Generic <type> @base` unless the user explicitly tells you
+   they are loading that vendor's own filament.** Vendor-branded profiles
+   (`Bambu PLA Basic`, `Polymaker PolyTerra PLA`, `eSUN ...`, etc.) bake in a
+   high `filament_max_volumetric_speed` (often 21 mm³/s) that only the
+   vendor's actual filament can sustain. Picking `Bambu PLA Basic` when the
+   user has loaded any other PLA causes severe under-extrusion (wavy walls,
+   missed features, failed in-place parts) — the slicer plans a flow rate
+   the hotend can't physically deliver. Match the profile to the *real
+   filament in the printer*, not just the printer brand. When unsure, ask
+   the user "is this filament made by <printer vendor>, or is it
+   generic/third-party?" and pick `Generic ...` for anything that isn't a
+   confirmed match.
 5. **Print goals?** — e.g. "strong functional part", "fast draft", "smooth
    surface", "dimensional accuracy". This determines which override recipe to
    apply.
@@ -204,7 +217,7 @@ These are optional — skip them for simple setups:
   file = "widget.3mf"
   filament = "Generic PETG-CF @base"
   [parts.filaments]
-  inlay = "Bambu PLA Basic @BBL X1C"
+  inlay = "Generic PLA @base"
   ```
 - **`estampo profiles pin`** — copies referenced profiles into a local `profiles/` directory for reproducible builds across machines.
 - **Code-CAD workflow** — estampo works with OpenSCAD, build123d, and CadQuery. Either emit STL/3MF from the code-CAD script, or emit STEP and let estampo load it directly via build123d — no pre-conversion required.
