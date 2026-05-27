@@ -294,6 +294,80 @@ def _check_orca_process_compat(
     )
 
 
+# Conservative flow ceiling that any generic/third-party PLA-class filament can
+# sustain through a stock 0.4mm hotend. Bambu Lab's own profiles assume their
+# in-house filament and set the limit at 21+ mm³/s, which under-extrudes badly
+# when fed generic filament — the hotend physically can't melt that fast.
+_GENERIC_FLOW_CEILING_MM3S = 15.0
+
+
+def _filament_max_vol_speed(data: dict) -> float | None:
+    """Return the filament_max_volumetric_speed as a float, or None if missing/unparseable.
+
+    OrcaSlicer stores the value as a stringly-typed list (e.g. ``["21"]``) or a
+    bare string. Take the first entry and coerce to float.
+    """
+    raw = data.get("filament_max_volumetric_speed")
+    if raw is None:
+        return None
+    if isinstance(raw, list):
+        if not raw:
+            return None
+        raw = raw[0]
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        return None
+
+
+def _check_filament_vendor_lock(
+    filament: str, engine: str, project_dir: Path, profiles_dir: str
+) -> str | None:
+    """Warn when a filament profile assumes a flow rate only the matching vendor's
+    own filament can sustain.
+
+    Vendor-branded profiles (``Bambu PLA Basic``, ``Polymaker ...``, etc.) are
+    calibrated for that vendor's actual filament — including a high
+    ``filament_max_volumetric_speed`` (often 21 mm³/s). Feeding generic or
+    third-party filament through such a profile causes severe under-extrusion
+    because the hotend can't physically melt the planned flow rate; walls come
+    out wavy and features fail. ``estampo run`` has no way to know what
+    filament is actually loaded, so this warning fires whenever the resolved
+    flow ceiling exceeds the generic-safe value — telling the user to either
+    override ``filament_max_volumetric_speed`` or pick a ``Generic ...``
+    profile if the filament is not the vendor's own.
+    """
+    if engine != "orca":
+        return None
+
+    from estampo.profiles import resolve_profile_data
+
+    try:
+        data = resolve_profile_data(
+            filament, "orca", "filament", project_dir=project_dir, profiles_dir=profiles_dir
+        )
+    except (EstampoError, FileNotFoundError, OSError):
+        return None
+
+    vol = _filament_max_vol_speed(data)
+    if vol is None or vol <= _GENERIC_FLOW_CEILING_MM3S:
+        return None
+
+    return (
+        f"filament '{filament}' sets filament_max_volumetric_speed = {vol:g} mm³/s, "
+        f"which is calibrated for that vendor's own filament. Generic/third-party "
+        f"filament cannot sustain that flow rate — a stock 0.4mm hotend tops out "
+        f"around {_GENERIC_FLOW_CEILING_MM3S:g} mm³/s for generic PLA — and the "
+        f"slicer will plan for a flow the hotend can't deliver, causing "
+        f"under-extrusion (wavy walls, missed features, failed in-place parts).\n"
+        f"  Fix one of:\n"
+        f"    - If using the matching vendor filament, ignore this warning.\n"
+        f"    - If using generic/third-party filament, switch to a 'Generic <type>' "
+        f"profile (e.g. 'Generic PLA @base'), or override "
+        f"filament_max_volumetric_speed to {int(_GENERIC_FLOW_CEILING_MM3S)} or below."
+    )
+
+
 def _check_cura_def_reachable(printer: str, project_dir: Path, profiles_dir: str) -> str | None:
     """Warn when a Cura printer name is known but the def.json isn't local.
 
@@ -429,29 +503,12 @@ def validate_config(path: Path) -> ValidationResult:
                         f"{cfg.slicer.engine} profiles ({source}).{hint}{pin_hint}"
                     )
                     profile_ok = False
-                elif fil.endswith("@base"):
-                    # @base is the generic ancestor profile — it lacks machine-specific
-                    # calibration (pressure advance, temperatures, retraction). At high
-                    # speeds this causes inconsistent extrusion and poor surface quality.
-                    base_name = fil[: -len("@base")].rstrip()
-                    variants = sorted(
-                        f for f in known_filaments if f.startswith(base_name + " @") and f != fil
+                else:
+                    vendor_warn = _check_filament_vendor_lock(
+                        fil, cfg.slicer.engine, cfg.base_dir, cfg.slicer.profiles_dir
                     )
-                    if variants:
-                        var_str = ", ".join(f"'{v}'" for v in variants[:5])
-                        more = f" (and {len(variants) - 5} more)" if len(variants) > 5 else ""
-                        hint = f"\n  Machine-specific variants: {var_str}{more}"
-                    else:
-                        hint = (
-                            f"\n  Run 'estampo profiles list --engine {cfg.slicer.engine}"
-                            f" --category filament' to find the right variant."
-                        )
-                    warnings.append(
-                        f"filament '{fil}' uses the generic '@base' profile — it lacks "
-                        f"machine-specific calibration (pressure advance, temperatures, "
-                        f"retraction). At high print speeds this causes inconsistent "
-                        f"extrusion and surface defects.{hint}"
-                    )
+                    if vendor_warn:
+                        warnings.append(vendor_warn)
 
         if profile_ok:
             passes.append(f"Slicer profiles valid ({source})")
@@ -972,6 +1029,24 @@ def _wizard_pick_filaments(
 
     if filament_options:
         ui.heading("Filament Profile")
+        # Vendor-branded profiles (Bambu PLA Basic, Polymaker, ...) are
+        # calibrated for that vendor's own filament — feeding generic filament
+        # through them causes under-extrusion at the planned flow rate. Default
+        # to the safe option (Generic ...) unless the user explicitly confirms
+        # they have the matching vendor's filament loaded.
+        ui.info(
+            "Vendor-branded profiles (e.g. 'Bambu PLA Basic') assume that "
+            "vendor's own filament. Using them with generic/third-party "
+            "filament causes under-extrusion — pick a 'Generic ...' profile "
+            "instead unless you are loading the vendor's actual filament."
+        )
+        prefer_generic = ui.prompt_yn(
+            "Restrict the menu to vendor-neutral 'Generic ...' profiles?", default=True
+        )
+        if prefer_generic:
+            filtered = [f for f in filament_options if f.startswith("Generic ")]
+            if filtered:
+                filament_options = filtered
         if machine_info.multi_material:
             ui.info("Printer supports multi-material. Pick a filament for each slot.")
             slot = 1

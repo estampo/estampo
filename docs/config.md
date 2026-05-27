@@ -259,8 +259,15 @@ file = "widget.3mf"
 filament = "Generic PETG-CF @base"       # default for unlisted objects
 
 [parts.filaments]
-inlay = "Bambu PLA Basic @BBL X1C"       # override for object named "inlay"
+inlay = "Generic PLA @base"              # override for object named "inlay"
 ```
+
+Pick the profile that matches the **actual filament loaded**, not just the
+printer brand. Vendor-branded profiles like `Bambu PLA Basic` bake in a high
+`filament_max_volumetric_speed` (often 21 mm³/s) calibrated for that
+vendor's own filament; using them with generic or third-party filament
+causes under-extrusion because the hotend can't melt fast enough to keep
+up with the planned flow.
 
 Objects from the same file are grouped as a single unit for bin packing.
 
