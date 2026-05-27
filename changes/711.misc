@@ -1,1 +1,0 @@
-Accept gcode_info as an alias for the gcode-info pipeline stage (TOML underscore convention).

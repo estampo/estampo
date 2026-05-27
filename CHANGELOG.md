@@ -4,6 +4,27 @@ All notable changes to this project are documented here.
 
 <!-- towncrier release notes start -->
 
+## 0.4.2 — 2026-05-27
+
+### Features
+
+- Surface resolved profile names and override counts in CLI output, GitHub Actions job summary, and PR comments. ([#695](https://github.com/estampo/estampo/pull/695))
+
+### Bugfixes
+
+- Fix broken GitHub Actions workflow trigger in ai-setup-prompt.md; add build-step hint and wall_loops guidance to recipe docs. ([#697](https://github.com/estampo/estampo/pull/697))
+- Declare click and rich as explicit direct dependencies to fix missing-module crash on uv tool install estampo. ([#709](https://github.com/estampo/estampo/pull/709))
+
+### Misc
+
+- Bump ``BAMBOX_VERSION`` to 0.4.7 in ``Dockerfile`` and ``Dockerfile.cura``. ([#702](https://github.com/estampo/estampo/pull/702))
+- Document that bambox is pre-installed in the estampo Docker image (no separate install needed for CI). ([#706](https://github.com/estampo/estampo/pull/706))
+- Add note that P1S, P1P, and A1 printers use @BBL X1C process profiles. ([#707](https://github.com/estampo/estampo/pull/707))
+- Add inline comment to quick-start TOML template explaining orient = "upright" for code-CAD output. ([#708](https://github.com/estampo/estampo/pull/708))
+- Document that comment: "false" disables PR comments in the action, with an explicit example for release workflows. ([#710](https://github.com/estampo/estampo/pull/710))
+- Accept gcode_info as an alias for the gcode-info pipeline stage (TOML underscore convention). ([#711](https://github.com/estampo/estampo/pull/711))
+
+
 ## 0.4.1 — 2026-04-21
 
 ### Bugfixes
