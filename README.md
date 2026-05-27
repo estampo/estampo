@@ -37,7 +37,7 @@ and [cadquery](https://github.com/cadquery/cadquery) — and with AI coding assi
 
 [[parts]]
 file = "enclosure_base.step"
-orient = "flat"
+orient = "flat"                 # use "upright" for code-CAD output (build123d, CadQuery, OpenSCAD)
 filament = 1                    # AMS slot 1: PETG-CF
 
 [[parts]]
@@ -56,7 +56,7 @@ version = "2.3.1"               # pinned for reproducibility
 
 [slicer.orca]
 printer = "Bambu Lab P1S 0.4 nozzle"
-process = "0.20mm Standard @BBL X1C"
+process = "0.20mm Standard @BBL X1C"   # P1S, P1P, and A1 share process profiles with the X1C
 filaments = ["Generic PETG-CF @base", "Generic PLA @base"]
 
 [slicer.orca.overrides]
@@ -202,7 +202,7 @@ version = "2.3.1"       # pin OrcaSlicer version for reproducibility
 
 [slicer.orca]
 printer = "Bambu Lab P1S 0.4 nozzle"
-process = "0.20mm Standard @BBL X1C"
+process = "0.20mm Standard @BBL X1C"   # P1S, P1P, and A1 use @BBL X1C process profiles
 
 [slicer.orca.overrides]  # simple way to define print settings without editing JSON
 sparse_infill_density = "30%"       # stronger infill
@@ -309,6 +309,8 @@ backends without touching the build system.
 For Bambu Lab printers, the companion CLI is
 [bambox](https://github.com/estampo/bambox). estampo never imports bambox —
 you install it separately and call it from your pipeline. Typical wiring:
+
+> **bambox is pre-installed in the estampo Docker image** — no separate install needed for CI. `pip install bambox` is only required for local runs outside the container.
 
 ```bash
 pip install bambox
