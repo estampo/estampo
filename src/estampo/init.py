@@ -429,6 +429,29 @@ def validate_config(path: Path) -> ValidationResult:
                         f"{cfg.slicer.engine} profiles ({source}).{hint}{pin_hint}"
                     )
                     profile_ok = False
+                elif fil.endswith("@base"):
+                    # @base is the generic ancestor profile — it lacks machine-specific
+                    # calibration (pressure advance, temperatures, retraction). At high
+                    # speeds this causes inconsistent extrusion and poor surface quality.
+                    base_name = fil[: -len("@base")].rstrip()
+                    variants = sorted(
+                        f for f in known_filaments if f.startswith(base_name + " @") and f != fil
+                    )
+                    if variants:
+                        var_str = ", ".join(f"'{v}'" for v in variants[:5])
+                        more = f" (and {len(variants) - 5} more)" if len(variants) > 5 else ""
+                        hint = f"\n  Machine-specific variants: {var_str}{more}"
+                    else:
+                        hint = (
+                            f"\n  Run 'estampo profiles list --engine {cfg.slicer.engine}"
+                            f" --category filament' to find the right variant."
+                        )
+                    warnings.append(
+                        f"filament '{fil}' uses the generic '@base' profile — it lacks "
+                        f"machine-specific calibration (pressure advance, temperatures, "
+                        f"retraction). At high print speeds this causes inconsistent "
+                        f"extrusion and surface defects.{hint}"
+                    )
 
         if profile_ok:
             passes.append(f"Slicer profiles valid ({source})")
