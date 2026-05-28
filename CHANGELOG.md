@@ -4,6 +4,17 @@ All notable changes to this project are documented here.
 
 <!-- towncrier release notes start -->
 
+## 0.4.3 — 2026-05-28
+
+### Bugfixes
+
+- ``estampo validate`` now warns when a filament profile bakes in a ``filament_max_volumetric_speed`` above ~15 mm³/s — vendor-branded profiles (e.g. ``Bambu PLA Basic``) bake in flow rates calibrated for that vendor's own filament that generic/third-party filament cannot sustain, causing under-extrusion. The ``estampo init`` wizard now defaults to vendor-neutral ``Generic ...`` filaments unless the user opts into vendor-branded options. AI setup prompt and docs updated with the same guidance.
+
+### Misc
+
+- Bump bundled ``bambox`` to 0.6.1 in both Docker images. bambox 0.5.0 removed its cloud-printing bridge (now in ``estampo/boo-cloud``), so the ``bambox-bridge`` binary is no longer published — the ``bridge-fetcher`` stage (bridge binary, ``libbambu_networking.so``, Bambu TLS cert) and its ``BNL_TOKEN`` build-arg plumbing are removed from ``Dockerfile`` and ``Dockerfile.cura``.
+
+
 ## 0.4.2 — 2026-05-27
 
 ### Features
