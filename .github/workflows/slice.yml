@@ -43,7 +43,6 @@ jobs:
         run: |
           docker build \
             --build-arg ORCA_VERSION=${{ inputs.version }} \
-            --build-arg BNL_TOKEN=${{ secrets.BNL_TOKEN }} \
             -t estampo/estampo:orca-${{ inputs.version }} .
 
       - name: Generate plate and slice
@@ -80,7 +79,6 @@ jobs:
           docker build --platform linux/amd64 \
             -f Dockerfile.cura \
             --build-arg CURA_VERSION=${{ inputs.version }} \
-            --build-arg BNL_TOKEN=${{ secrets.BNL_TOKEN }} \
             -t estampo/estampo:cura-${{ inputs.version }} .
 
       - name: Generate plate and slice
