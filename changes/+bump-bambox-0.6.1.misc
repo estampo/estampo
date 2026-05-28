@@ -1,1 +1,0 @@
-Bump bundled ``bambox`` to 0.6.1 in both Docker images. bambox 0.5.0 removed its cloud-printing bridge (now in ``estampo/boo-cloud``), so the ``bambox-bridge`` binary is no longer published — the ``bridge-fetcher`` stage (bridge binary, ``libbambu_networking.so``, Bambu TLS cert) and its ``BNL_TOKEN`` build-arg plumbing are removed from ``Dockerfile`` and ``Dockerfile.cura``.
