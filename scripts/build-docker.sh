@@ -10,8 +10,6 @@
 #   ./scripts/build-docker.sh cura-base 5.12.0 --push
 #   ./scripts/build-docker.sh cura-slicer 5.12.0     # build CuraEngine estampo image
 #   ./scripts/build-docker.sh cura-slicer 5.12.0 --push
-#   ./scripts/build-docker.sh cloud-bridge           # build cloud bridge image
-#   ./scripts/build-docker.sh cloud-bridge --push
 #
 # Legacy (orca slicer only):
 #   ./scripts/build-docker.sh 2.3.1          # build slicer image
@@ -19,7 +17,7 @@
 
 set -euo pipefail
 
-TARGET="${1:?Usage: $0 <orca-base|slicer|cloud-bridge|orca-version> [version] [--push]}"
+TARGET="${1:?Usage: $0 <orca-base|slicer|orca-version> [version] [--push]}"
 
 case "$TARGET" in
     orca-base)
@@ -103,28 +101,6 @@ case "$TARGET" in
             --platform linux/amd64 \
             -f Dockerfile.cura \
             --build-arg "CURA_VERSION=${VERSION}" \
-            -t "${IMAGE}" \
-            .
-
-        echo "Build complete: ${IMAGE}"
-
-        if [ "${PUSH}" = "--push" ]; then
-            docker push "${IMAGE}"
-            echo "Pushed."
-        fi
-        ;;
-
-    cloud-bridge)
-        PUSH="${2:-}"
-        BAMBU_VERSION="02.05.00.00"
-        IMAGE="estampo/cloud-bridge:bambu-${BAMBU_VERSION}"
-        BNL_TOKEN="${BNL_TOKEN:-$(gh auth token 2>/dev/null || true)}"
-
-        echo "Building ${IMAGE} ..."
-        docker build \
-            --platform linux/amd64 \
-            -f Dockerfile.cloud-bridge \
-            --build-arg "BNL_TOKEN=${BNL_TOKEN}" \
             -t "${IMAGE}" \
             .
 

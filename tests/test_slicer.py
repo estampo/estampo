@@ -200,7 +200,6 @@ def test_docker_image_tag_consistency():
     skip = {
         "scripts/build-docker.sh",
         ".github/workflows/publish-docker.yml",
-        ".github/workflows/publish-cloud-bridge.yml",
         ".github/workflows/release-readiness.yml",
         ".github/workflows/release.yml",
         ".github/workflows/slice.yml",
