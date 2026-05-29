@@ -210,8 +210,6 @@ estampo → CuraEngine → raw G-code (print-ready for native Cura printers)
                         bambox post-process (T→AMS, start/end injection)
                             ↓
                         bambox pack (.gcode.3mf)
-                            ↓
-                        bambox print (cloud bridge)
 ```
 
 ### Separation of concerns
@@ -230,7 +228,6 @@ estampo → CuraEngine → raw G-code (print-ready for native Cura printers)
   - Translates slicer layer markers to BBL firmware format (existing
     `gcode_compat.py`)
   - Packages into `.gcode.3mf` with settings, thumbnails, checksums
-  - Sends to printer via cloud bridge
 
 - **Neither project depends on the other at the Python level.** estampo
   invokes bambox as a CLI tool or subprocess, not as an imported library.

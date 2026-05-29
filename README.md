@@ -317,7 +317,6 @@ you install it separately and call it from your pipeline. Typical wiring:
 
 ```bash
 pip install bambox
-bambox login        # one-time — credentials saved to ~/.config/bambox/credentials.toml
 ```
 
 For OrcaSlicer output, `bambox repack` regenerates the Bambu settings
@@ -340,13 +339,6 @@ For CuraEngine output, `bambox pack` wraps the raw `.gcode` into a
 command = "bambox pack {sliced_dir}/plate.gcode -o {output_dir}/plate.gcode.3mf"
 output = "{output_dir}/plate.gcode.3mf"
 ```
-
-To send the packed archive to a printer, add a stage that calls
-`bambox print` — this uses Bambu Cloud and requires either the
-`bambox-bridge` native binary (Linux x86_64) or Docker (macOS,
-Windows, Linux ARM64). See the [AI setup prompt](docs/ai-setup-prompt.md)
-for full examples including GitHub Actions wiring, and the
-[bambox README](https://github.com/estampo/bambox) for bridge setup.
 
 ### Other printers
 

@@ -131,9 +131,8 @@ estampo info --json           # JSON for tooling
 ## `estampo setup` *(deprecated — removed in v0.4.0)*
 
 > **Use [bambox](https://github.com/estampo/bambox) instead.** estampo is
-> printer-agnostic — printer setup and credentials are managed by bambox.
-> Run `bambox login` to authenticate with Bambu Cloud. Credentials are
-> saved to `~/.config/bambox/credentials.toml`.
+> printer-agnostic — printer setup and packaging are handled by external
+> tools configured as command stages.
 
 ## `estampo run`
 

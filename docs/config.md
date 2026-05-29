@@ -86,11 +86,8 @@ stages = ["load", "arrange", "plate", "slice", "gcode-info", "pack"]
 > **Use [bambox](https://github.com/estampo/bambox) instead.** estampo is
 > printer-agnostic — printing and packaging are handled by external tools
 > configured as [command stages](#command-stages). See the
-> [AI setup prompt](ai-setup-prompt.md) for examples of `bambox pack`,
-> `bambox repack`, and `bambox print`.
->
-> Credentials are managed by bambox: run `bambox login` to authenticate,
-> credentials are saved to `~/.config/bambox/credentials.toml`.
+> [AI setup prompt](ai-setup-prompt.md) for examples of `bambox pack` and
+> `bambox repack`.
 
 ## `[plate]`
 
