@@ -61,7 +61,6 @@ The `release-readiness.yml` workflow exercises the full release pipeline without
 | Job | What it tests |
 |-----|---------------|
 | `build-estampo-image` | Docker image builds successfully |
-| `build-cloud-bridge` | Cloud bridge image builds and binary works |
 | `smoke-test` | `estampo --help` and `estampo run --help` work inside the container |
 | `profile-extraction` | `extract_profiles.py` runs and produces valid JSON with profiles |
 | `slice-test` | Real end-to-end slice using `examples/estampo.toml` |
