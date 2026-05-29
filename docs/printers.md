@@ -1,129 +1,35 @@
 # Printer support
 
-> **Note (v0.4.0 migration):** Printer communication is moving out of estampo.
-> estampo is becoming printer-agnostic — it produces G-code and delegates
-> packaging/printing to external tools via command stages (see ADR-005, ADR-007).
->
-> For Bambu Lab printers, use [bambox](https://github.com/estampo/bambox) to
-> pack the sliced output:
-> ```toml
-> [pack]
-> command = "bambox pack {sliced_dir}/plate.gcode -o {output_dir}/plate.gcode.3mf"
-> ```
->
-> The built-in `bambu-lan`, `bambu-cloud`, and `moonraker` printer types
-> described below are **deprecated** and will be removed in v0.4.0.
+estampo is **printer-agnostic**: it produces a sliced G-code / `.gcode.3mf` on
+disk and stops there. Packaging the output into a vendor-specific format and
+sending it to a printer are handled by external CLIs wired into the pipeline as
+[command stages](config.md#command-stages) (see ADR-005, ADR-007). This keeps
+vendor-specific code out of estampo and lets you swap printer backends without
+touching the build system.
 
----
+## Bambu Lab
 
-## bambu-lan (deprecated — use bambox)
+Use [bambox](https://github.com/estampo/bambox) to pack the sliced output into
+the `.gcode.3mf` format Bambu printers expect:
 
-Direct LAN connection to Bambu Lab printers using the `bambulabs_api` library.
+```toml
+[pack]
+command = "bambox pack {sliced_dir}/plate.gcode -o {output_dir}/plate.gcode.3mf"
+```
 
-| Feature        | Status |
-|----------------|--------|
-| Send gcode     | Supported |
-| Upload only    | Supported |
-| Status         | Supported |
-| Watch          | Supported |
+## Klipper / Moonraker
 
-**Credentials:** `ip`, `access_code`, `serial`
+Any printer running Klipper + Moonraker (Voron, Ender with Klipper, etc.) can be
+driven with a `curl`-based command stage — no extra tooling required:
 
-**Dependencies:** `bambulabs_api` (optional install)
-
-**Migration:** See [bambox docs](https://github.com/estampo/bambox) for sending prints to Bambu Lab printers.
-
-## bambu-cloud (deprecated — use bambox)
-
-Cloud connection to Bambu Lab printers via the Bambu Connect bridge binary (`bambu_cloud_bridge`).
-
-| Feature           | Status |
-|--------------------|--------|
-| Send gcode (.3mf)  | Supported |
-| AMS filament mapping | Supported |
-| Status             | Supported |
-| Watch              | Supported |
-
-**Credentials:** `serial` (plus cloud login via `estampo setup`)
-
-**Dependencies:** `bambu_cloud_bridge` binary, cloud auth token
-
-**Migration:** See [bambox docs](https://github.com/estampo/bambox) for sending prints to Bambu Lab printers.
-
-## moonraker (deprecated — use command stages)
-
-REST API connection to Klipper/Moonraker printers. Works with any printer running Klipper + Moonraker (Voron, Ender with Klipper, etc.).
-
-| Feature        | Status |
-|----------------|--------|
-| Send gcode     | Supported |
-| Upload only    | Supported |
-| Status         | Supported |
-| Watch          | Supported |
-
-**Credentials:** `url` (required), `api_key` (optional, for authenticated instances)
-
-**Dependencies:** `requests` (optional install)
-
-**Migration:** In v0.4.0, Moonraker support will be available as a command stage.
-A simple `curl`-based command stage can replace the built-in integration:
 ```toml
 [print]
 command = "curl -F file=@{sliced_dir}/plate.gcode http://YOUR_PRINTER:7125/server/files/upload"
 ```
 
-### API endpoints used
+## Other printers
 
-| Operation    | Method | Endpoint |
-|-------------|--------|----------|
-| Upload file  | POST   | `/server/files/upload` |
-| Start print  | POST   | `/printer/print/start` |
-| Query status | GET    | `/printer/objects/query?print_stats&heater_bed&extruder&display_status` |
-
-### State mapping
-
-Klipper states are mapped to the normalised estampo states:
-
-| Klipper state | estampo state |
-|---------------|----------------|
-| standby       | IDLE           |
-| printing      | RUNNING        |
-| paused        | PAUSE          |
-| complete      | FINISH         |
-| cancelled     | IDLE           |
-| error         | FAILED         |
-
-### Testing with a virtual printer
-
-Moonraker support has been tested against the [mainsail-crew/virtual-klipper-printer](https://github.com/mainsail-crew/virtual-klipper-printer) Docker image, which runs Klipper with simulavr + Moonraker without real hardware.
-
-```bash
-# Clone and start the virtual printer
-git clone https://github.com/mainsail-crew/virtual-klipper-printer.git
-cd virtual-klipper-printer
-docker run -d --name virtual-klipper \
-  -v "$(pwd)/printer_data:/home/printer/printer_data" \
-  -p 7125:7125 -p 8110:8080 \
-  --tmpfs /tmp:noexec \
-  --tmpfs /home/printer/printer_data/comms:noexec \
-  ghcr.io/mainsail-crew/virtual-klipper-printer:latest
-
-# Wait for Klipper to connect to simulavr (~15-30s)
-# Check readiness:
-curl -s http://localhost:7125/printer/info | python3 -m json.tool
-
-# The moonraker module was verified against this virtual printer
-```
-
-**Verified operations (2026-03-18):**
-
-- `get_moonraker_status()` — state, temperatures, progress, layer info
-- `_send_moonraker()` upload-only — file appears in Moonraker file list
-- `_send_moonraker()` upload + start — print runs to completion
-
-**Note:** The simulavr virtual printer executes gcode nearly instantly, so `RUNNING` state is brief. On real hardware, progress and layer tracking will update over time.
-
-### Not yet tested
-
-- API key authentication (`X-Api-Key` header)
-- Real Klipper hardware (Voron, Ender, etc.)
+Any CLI that reads a sliced file and does something with it can be a command
+stage. If your printer vendor ships a CLI, wire it in the same way; otherwise
+`estampo run` already produces the G-code file for you to send however you
+normally would.
