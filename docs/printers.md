@@ -4,13 +4,11 @@
 > estampo is becoming printer-agnostic — it produces G-code and delegates
 > packaging/printing to external tools via command stages (see ADR-005, ADR-007).
 >
-> For Bambu Lab printers, use [bambox](https://github.com/estampo/bambox):
+> For Bambu Lab printers, use [bambox](https://github.com/estampo/bambox) to
+> pack the sliced output:
 > ```toml
 > [pack]
 > command = "bambox pack {sliced_dir}/plate.gcode -o {output_dir}/plate.gcode.3mf"
->
-> [print]
-> command = "bambox print {output_dir}/plate.gcode.3mf --serial YOUR_SERIAL"
 > ```
 >
 > The built-in `bambu-lan`, `bambu-cloud`, and `moonraker` printer types
@@ -33,7 +31,7 @@ Direct LAN connection to Bambu Lab printers using the `bambulabs_api` library.
 
 **Dependencies:** `bambulabs_api` (optional install)
 
-**Migration:** Use `bambox print --lan` instead. See [bambox docs](https://github.com/estampo/bambox).
+**Migration:** See [bambox docs](https://github.com/estampo/bambox) for sending prints to Bambu Lab printers.
 
 ## bambu-cloud (deprecated — use bambox)
 
@@ -43,14 +41,14 @@ Cloud connection to Bambu Lab printers via the Bambu Connect bridge binary (`bam
 |--------------------|--------|
 | Send gcode (.3mf)  | Supported |
 | AMS filament mapping | Supported |
-| Status             | Supported (via cloud bridge) |
+| Status             | Supported |
 | Watch              | Supported |
 
 **Credentials:** `serial` (plus cloud login via `estampo setup`)
 
 **Dependencies:** `bambu_cloud_bridge` binary, cloud auth token
 
-**Migration:** Use `bambox print` and `bambox bridge` instead. See [bambox docs](https://github.com/estampo/bambox).
+**Migration:** See [bambox docs](https://github.com/estampo/bambox) for sending prints to Bambu Lab printers.
 
 ## moonraker (deprecated — use command stages)
 

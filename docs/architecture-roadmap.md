@@ -28,8 +28,8 @@ estampo (pipeline + slicer backends)
     ├── CuraEngine (via Docker)
     ↓ plain G-code
     ↓ command stages (user-configured CLI calls)
-bambox pack / bambox print              ← external CLI tool
-    ↓ .gcode.3mf → MQTT/FTP
+bambox pack                             ← external CLI tool
+    ↓ .gcode.3mf
 Bambu printer
 ```
 
@@ -81,18 +81,12 @@ command stages — never as a Python import.
    firmware format (progress markers, layer notifications, header block)
 3. **CuraEngine printer definitions** — `bambox_p1s.def.json` with native
    start/end G-code for Bambu printers (no post-processing required)
-4. **Printer communication** — cloud/LAN printing, status monitoring,
-   AMS mapping, Bambu Cloud authentication
-5. **Bridge** — Docker-based BNL bridge binary for cloud printing
 
 **Integration point:**
 ```toml
 [pack]
 command = "bambox pack {sliced_dir}/plate.gcode -o {output_dir}/plate.gcode.3mf"
 output = "{output_dir}/plate.gcode.3mf"
-
-[print]
-command = "bambox print {output_dir}/plate.gcode.3mf --serial YOUR_SERIAL"
 ```
 
 ## Slicer Comparison
