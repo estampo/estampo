@@ -41,9 +41,10 @@ preferred input from code-CAD — estampo tessellates it at load time.
 ## Step 2 — Engine and printer (ask, don't guess)
 
 The one rule: **`orca` for Bambu Lab printers, `cura` for everything else.**
-estampo bundles 35 Orca machine profiles (all Bambu Lab) and 643 Cura profiles
-(Creality, Prusa, Voron, Ultimaker, Anycubic, Elegoo, …). Picking orca for a
-non-BBL printer means the user must supply their own machine profile.
+The bundled Orca machine profiles are all Bambu Lab; the bundled Cura set
+covers hundreds of other printers (Creality, Prusa, Voron, Ultimaker, Anycubic,
+Elegoo, …). Picking orca for a non-BBL printer means the user must supply
+their own machine profile.
 
 [ASK: Which printer (make/model/nozzle) and which filament(s) are loaded?]
 if the repo doesn't say. Then discover exact profile names — never invent them:
@@ -54,7 +55,8 @@ estampo profiles list --engine orca --category process --printer "Bambu Lab P1S 
 estampo profiles list --engine orca --category filament --printer "Bambu Lab P1S 0.4 nozzle"
 ```
 
-**Always pass `--printer` when listing process/filament profiles.** OrcaSlicer
+**With orca, always pass `--printer` when listing process/filament profiles**
+(the filter is OrcaSlicer-only — cura ignores it). OrcaSlicer
 silently fails at slice time (exit 239) if the process and printer are
 incompatible; the filter only shows compatible ones.
 
