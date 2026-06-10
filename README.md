@@ -151,8 +151,7 @@ pinning):
 
 ```bash
 mkdir -p .claude/skills/estampo
-curl -fsSL https://raw.githubusercontent.com/estampo/estampo/main/docs/SKILL.md \
-  -o .claude/skills/estampo/SKILL.md
+curl -fsSL https://estampo.dev/skill -o .claude/skills/estampo/SKILL.md
 ```
 
 ## Best fit
