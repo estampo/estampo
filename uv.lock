@@ -498,14 +498,16 @@ wheels = [
 
 [[package]]
 name = "estampo"
-version = "0.4.0b3"
+version = "0.4.3"
 source = { editable = "." }
 dependencies = [
     { name = "build123d" },
+    { name = "click" },
     { name = "defusedxml" },
     { name = "questionary" },
     { name = "rectpack" },
     { name = "requests" },
+    { name = "rich" },
     { name = "sf-hamilton" },
     { name = "trimesh", extra = ["easy"] },
     { name = "typer" },
@@ -525,6 +527,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "build123d", specifier = ">=0.10.0" },
+    { name = "click", specifier = ">=8.0" },
     { name = "defusedxml", specifier = ">=0.7.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10.0" },
     { name = "packaging", marker = "extra == 'dev'", specifier = ">=23.0" },
@@ -533,6 +536,7 @@ requires-dist = [
     { name = "questionary", specifier = ">=2.1.0" },
     { name = "rectpack", specifier = ">=0.2.0" },
     { name = "requests", specifier = ">=2.28" },
+    { name = "rich", specifier = ">=10.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4.0" },
     { name = "sf-hamilton", specifier = ">=1.82.0" },
     { name = "towncrier", marker = "extra == 'dev'", specifier = ">=24.7.0" },
