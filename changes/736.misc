@@ -1,1 +1,0 @@
-Bump ``actions/github-script`` to v9 in the shipped GitHub Action, extend Dependabot coverage to it, and update stale doc examples
