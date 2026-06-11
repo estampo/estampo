@@ -1,6 +1,9 @@
 version: 2
 updates:
   - package-ecosystem: "github-actions"
-    directory: "/"
+    # "/" covers .github/workflows/; "/action" covers the shipped composite action
+    directories:
+      - "/"
+      - "/action"
     schedule:
       interval: "monthly"
