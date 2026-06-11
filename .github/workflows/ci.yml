@@ -25,7 +25,8 @@ jobs:
 
   changelog:
     # Ensure PRs include a towncrier fragment in changes/
-    if: github.event_name == 'pull_request'
+    # (Dependabot exempted: its PRs can't add fragments)
+    if: github.event_name == 'pull_request' && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
