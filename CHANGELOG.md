@@ -4,6 +4,21 @@ All notable changes to this project are documented here.
 
 <!-- towncrier release notes start -->
 
+## 0.4.4 — 2026-06-11
+
+### Features
+
+- Add an installable Claude Code skill (``docs/SKILL.md``) that routes "print this" / "slice these parts" requests through the estampo workflow — engine choice, profile discovery, overrides, and reproducibility pinning ([#731](https://github.com/estampo/estampo/pull/731))
+
+### Misc
+
+- Use the ``estampo.dev/skill`` short URL in the README's Claude Code skill install one-liner ([#732](https://github.com/estampo/estampo/pull/732))
+- Update GitHub Actions to latest major versions and add Dependabot config to keep them current ([#734](https://github.com/estampo/estampo/pull/734))
+- Bump ``actions/github-script`` to v9 in the shipped GitHub Action, extend Dependabot coverage to it, and update stale doc examples ([#736](https://github.com/estampo/estampo/pull/736))
+- Remove dead cloud-bridge build plumbing: the ``cloud-bridge`` target in ``scripts/build-docker.sh`` (pointed at a no-longer-present ``Dockerfile.cloud-bridge``), the orphaned ``scripts/cache-bnl.sh`` helper, the stale ``build-cloud-bridge`` release-readiness row in ``docs/developing.md``, and the dangling ``publish-cloud-bridge.yml`` entry in the tag-consistency test. This drops the repository's last ``BNL_TOKEN`` reference.
+- Remove documentation references to bambox cloud commands (``print``, ``status``, ``cancel``, ``login``, ``bridge``, ``daemon``) and related Bambu Cloud prose from the README, examples, and ``docs/``. These commands were extracted out of bambox; estampo's docs now cover only the ``bambox pack``/``repack`` packaging stages. Also trims ``docs/printers.md`` down to current behaviour, dropping the documentation for the ``bambu-lan``, ``bambu-cloud``, and ``moonraker`` built-in printer types that were already removed from the code.
+
+
 ## 0.4.3 — 2026-05-28
 
 ### Bugfixes

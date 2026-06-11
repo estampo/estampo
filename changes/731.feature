@@ -1,1 +1,0 @@
-Add an installable Claude Code skill (``docs/SKILL.md``) that routes "print this" / "slice these parts" requests through the estampo workflow — engine choice, profile discovery, overrides, and reproducibility pinning
