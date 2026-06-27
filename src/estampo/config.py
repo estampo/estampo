@@ -7,6 +7,7 @@ import logging
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from estampo import EstampoError
 from estampo.commands import CommandStageConfig, parse_command_stage
@@ -46,6 +47,7 @@ _PART_KEYS = {
     "object",
     "sequence",
     "filaments",
+    "overrides",
 }
 _COMMAND_STAGE_KEYS = {"command", "output", "docker", "image"}
 
@@ -111,6 +113,9 @@ class PartConfig:
     object_filaments: dict[str, int] = field(default_factory=dict)  # 3MF object → slot
     object: str | None = None  # select named object from multi-object 3MF
     sequence: int = 1  # print order for sequential printing
+    # per-object process overrides (Any, not object: the 'object' field above
+    # shadows the builtin 'object' type within this class body)
+    overrides: dict[str, Any] = field(default_factory=dict)
 
 
 DEFAULT_STAGES = ["load", "arrange", "plate", "slice"]
@@ -365,6 +370,15 @@ def _parse_parts(
         sequence = int(p.get("sequence", 1))
         if sequence < 1:
             raise EstampoError(f"parts[{i}]: sequence must be >= 1, got {sequence}")
+        overrides = p.get("overrides", {})
+        if not isinstance(overrides, dict):
+            raise EstampoError(f"parts[{i}].overrides must be a table of setting = value pairs")
+        reserved = {"extruder", "filament"} & overrides.keys()
+        if reserved:
+            raise EstampoError(
+                f"parts[{i}].overrides must not set {sorted(reserved)} — "
+                f"use the part's 'filament' field instead"
+            )
         material_name = raw_fil if isinstance(raw_fil, str) else None
 
         parts.append(
@@ -378,6 +392,7 @@ def _parse_parts(
                 scale=scale,
                 object=obj_name,
                 sequence=sequence,
+                overrides=overrides,
             )
         )
 
@@ -493,6 +508,13 @@ def load_config(path: Path) -> EstampoConfig:
         for i, raw_fil in enumerate(raw_filaments):
             if isinstance(raw_fil, int):
                 parts[i].filament = raw_fil
+        # Per-part overrides are injected via OrcaSlicer's model_settings.config;
+        # CuraEngine has no equivalent per-object settings mechanism.
+        for i, part in enumerate(parts):
+            if part.overrides:
+                raise EstampoError(
+                    f"parts[{i}].overrides is only supported with the OrcaSlicer engine"
+                )
 
     pipeline = _parse_pipeline(raw)
 

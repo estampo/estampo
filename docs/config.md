@@ -268,6 +268,41 @@ up with the planned flow.
 
 Objects from the same file are grouped as a single unit for bin packing.
 
+### Per-part process overrides
+
+> **OrcaSlicer only.** Per-part overrides are injected through OrcaSlicer's
+> `model_settings.config`; CuraEngine has no equivalent and setting them with
+> `engine = "cura"` is an error.
+
+Apply process settings to a single part, overriding the global process profile
+just for that part. This is the per-object equivalent of the global
+`[slicer.orca.overrides]` table — it maps directly onto OrcaSlicer's
+right-click **"Add settings"** on an object.
+
+```toml
+[[parts]]
+file = "bracket.stl"
+filament = "Generic PETG @base"
+
+[parts.overrides]
+sparse_infill_density = "80%"    # denser infill for this part only
+wall_loops = 5
+```
+
+Setting keys and values are passed through verbatim (use the same names
+OrcaSlicer uses internally, e.g. `sparse_infill_density`, `wall_loops`).
+OrcaSlicer only accepts a **subset** of settings per object (infill, walls,
+supports, speeds, layer height — not machine-level settings); it rejects
+unknown or non-overridable keys rather than estampo silently dropping them.
+
+Write boolean settings as `1`/`0`, not `true`/`false` — values are stringified
+as-is and OrcaSlicer expects `"1"`/`"0"` (same convention as
+`[slicer.orca.overrides]`). The `extruder`/`filament` keys are reserved; set a
+part's filament with its `filament` field, not here.
+
+For multi-object 3MF files the overrides apply to every object selected by that
+`[[parts]]` entry.
+
 ### Sequential printing
 
 For workflows that require printing one layer/object before another (e.g. bottom inlay):
