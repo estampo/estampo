@@ -295,6 +295,11 @@ OrcaSlicer only accepts a **subset** of settings per object (infill, walls,
 supports, speeds, layer height — not machine-level settings); it rejects
 unknown or non-overridable keys rather than estampo silently dropping them.
 
+Write boolean settings as `1`/`0`, not `true`/`false` — values are stringified
+as-is and OrcaSlicer expects `"1"`/`"0"` (same convention as
+`[slicer.orca.overrides]`). The `extruder`/`filament` keys are reserved; set a
+part's filament with its `filament` field, not here.
+
 For multi-object 3MF files the overrides apply to every object selected by that
 `[[parts]]` entry.
 

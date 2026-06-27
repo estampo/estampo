@@ -249,6 +249,36 @@ def test_build_plate_expands_group(tmp_path):
     assert extruders == {"1", "2"}
 
 
+def test_build_plate_group_propagates_overrides(tmp_path):
+    """Per-object overrides survive group expansion into individual objects."""
+    inlay = trimesh.creation.box(extents=[10, 10, 1])
+    body = trimesh.creation.box(extents=[20, 20, 10])
+    body.apply_translation([0, 0, 5])
+    inlay.metadata["filament_id"] = 2
+    inlay.metadata["overrides"] = {"wall_loops": 5}
+    body.metadata["filament_id"] = 1
+    body.metadata["overrides"] = {"wall_loops": 5}
+
+    combined = trimesh.util.concatenate([inlay, body])
+    combined.metadata["filament_id"] = 1
+    combined.metadata["overrides"] = {"wall_loops": 5}
+    combined.metadata["group_objects"] = [("inlay", inlay), ("body", body)]
+    combined.metadata["original_bounds_min"] = combined.bounds[0][:2].copy()
+
+    placements = arrange([combined], ["widget"], plate_size=(256, 256))
+    scene = build_plate(placements, plate_size=(256, 256))
+
+    out = tmp_path / "plate.3mf"
+    export_plate(scene, out)
+    with zipfile.ZipFile(out) as zf:
+        ms = zf.read("Metadata/model_settings.config").decode()
+    objects = ET.fromstring(ms).findall("object")
+    assert len(objects) == 2
+    for o in objects:
+        meta = {m.get("key"): m.get("value") for m in o.findall("metadata")}
+        assert meta["wall_loops"] == "5"
+
+
 def test_build_plate_sequence_filter():
     """Grouped objects can be filtered by sequence for sequential printing."""
     inlay = trimesh.creation.box(extents=[10, 10, 1])

@@ -1178,6 +1178,29 @@ overrides = "nope"
         load_config(path)
 
 
+def test_part_overrides_reserved_keys_rejected(tmp_path):
+    """extruder/filament are reserved and rejected in [parts.overrides]."""
+    path = _write_toml(
+        tmp_path,
+        """
+[slicer]
+engine = "orca"
+
+[slicer.orca]
+printer = "Bambu Lab P1S 0.4 nozzle"
+
+[[parts]]
+file = "cube.stl"
+
+[parts.overrides]
+extruder = 2
+""",
+        create_files=["cube.stl"],
+    )
+    with pytest.raises(EstampoError, match="reserved|must not set"):
+        load_config(path)
+
+
 def test_part_overrides_rejected_for_cura(tmp_path):
     """Per-part overrides are OrcaSlicer-only and rejected for the cura engine."""
     path = _write_toml(

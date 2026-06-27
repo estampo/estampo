@@ -373,6 +373,12 @@ def _parse_parts(
         overrides = p.get("overrides", {})
         if not isinstance(overrides, dict):
             raise EstampoError(f"parts[{i}].overrides must be a table of setting = value pairs")
+        reserved = {"extruder", "filament"} & overrides.keys()
+        if reserved:
+            raise EstampoError(
+                f"parts[{i}].overrides must not set {sorted(reserved)} — "
+                f"use the part's 'filament' field instead"
+            )
         material_name = raw_fil if isinstance(raw_fil, str) else None
 
         parts.append(
