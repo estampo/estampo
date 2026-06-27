@@ -144,6 +144,16 @@ to a project from scratch — it scans the repo for model files, asks you a few
 questions, and generates the config. This isn't an AI feature bolted on — it's
 an architectural property of using text instead of a GUI.
 
+For Claude Code there is also an installable [skill](docs/SKILL.md) that routes
+any future "print this" / "slice these parts" request through the correct
+estampo workflow (engine choice, profile discovery, overrides, reproducibility
+pinning):
+
+```bash
+mkdir -p .claude/skills/estampo
+curl -fsSL https://estampo.dev/skill -o .claude/skills/estampo/SKILL.md
+```
+
 ## Best fit
 
 estampo is best suited to:

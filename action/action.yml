@@ -227,7 +227,7 @@ runs:
 
     - name: Post PR comment
       if: ${{ inputs.comment == 'true' && (github.event_name == 'pull_request' || github.event_name == 'workflow_run') }}
-      uses: actions/github-script@v8
+      uses: actions/github-script@v9
       env:
         PRINT_TIME: ${{ steps.metrics.outputs.print-time }}
         FILAMENT_GRAMS: ${{ steps.metrics.outputs.filament-grams }}
