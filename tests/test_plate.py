@@ -111,6 +111,58 @@ def test_export_injects_extruder_metadata(tmp_path):
     assert objects[1].get("id") == model_objects[1].get("id")
 
 
+def test_export_injects_per_object_overrides(tmp_path):
+    """Per-part process overrides are injected into model_settings.config."""
+    m1 = trimesh.creation.box(extents=[10, 10, 10])
+    m2 = trimesh.creation.box(extents=[10, 10, 10])
+    m1.metadata["filament_id"] = 1
+    m1.metadata["overrides"] = {"sparse_infill_density": "80%", "wall_loops": 5}
+    m2.metadata["filament_id"] = 1
+    m2.metadata["overrides"] = {}
+
+    placements = arrange([m1, m2], ["dense", "plain"], plate_size=(256, 256))
+    scene = build_plate(placements)
+
+    out = tmp_path / "plate.3mf"
+    export_plate(scene, out)
+
+    with zipfile.ZipFile(out) as zf:
+        ms = zf.read("Metadata/model_settings.config").decode()
+
+    ms_root = ET.fromstring(ms)
+    objects = ms_root.findall("object")
+    assert len(objects) == 2
+
+    meta0 = {m.get("key"): m.get("value") for m in objects[0].findall("metadata")}
+    assert meta0["extruder"] == "1"
+    assert meta0["sparse_infill_density"] == "80%"
+    assert meta0["wall_loops"] == "5"
+
+    # Second object has no overrides — only the extruder entry
+    meta1 = {m.get("key"): m.get("value") for m in objects[1].findall("metadata")}
+    assert meta1 == {"extruder": "1"}
+
+
+def test_export_overrides_only_no_filament(tmp_path):
+    """Overrides alone (filament 1, no paint) still trigger model_settings injection."""
+    mesh = trimesh.creation.box(extents=[10, 10, 10])
+    mesh.metadata["filament_id"] = 1
+    mesh.metadata["overrides"] = {"wall_loops": 4}
+
+    placements = arrange([mesh], ["part"], plate_size=(256, 256))
+    scene = build_plate(placements)
+
+    out = tmp_path / "plate.3mf"
+    export_plate(scene, out)
+
+    with zipfile.ZipFile(out) as zf:
+        ms = zf.read("Metadata/model_settings.config").decode()
+
+    obj = ET.fromstring(ms).find("object")
+    meta = {m.get("key"): m.get("value") for m in obj.findall("metadata")}
+    assert meta["wall_loops"] == "4"
+
+
 def test_export_preserves_paint_colors(tmp_path):
     """Pre-painted meshes (paint_colors in metadata) are preserved in export."""
     mesh = trimesh.creation.box(extents=[10, 10, 10])

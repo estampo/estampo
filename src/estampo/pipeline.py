@@ -220,6 +220,7 @@ def load_parts(cfg: EstampoConfig, global_scale: float | None = None) -> LoadedP
                 obj_mesh.apply_scale(scale)
             obj_mesh.metadata["filament_id"] = part.filament
             obj_mesh.metadata["sequence"] = part.sequence
+            obj_mesh.metadata["overrides"] = part.overrides
             sub_meshes.append((part.object, obj_mesh))
 
         combined = trimesh.util.concatenate([m for _, m in sub_meshes])
@@ -255,6 +256,7 @@ def load_parts(cfg: EstampoConfig, global_scale: float | None = None) -> LoadedP
             if scale != 1.0:
                 mesh.apply_scale(scale)
             mesh.metadata["filament_id"] = part.filament
+            mesh.metadata["overrides"] = part.overrides
         elif part.object_filaments:
             objects = load_3mf_objects(part.file)
             sub_meshes = []
@@ -263,10 +265,12 @@ def load_parts(cfg: EstampoConfig, global_scale: float | None = None) -> LoadedP
                     obj_mesh.apply_scale(scale)
                 fil_id = part.object_filaments.get(obj_name, part.filament)
                 obj_mesh.metadata["filament_id"] = fil_id
+                obj_mesh.metadata["overrides"] = part.overrides
                 sub_meshes.append((obj_name, obj_mesh))
 
             mesh = trimesh.util.concatenate([m for _, m in sub_meshes])
             mesh.metadata["filament_id"] = part.filament
+            mesh.metadata["overrides"] = part.overrides
             mesh.metadata["group_objects"] = sub_meshes
             mesh.metadata["original_bounds_min"] = mesh.bounds[0][:2].copy()
         else:
@@ -275,6 +279,7 @@ def load_parts(cfg: EstampoConfig, global_scale: float | None = None) -> LoadedP
             if scale != 1.0:
                 mesh.apply_scale(scale)
             mesh.metadata["filament_id"] = part.filament
+            mesh.metadata["overrides"] = part.overrides
             paint_colors = extract_paint_colors(part.file)
             if paint_colors:
                 mesh.metadata["paint_colors"] = paint_colors

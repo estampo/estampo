@@ -8,6 +8,7 @@ import re
 import xml.etree.ElementTree as ET  # for SubElement, tostring, iterparse (not in defusedxml)
 import zipfile
 from pathlib import Path
+from xml.sax.saxutils import quoteattr
 
 import trimesh
 from defusedxml import ElementTree as SafeET  # safe fromstring for untrusted 3MF XML
@@ -86,23 +87,32 @@ def export_plate(scene: trimesh.Scene, output: Path) -> Path:
     output.parent.mkdir(parents=True, exist_ok=True)
     scene.export(str(output))
     _inject_paint_data(output, scene)
-    _inject_extruder_metadata(output, scene)
+    _inject_object_settings(output, scene)
     log.info("Exported plate to %s", output)
     return output
 
 
-def _inject_extruder_metadata(output: Path, scene: trimesh.Scene) -> None:
-    """Add per-object extruder assignments to the 3MF via model_settings.config.
+def _inject_object_settings(output: Path, scene: trimesh.Scene) -> None:
+    """Add per-object settings to the 3MF via model_settings.config.
 
-    OrcaSlicer reads ``Metadata/model_settings.config`` for per-object settings
-    including which extruder (AMS slot) each object uses.  Without this, all
-    objects default to extruder 1 regardless of the config's ``filament`` field.
+    OrcaSlicer reads ``Metadata/model_settings.config`` for per-object settings:
+    which extruder (AMS slot) each object uses, and any process-setting
+    overrides scoped to that object (e.g. ``sparse_infill_density``,
+    ``wall_loops``).  Without the extruder metadata, all objects default to
+    extruder 1 regardless of the config's ``filament`` field; without the
+    override metadata, every object uses the global process profile.
+
+    Override values are passed through verbatim (stringified) — OrcaSlicer only
+    accepts a subset of settings per object and rejects unknown keys, which we
+    surface rather than silently dropping.
 
     Object IDs in model_settings.config must match the ``id`` attributes in
     ``3D/3dmodel.model``, which trimesh assigns sequentially starting at 1.
     """
     geometries = list(scene.geometry.values())
-    if not any(geom.metadata.get("filament_id") for geom in geometries):
+    has_extruder = any(geom.metadata.get("filament_id") for geom in geometries)
+    has_overrides = any(geom.metadata.get("overrides") for geom in geometries)
+    if not has_extruder and not has_overrides:
         return
 
     # Read object IDs from the 3MF model XML to ensure correct mapping
@@ -116,12 +126,18 @@ def _inject_extruder_metadata(output: Path, scene: trimesh.Scene) -> None:
     for i, obj in enumerate(objects):
         if i >= len(geometries):
             break
-        filament_id = geometries[i].metadata.get("filament_id")
+        metadata = geometries[i].metadata
+        filament_id = metadata.get("filament_id")
+        overrides = metadata.get("overrides") or {}
+        if not filament_id and not overrides:
+            continue
+        obj_id = obj.get("id")
+        lines.append(f'  <object id="{obj_id}">')
         if filament_id:
-            obj_id = obj.get("id")
-            lines.append(f'  <object id="{obj_id}">')
             lines.append(f'    <metadata key="extruder" value="{filament_id}"/>')
-            lines.append("  </object>")
+        for key, value in overrides.items():
+            lines.append(f"    <metadata key={quoteattr(str(key))} value={quoteattr(str(value))}/>")
+        lines.append("  </object>")
     lines.append("</config>")
 
     model_settings = "\n".join(lines)
@@ -135,7 +151,7 @@ def _inject_extruder_metadata(output: Path, scene: trimesh.Scene) -> None:
             zout.writestr("Metadata/model_settings.config", model_settings)
 
     output.write_bytes(buf.getvalue())
-    log.info("Injected per-object extruder metadata into %s", output)
+    log.info("Injected per-object settings metadata into %s", output)
 
 
 def _inject_paint_data(output: Path, scene: trimesh.Scene) -> None:

@@ -1127,3 +1127,75 @@ file = "cube.stl"
         assert cfg.slicer.orca.machine_overrides == {"nozzle_diameter": "0.6"}
         assert cfg.slicer.orca.filament_overrides == {"filament_retraction_length": "0.8"}
         assert cfg.slicer.orca.machine_overrides == {"nozzle_diameter": "0.6"}
+
+
+def test_part_overrides_parsed(tmp_path):
+    """Per-part [parts.overrides] is parsed into PartConfig.overrides."""
+    path = _write_toml(
+        tmp_path,
+        """
+[slicer]
+engine = "orca"
+
+[slicer.orca]
+printer = "Bambu Lab P1S 0.4 nozzle"
+
+[[parts]]
+file = "cube.stl"
+
+[parts.overrides]
+sparse_infill_density = "80%"
+wall_loops = 5
+
+[[parts]]
+file = "cyl.stl"
+""",
+        create_files=["cube.stl", "cyl.stl"],
+    )
+    cfg = load_config(path)
+    assert cfg.parts[0].overrides == {"sparse_infill_density": "80%", "wall_loops": 5}
+    assert cfg.parts[1].overrides == {}
+
+
+def test_part_overrides_must_be_table(tmp_path):
+    """A non-table [parts.overrides] value is rejected."""
+    path = _write_toml(
+        tmp_path,
+        """
+[slicer]
+engine = "orca"
+
+[slicer.orca]
+printer = "Bambu Lab P1S 0.4 nozzle"
+
+[[parts]]
+file = "cube.stl"
+overrides = "nope"
+""",
+        create_files=["cube.stl"],
+    )
+    with pytest.raises(EstampoError, match="overrides must be a table"):
+        load_config(path)
+
+
+def test_part_overrides_rejected_for_cura(tmp_path):
+    """Per-part overrides are OrcaSlicer-only and rejected for the cura engine."""
+    path = _write_toml(
+        tmp_path,
+        """
+[slicer]
+engine = "cura"
+
+[slicer.cura]
+printer = "creality_ender3"
+
+[[parts]]
+file = "cube.stl"
+
+[parts.overrides]
+wall_loops = 5
+""",
+        create_files=["cube.stl"],
+    )
+    with pytest.raises(EstampoError, match="only supported with the OrcaSlicer engine"):
+        load_config(path)
