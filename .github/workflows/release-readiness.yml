@@ -148,7 +148,7 @@ jobs:
         run: docker load -i estampo-image.tar
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: "3.11"
 
@@ -278,7 +278,7 @@ jobs:
                      estampo/estampo:orca-${{ matrix.orca_version }}
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -422,7 +422,7 @@ jobs:
         run: docker load -i cura-image.tar
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: "3.11"
 
