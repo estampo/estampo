@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from estampo import EstampoError
-from estampo.docker import ensure_image, has_image
+from estampo.docker import ensure_image, has_image, pull_image
 from estampo.slicer import (
     _apply_overrides,
     _resolve_profiles,
@@ -260,6 +260,60 @@ def test_has_docker_image_false_no_image():
 def test_has_docker_image_false_no_docker():
     with patch("estampo.docker.subprocess.run", side_effect=FileNotFoundError):
         assert has_image("estampo:orca-2.3.1") is False
+
+
+# --- _select_slicer remediation hints ---
+
+
+@pytest.mark.parametrize("docker_version", [None, "2.3.1"])
+def test_select_slicer_hint_pins_platform(docker_version):
+    """The copy-pasteable hint must carry the pin, or arm64 users hit the manifest error.
+
+    Both no-slicer-available paths tell the user to pull the image by hand. Without
+    ``--platform`` those commands fail on the very hosts the hint is meant to rescue.
+    """
+    from estampo.orca import _select_slicer
+
+    with (
+        patch("estampo.docker.ensure_image", return_value=False),
+        patch("estampo.slicer.find_slicer", side_effect=FileNotFoundError),
+        pytest.raises(FileNotFoundError) as excinfo,
+    ):
+        _select_slicer(False, docker_version, "estampo/estampo:orca-2.3.1")
+
+    assert "docker pull --platform linux/amd64 estampo/estampo:orca-2.3.1" in str(excinfo.value)
+
+
+# --- pull_image ---
+
+
+def test_pull_image_pins_amd64_platform():
+    """Published images are amd64-only — the pull must request that platform.
+
+    Without it, an arm64 host gets a manifest mismatch and the pull fails.
+    """
+    mock_result = MagicMock(returncode=0, stderr="")
+    with patch("estampo.docker.subprocess.run", return_value=mock_result) as mock_run:
+        assert pull_image("estampo/estampo:orca-2.3.1", cached=False) is True
+    argv = mock_run.call_args[0][0]
+    assert argv == [
+        "docker",
+        "pull",
+        "--platform",
+        "linux/amd64",
+        "estampo/estampo:orca-2.3.1",
+    ]
+
+
+def test_pull_image_false_on_failure():
+    mock_result = MagicMock(returncode=1, stderr="no matching manifest")
+    with patch("estampo.docker.subprocess.run", return_value=mock_result):
+        assert pull_image("estampo/estampo:orca-2.3.1", cached=True) is False
+
+
+def test_pull_image_false_when_docker_missing():
+    with patch("estampo.docker.subprocess.run", side_effect=FileNotFoundError):
+        assert pull_image("estampo/estampo:orca-2.3.1", cached=False) is False
 
 
 # --- _ensure_docker_image ---
