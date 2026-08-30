@@ -35,8 +35,10 @@ def pull_image(image: str, *, cached: bool) -> bool:
     log.info("Pulling Docker image %s ...", image)
     try:
         with ui.status(f"{label} [bold]{image}[/bold]"):
+            # Published images are amd64-only, so an arm64 host needs the
+            # explicit platform or the pull fails on a manifest mismatch. See #746
             r = subprocess.run(
-                ["docker", "pull", image],
+                ["docker", "pull", "--platform", "linux/amd64", image],
                 capture_output=True,
                 text=True,
                 timeout=300,
