@@ -1,1 +1,0 @@
-Pin ``--platform linux/amd64`` on ``docker pull`` so Docker images can be pulled on Apple Silicon and other arm64 hosts.

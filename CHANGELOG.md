@@ -4,6 +4,22 @@ All notable changes to this project are documented here.
 
 <!-- towncrier release notes start -->
 
+## 0.4.5 — 2026-08-30
+
+### Features
+
+- Support Python 3.14 by splitting the ``build123d`` dependency on Python version — 3.13+ now uses build123d 0.11 with ``cadquery-ocp-novtk``, which ships cp314 wheels. ([#751](https://github.com/estampo/estampo/pull/751))
+- Add per-part process overrides via ``[parts.overrides]`` (OrcaSlicer), injected as per-object settings into ``model_settings.config``.
+
+### Bugfixes
+
+- Pin ``--platform linux/amd64`` on ``docker pull`` so Docker images can be pulled on Apple Silicon and other arm64 hosts. ([#747](https://github.com/estampo/estampo/pull/747))
+
+### Misc
+
+- Remove stale ``docs/gcode-3mf-format.md`` — the ``.gcode.3mf`` format reference now lives in bambox. ([#743](https://github.com/estampo/estampo/pull/743))
+
+
 ## 0.4.4 — 2026-06-11
 
 ### Features
