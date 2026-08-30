@@ -396,7 +396,7 @@ def _select_slicer(
             raise FileNotFoundError(
                 f"Docker image '{image}' not found locally or on Docker Hub, "
                 f"and no local slicer installed. Either:\n"
-                f"  docker pull {image}\n"
+                f"  docker pull --platform linux/amd64 {image}\n"
                 f"  or install the slicer locally"
             )
 
@@ -414,7 +414,8 @@ def _select_slicer(
         return False, slicer
     except FileNotFoundError:
         raise FileNotFoundError(
-            f"No slicer available. Pull the Docker image:\n  docker pull {image}"
+            f"No slicer available. Pull the Docker image:\n"
+            f"  docker pull --platform linux/amd64 {image}"
         )
 
 

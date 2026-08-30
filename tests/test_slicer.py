@@ -262,6 +262,28 @@ def test_has_docker_image_false_no_docker():
         assert has_image("estampo:orca-2.3.1") is False
 
 
+# --- _select_slicer remediation hints ---
+
+
+@pytest.mark.parametrize("docker_version", [None, "2.3.1"])
+def test_select_slicer_hint_pins_platform(docker_version):
+    """The copy-pasteable hint must carry the pin, or arm64 users hit the manifest error.
+
+    Both no-slicer-available paths tell the user to pull the image by hand. Without
+    ``--platform`` those commands fail on the very hosts the hint is meant to rescue.
+    """
+    from estampo.orca import _select_slicer
+
+    with (
+        patch("estampo.docker.ensure_image", return_value=False),
+        patch("estampo.slicer.find_slicer", side_effect=FileNotFoundError),
+        pytest.raises(FileNotFoundError) as excinfo,
+    ):
+        _select_slicer(False, docker_version, "estampo/estampo:orca-2.3.1")
+
+    assert "docker pull --platform linux/amd64 estampo/estampo:orca-2.3.1" in str(excinfo.value)
+
+
 # --- pull_image ---
 
 
