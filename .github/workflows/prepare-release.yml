@@ -27,7 +27,7 @@ jobs:
             exit 1
           fi
 
-      - uses: astral-sh/setup-uv@v8.2.0
+      - uses: astral-sh/setup-uv@v9.0.0
 
       - name: Install project dependencies
         run: uv sync --extra dev
